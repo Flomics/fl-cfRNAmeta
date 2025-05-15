@@ -46,8 +46,6 @@ def main():
     decruyenaere = decruyenaere.merge(dataset_metadata[['dataset_short_name', 'Plasma tubes', 'DNAse','RNA extraction kit','RNA extraction kit (short name)','Library prep kit','Library prep kit (short name)']], on='dataset_short_name', how='left')
     reggiardo = reggiardo.merge(dataset_metadata[['dataset_short_name','Biomaterial', 'Plasma tubes', 'DNAse','RNA extraction kit','RNA extraction kit (short name)','Library prep kit','Library prep kit (short name)']], on='dataset_short_name', how='left')
 
-    decruyenaere.columns.values[0] = "Run"
-
     dfs = [chen, zhu, roskams, ngo, ibarra, toden, chalasani, block, rozowsky, tao, wei, moufarrej, wang, giraldez, sun, decruyenaere, reggiardo]
 
     merged_metadata = pd.concat(dfs, axis=0, join="outer", ignore_index=True)

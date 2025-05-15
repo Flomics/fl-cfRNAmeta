@@ -296,6 +296,18 @@ def preprocess_decruyenaere():
     csv_path = "../sra_metadata/decruyenaere_metadata.csv"
     df = pd.read_csv(csv_path)
 
+    # only dataset from EGA-archive
+    df = df.rename(columns={"sample_alias":"Run"})
+
+    # expand 'sample_attributes' column
+    #split_col_df = df.set_index('sample_alias')["sample_attributes"].str.split(";", expand=True)
+    #df_ext = pd.concat(
+    #    [df.set_index('sample_alias')] + 
+    #    # extract prefix and use it to name columns
+    #    [cc.str.split("=", expand=True)[1].rename(''.join(cc.str.split("=", expand=True)[0].unique())) for nn, cc in split_col_df.items()],
+    #    axis=1
+    #).reset_index().drop("sample_attributes", axis=1)
+
     df["dataset_short_name"] = "decruyenaere"
     df["dataset_batch"] = "decruyenaere"
     df["biomaterial"] = "Blood plasma"
