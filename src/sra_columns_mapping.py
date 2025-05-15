@@ -12,7 +12,7 @@ mapping_disease = {
     'Hepatoma'
     'Cirrhosis':'Cirrhosis',
     'pre-eclampsia':'Pre-eclampsia',
-    'severe pre-eclampsia':'Severe pre-eclampsia',
+    'severe pre-eclampsia':'Pre-eclampsia',
     'liver cancer patient':'Liver cancer',
     'healthy donor':'Control',
     'normal':'Control',
