@@ -247,8 +247,12 @@ def preprocess_wang():
     #df["rna_extraction_kit"]="Apostle MiniMaxTM High-Efficiency cfRNA Isolation Kit"
     #df["rna_extraction_kit_short"]="Apostle"
     #df["dnase"]="No"
-    #df["library_prep_kit"]="Own protocol"
-    #df["library_prep_kit_short"]="Own protocol"
+    df["library_prep_kit"] = "SLiPiR-seq"
+    df["library_prep_kit_short"] = "SLiPiR-seq"
+    # There are 3 samples that were processed with a different library prep kit
+    index = df[df['Sample Name'].str.startswith("NEB")].index
+    df.loc[index, "library_prep_kit"] = "NEBNext Small RNA Library Prep Set"
+    df.loc[index, "library_prep_kit_short"] = "NEBNext"
     df.to_csv("../sra_metadata/wang_metadata_preprocessed.csv", index=False)
 
     return df
