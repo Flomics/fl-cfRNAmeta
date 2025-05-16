@@ -306,7 +306,6 @@ def preprocess_decruyenaere():
     #df = pd.read_csv(csv_path)
     csv_path = "../sra_metadata/decruyenaere_metadata_ext.tsv"
     df = pd.read_csv(csv_path, sep='\t')[col_names]
-    pdb.set_trace()
     
     # only dataset from EGA-archive
     df = df.rename(columns={"sample_alias":"Run"})
