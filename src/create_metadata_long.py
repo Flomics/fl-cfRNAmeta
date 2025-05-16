@@ -3,6 +3,7 @@
 
 import pandas as pd
 from preprocess_metadata_functions import *
+from sra_columns_mapping import rename_columns_and_values
 pd.set_option('display.max_columns', None)
 
 def main():
@@ -49,6 +50,8 @@ def main():
     dfs = [chen, zhu, roskams, ngo, ibarra, toden, chalasani, block, rozowsky, tao, wei, moufarrej, wang, giraldez, sun, decruyenaere, reggiardo]
 
     merged_metadata = pd.concat(dfs, axis=0, join="outer", ignore_index=True)
+
+    merged_metadata = rename_columns_and_values(merged_metadata)
 
     merged_metadata.to_csv("../tables/cfRNA-meta_per_sample_metadata.tsv", sep="\t", index=False)
 
