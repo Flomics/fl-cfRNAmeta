@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import re
 import pdb
 
 
@@ -253,6 +254,14 @@ def preprocess_wang():
     index = df[df['Sample Name'].str.startswith("NEB")].index
     df.loc[index, "library_prep_kit"] = "NEBNext Small RNA Library Prep Set"
     df.loc[index, "library_prep_kit_short"] = "NEBNext"
+    def parse_plasma_volume_wang(s):
+        m = re.search(r'^Input\(([\d.]+?)\).*$', s, re.I)
+        if m:
+            return float(m.group(1))
+        else:
+            return np.nan
+
+    df['plasma_volume'] = df['Sample Name'].map(parse_plasma_volume_wang).dropna()
     df.to_csv("../sra_metadata/wang_metadata_preprocessed.csv", index=False)
 
     return df
