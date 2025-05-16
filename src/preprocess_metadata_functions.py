@@ -1,5 +1,7 @@
 import pandas as pd
 import numpy as np
+import pdb
+
 
 def preprocess_chen():
     csv_path = "../sra_metadata/chen_metadata.csv"
@@ -293,26 +295,27 @@ def preprocess_sun():
     return df
 
 def preprocess_decruyenaere():
+    # Most relevant variables:
+    col_names = [
+        'sample_alias', 'sample_accession_id', 'biosample_id', 'run_accession_id', 'experiment_accession_id', 'study_accession_id', 'instrument_platform', 'instrument_model', 'library_layout', 'library_name', 'library_strategy', 'library_source', 'library_selection', 'run_file_type', 'design_description', 'description',
+        'sample_title', 'phenotype', 'case_or_control', 'biological_sex', 'subject_id', 'cell_line', 'ENA-CHECKLIST',
+        'organism_part', 'region'
+    ]
+    
     csv_path = "../sra_metadata/decruyenaere_metadata.csv"
-    df = pd.read_csv(csv_path)
-
+    #df = pd.read_csv(csv_path)
+    csv_path = "../sra_metadata/decruyenaere_metadata_ext.tsv"
+    df = pd.read_csv(csv_path, sep='\t')[col_names]
+    pdb.set_trace()
+    
     # only dataset from EGA-archive
     df = df.rename(columns={"sample_alias":"Run"})
-
-    # expand 'sample_attributes' column
-    #split_col_df = df.set_index('sample_alias')["sample_attributes"].str.split(";", expand=True)
-    #df_ext = pd.concat(
-    #    [df.set_index('sample_alias')] + 
-    #    # extract prefix and use it to name columns
-    #    [cc.str.split("=", expand=True)[1].rename(''.join(cc.str.split("=", expand=True)[0].unique())) for nn, cc in split_col_df.items()],
-    #    axis=1
-    #).reset_index().drop("sample_attributes", axis=1)
 
     df["dataset_short_name"] = "decruyenaere"
     df["dataset_batch"] = "decruyenaere"
     df["biomaterial"] = "Blood plasma"
     df["nucleic_acid_type"] = "total RNA"
-    df["library_selection"] = "whole-transcriptome"
+    df["library_selection"] = "whole-transcriptome" # Overwrites existing column ( with values='cDNA_randomPriming')
     #df["plasma_tubes"] = "PAXgene blood ccfDNA"
     #df["rna_extraction_kit"]="Qiagen miRNeasy Serum/Plasma kit"
     #df["rna_extraction_kit_short"]="Qiagen miRNeasy Plasma"
