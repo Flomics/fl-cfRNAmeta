@@ -262,6 +262,36 @@ def preprocess_wang():
             return np.nan
 
     df['plasma_volume'] = df['Sample Name'].map(parse_plasma_volume_wang).dropna()
+    # During technology optimization, different modifications of the library prep
+    # protocol were tested. We discard the samples for which irrelevant modifications
+    # were applied to the protocol, such as removing the ExoI enzyme or changing
+    # the concentration of the RT primers.
+    df = (df.set_index('Sample Name').drop([
+        'USER(-)-1',
+        'ExoI(-)-3',
+        'ExoI(-)-2',
+        'RT(80)-3',
+        'RT(80)-2',
+        'RT(80)-1',
+        'RT(40)-3',
+        'RT(40)-2',
+        'RT(40)-1',
+        'RT(20)-3',
+        'RT(20)-2',
+        'RT(20)-1',
+        'ExoI(-)-1',
+        'RT(10)-3',
+        'RT(10)-2',
+        'RT(10)-1',
+        'RT(2.5)-3',
+        'RT(2.5)-2',
+        'RT(2.5)-1',
+        'RT(1.25)-3',
+        'RT(1.25)-2',
+        'RT(1.25)-1',
+        'USER(-)-3',
+        'USER(-)-2',
+    ]).reset_index())
     df.to_csv("../sra_metadata/wang_metadata_preprocessed.csv", index=False)
 
     return df
