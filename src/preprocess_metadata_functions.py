@@ -250,10 +250,14 @@ def preprocess_wang():
     #df["dnase"]="No"
     df["library_prep_kit"] = "SLiPiR-seq"
     df["library_prep_kit_short"] = "SLiPiR-seq"
-    # There are 3 samples that were processed with a different library prep kit
+
+    # There are 3 samples that were processed with a different library prep kit.
+    # Discard them.
     index = df[df['Sample Name'].str.startswith("NEB")].index
     df.loc[index, "library_prep_kit"] = "NEBNext Small RNA Library Prep Set"
     df.loc[index, "library_prep_kit_short"] = "NEBNext"
+    df = df.loc[df.index.difference(index)]
+
     def parse_plasma_volume_wang(s):
         m = re.search(r'^Input\(([\d.]+?)\).*$', s, re.I)
         if m:
@@ -262,6 +266,7 @@ def preprocess_wang():
             return np.nan
 
     df['plasma_volume'] = df['Sample Name'].map(parse_plasma_volume_wang).dropna()
+    
     # During technology optimization, different modifications of the library prep
     # protocol were tested. We discard the samples for which irrelevant modifications
     # were applied to the protocol, such as removing the ExoI enzyme or changing
