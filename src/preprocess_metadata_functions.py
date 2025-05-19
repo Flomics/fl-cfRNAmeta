@@ -56,6 +56,33 @@ def preprocess_roskams():
     #df["dnase"]="Baseline-ZERO"
     #df["library_prep_kit"]="SMARTer Stranded Pico v2"
     #df["library_prep_kit_short"]="SMARTer Pico v2"
+
+    # The supplementary table 2 contains sample-level information about the RNA
+    # extraction and library preparation batches
+    supp_table = pd.read_csv("../sra_metadata/roskams_supp_table_2.tsv", sep='\t')
+    supp_table['RNA extraction batch'] = (supp_table['RNA Extraction']
+                                          .str.extract(r'batch\s*(\d+)').astype(int))
+    supp_table['Library preparation batch'] = (supp_table['Library Preparation']
+                                               .str.extract(r'batch\s*(\d+)').astype(int))
+
+    # Parse the GEO series matrix file, which contains the mapping between
+    # the GEO/GSM ids and the sample names in the study (PP02, etc)
+    with open("../sra_metadata/roskams_GSE182824_series_matrix.txt") as f:
+        GEO_matrix = f.readlines()
+
+    line = [line for line in GEO_matrix if re.search(r'!Series_sample_id', line)][0]
+    s = re.search(r'^!Series_sample_id\t"(.+)"\s*', line).group(1).strip()
+    GSM_ids = s.split()
+
+    line = [line for line in GEO_matrix if re.search(r'!Sample_title', line)][0]
+    s = re.search(r'^!Sample_title\t"(.+)"\s*', line).group(1).strip()
+    sample_names = s.split('"\t"')
+    sample_names
+    if len(sample_names) != len(GSM_ids):
+        raise RunTimeError("Parsing the series matrix file, found different number of sample ids and sample names.")
+
+    sample_id_mapping = pd.DataFrame(np.transpose([GSM_ids, sample_names]), columns=['GSM_id', 'Sample_id'])
+    sample_id_mapping
     df.to_csv("../sra_metadata/roskams_metadata_preprocessed.csv", index=False)
 
     return df
