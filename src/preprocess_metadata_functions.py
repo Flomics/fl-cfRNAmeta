@@ -156,7 +156,8 @@ def preprocess_block():
     #df["library_prep_kit_short"]="SMARTer Pico v2"
 
     # Exclude non-plasma samples: Tissue, and Plasma-derived vesicles.
-    df = df[df['tissue'] == 'Plasma']
+    df = df.rename(columns={'tissue':'biomaterial'})
+    df = df[df['biomaterial'] == 'Plasma']
 
     # Add information from supplementary table 7.
     # Characteristics of HCC and CCA patients whose specimens were used. CH, NJ: Capital Health Cancer Center, NJ. UPEN, PA: Veterans hospital University of Pennysylvania, PA. Biochemed.
