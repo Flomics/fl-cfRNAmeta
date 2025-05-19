@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import re
 import pdb
 
 
@@ -61,9 +62,9 @@ def preprocess_roskams():
     # extraction and library preparation batches
     supp_table = pd.read_csv("../sra_metadata/roskams_supp_table_2.tsv", sep='\t')
     supp_table['RNA extraction batch'] = (supp_table['RNA Extraction']
-                                          .str.extract(r'batch\s*(\d+)').astype(int))
+                                          .str.extract(r'batch\s*(\d+)'))
     supp_table['Library preparation batch'] = (supp_table['Library Preparation']
-                                               .str.extract(r'batch\s*(\d+)').astype(int))
+                                               .str.extract(r'batch\s*(\d+)'))
 
     # Parse the GEO series matrix file, which contains the mapping between
     # the GEO/GSM ids and the sample names in the study (PP02, etc)
@@ -80,9 +81,14 @@ def preprocess_roskams():
     sample_names
     if len(sample_names) != len(GSM_ids):
         raise RunTimeError("Parsing the series matrix file, found different number of sample ids and sample names.")
-
-    sample_id_mapping = pd.DataFrame(np.transpose([GSM_ids, sample_names]), columns=['GSM_id', 'Sample_id'])
-    sample_id_mapping
+    sample_id_mapping = pd.DataFrame(np.transpose([GSM_ids, sample_names]),
+                                     columns=['GSM_id', 'Sample_id'])
+    # Merge the metadata table with the supp table using the sample id mapping
+    df = (df
+        .merge(sample_id_mapping, on='GEO_Accession (exp)', how='outer')
+        .merge(supp_table[['SeqID', 'Library preparation batch', 'RNA extraction batch']]
+                .rename(columns={'SeqID':'Sample_id'}), on='Sample_id', how='outer')
+    )
     df.to_csv("../sra_metadata/roskams_metadata_preprocessed.csv", index=False)
 
     return df
