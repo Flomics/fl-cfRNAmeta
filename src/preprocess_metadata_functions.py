@@ -80,7 +80,7 @@ def preprocess_roskams():
     sample_names = s.split('"\t"')
     sample_names
     if len(sample_names) != len(GSM_ids):
-        raise RunTimeError("Parsing the series matrix file, found different number of sample ids and sample names.")
+        raise RuntimeError("Parsing the series matrix file, found different number of sample ids and sample names.")
     sample_id_mapping = pd.DataFrame(np.transpose([GSM_ids, sample_names]),
                                      columns=['GSM_id', 'Sample_id'])
     # Merge the metadata table with the supp table using the sample id mapping
