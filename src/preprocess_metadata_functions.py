@@ -46,7 +46,7 @@ def preprocess_roskams():
     df = pd.read_csv(csv_path)
 
     df["dataset_short_name"] = "roskams"
-    df["dataset_batch"] = np.where(df["Cohort"] == "pilot", "rokams_1", "roskams_2")
+    df["dataset_batch"] = np.where(df["Cohort"] == "pilot", "roskams_1", "roskams_2")
     #df["biomaterial"] = "blood plasma"
     df["nucleic_acid_type"] = "total RNA"
     df["library_selection"] = "whole-transcriptome"
