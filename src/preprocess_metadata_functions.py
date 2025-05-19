@@ -154,6 +154,23 @@ def preprocess_block():
     #df["dnase"]="No"
     #df["library_prep_kit"]="SMARTer Stranded Pico v2"
     #df["library_prep_kit_short"]="SMARTer Pico v2"
+
+    # Exclude non-plasma samples: Tissue, and Plasma-derived vesicles.
+    df = df[df['tissue'] == 'Plasma']
+
+    # Add information from supplementary table 7.
+    # Characteristics of HCC and CCA patients whose specimens were used. CH, NJ: Capital Health Cancer Center, NJ. UPEN, PA: Veterans hospital University of Pennysylvania, PA. Biochemed.
+    # Note that there is no available information for the LC patients (9 samples).
+    supp_table = pd.read_excel("../sra_metadata/block_supp_table_7.xlsx", skiprows=3, index_col=1)
+    supp_table = supp_table.iloc[1:, :].drop('Unnamed: 0', axis=1)
+    supp_table = (supp_table[['Source/Place', 'Bleed date']].dropna(how='all')
+                  .reset_index()
+                  .rename(columns={'Patient ID':'Patient_id', 
+                                   'Source/Place':'Collection_center'}))
+    # Merge with the sample-level metadata dataframe
+    df['Patient_id'] = df['Sample_ID'].str.extract(r'(.+\d)[^\d]*$')
+    df = df.merge(supp_table, on='Patient_id', how='left')
+
     df.to_csv("../sra_metadata/block_metadata_preprocessed.csv", index=False)
 
     return df
