@@ -192,6 +192,9 @@ def preprocess_tao():
     #df["dnase"]="DNAse I"
     #df["library_prep_kit"]="SMARTer Stranded Pico v2"
     #df["library_prep_kit_short"]="SMARTer Pico v2"
+    # Select only the cfRNA-seq samples, filter out tissue and PBMC, and other assays like MeDIP-Seq, miRNA-Seq
+    df = df[(df['source_name'] == 'plasma') &
+            (df['Assay Type'] == 'RNA-Seq')]
     df.to_csv("../sra_metadata/tao_metadata_preprocessed.csv", index=False)
 
     return df
