@@ -372,6 +372,8 @@ def preprocess_giraldez():
     #df["dnase"]="No"
     #df["library_prep_kit"]="Illumina TruSeq small RNA"
     #df["library_prep_kit_short"]="Illumina TruSeq small RNA"
+    # Filter out the 2 synthetic samples
+    df = df[~df['source_name'].str.contains('Synthetic sRNA equimolar pool')]
     df.to_csv("../sra_metadata/giraldez_metadata_preprocessed.csv", index=False)
 
     return df
