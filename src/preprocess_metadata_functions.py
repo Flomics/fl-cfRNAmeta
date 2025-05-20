@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import re
 import pdb
 
 
@@ -249,10 +250,53 @@ def preprocess_wang():
     #df["dnase"]="No"
     df["library_prep_kit"] = "SLiPiR-seq"
     df["library_prep_kit_short"] = "SLiPiR-seq"
-    # There are 3 samples that were processed with a different library prep kit
+
+    # There are 3 samples that were processed with a different library prep kit.
+    # Discard them.
     index = df[df['Sample Name'].str.startswith("NEB")].index
     df.loc[index, "library_prep_kit"] = "NEBNext Small RNA Library Prep Set"
     df.loc[index, "library_prep_kit_short"] = "NEBNext"
+    df = df.loc[df.index.difference(index)]
+
+    def parse_plasma_volume_wang(s):
+        m = re.search(r'^Input\(([\d.]+?)\).*$', s, re.I)
+        if m:
+            return float(m.group(1))
+        else:
+            return np.nan
+
+    df['plasma_volume'] = df['Sample Name'].map(parse_plasma_volume_wang).dropna()
+    
+    # During technology optimization, different modifications of the library prep
+    # protocol were tested. We discard the samples for which irrelevant modifications
+    # were applied to the protocol, such as removing the ExoI enzyme or changing
+    # the concentration of the RT primers.
+    df = (df.set_index('Sample Name').drop([
+        'USER(-)-1',
+        'ExoI(-)-3',
+        'ExoI(-)-2',
+        'RT(80)-3',
+        'RT(80)-2',
+        'RT(80)-1',
+        'RT(40)-3',
+        'RT(40)-2',
+        'RT(40)-1',
+        'RT(20)-3',
+        'RT(20)-2',
+        'RT(20)-1',
+        'ExoI(-)-1',
+        'RT(10)-3',
+        'RT(10)-2',
+        'RT(10)-1',
+        'RT(2.5)-3',
+        'RT(2.5)-2',
+        'RT(2.5)-1',
+        'RT(1.25)-3',
+        'RT(1.25)-2',
+        'RT(1.25)-1',
+        'USER(-)-3',
+        'USER(-)-2',
+    ]).reset_index())
     df.to_csv("../sra_metadata/wang_metadata_preprocessed.csv", index=False)
 
     return df
