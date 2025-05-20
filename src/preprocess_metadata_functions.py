@@ -47,7 +47,7 @@ def preprocess_roskams():
     df = pd.read_csv(csv_path)
 
     df["dataset_short_name"] = "roskams"
-    df["dataset_batch"] = np.where(df["Cohort"] == "pilot", "rokams_1", "roskams_2")
+    df["dataset_batch"] = np.where(df["Cohort"] == "pilot", "roskams_1", "roskams_2")
     #df["biomaterial"] = "blood plasma"
     df["nucleic_acid_type"] = "total RNA"
     df["library_selection"] = "whole-transcriptome"
@@ -57,6 +57,38 @@ def preprocess_roskams():
     #df["dnase"]="Baseline-ZERO"
     #df["library_prep_kit"]="SMARTer Stranded Pico v2"
     #df["library_prep_kit_short"]="SMARTer Pico v2"
+
+    # The supplementary table 2 contains sample-level information about the RNA
+    # extraction and library preparation batches
+    supp_table = pd.read_csv("../sra_metadata/roskams_supp_table_2.tsv", sep='\t')
+    supp_table['RNA extraction batch'] = (supp_table['RNA Extraction']
+                                          .str.extract(r'batch\s*(\d+)'))
+    supp_table['Library preparation batch'] = (supp_table['Library Preparation']
+                                               .str.extract(r'batch\s*(\d+)'))
+
+    # Parse the GEO series matrix file, which contains the mapping between
+    # the GEO/GSM ids and the sample names in the study (PP02, etc)
+    with open("../sra_metadata/roskams_GSE182824_series_matrix.txt") as f:
+        GEO_matrix = f.readlines()
+
+    line = [line for line in GEO_matrix if re.search(r'!Series_sample_id', line)][0]
+    s = re.search(r'^!Series_sample_id\t"(.+)"\s*', line).group(1).strip()
+    GSM_ids = s.split()
+
+    line = [line for line in GEO_matrix if re.search(r'!Sample_title', line)][0]
+    s = re.search(r'^!Sample_title\t"(.+)"\s*', line).group(1).strip()
+    sample_names = s.split('"\t"')
+    sample_names
+    if len(sample_names) != len(GSM_ids):
+        raise RuntimeError("Parsing the series matrix file, found different number of sample ids and sample names.")
+    sample_id_mapping = pd.DataFrame(np.transpose([GSM_ids, sample_names]),
+                                     columns=['GSM_id', 'Sample_id'])
+    # Merge the metadata table with the supp table using the sample id mapping
+    df = (df
+        .merge(sample_id_mapping, on='GEO_Accession (exp)', how='outer')
+        .merge(supp_table[['SeqID', 'Library preparation batch', 'RNA extraction batch']]
+                .rename(columns={'SeqID':'Sample_id'}), on='Sample_id', how='outer')
+    )
     df.to_csv("../sra_metadata/roskams_metadata_preprocessed.csv", index=False)
 
     return df
