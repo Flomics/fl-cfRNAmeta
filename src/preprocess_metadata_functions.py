@@ -44,8 +44,7 @@ def preprocess_zhu():
 
 def preprocess_roskams():
     csv_path = "../sra_metadata/roskams_metadata.csv"
-    df = pd.read_csv(csv_path)
-
+    print(df.columns.tolist())
     df["dataset_short_name"] = "roskams"
     df["dataset_batch"] = np.where(df["Cohort"] == "pilot", "roskams_1", "roskams_2")
     #df["biomaterial"] = "blood plasma"
@@ -65,7 +64,6 @@ def preprocess_roskams():
                                           .str.extract(r'batch\s*(\d+)'))
     supp_table['Library preparation batch'] = (supp_table['Library Preparation']
                                                .str.extract(r'batch\s*(\d+)'))
-
     # Parse the GEO series matrix file, which contains the mapping between
     # the GEO/GSM ids and the sample names in the study (PP02, etc)
     with open("../sra_metadata/roskams_GSE182824_series_matrix.txt") as f:
@@ -85,7 +83,7 @@ def preprocess_roskams():
                                      columns=['GSM_id', 'Sample_id'])
     # Merge the metadata table with the supp table using the sample id mapping
     df = (df
-        .merge(sample_id_mapping, on='GEO_Accession (exp)', how='outer')
+        .merge(sample_id_mapping, left_on='GEO_Accession (exp)', right_on='GSM_id', how='left')
         .merge(supp_table[['SeqID', 'Library preparation batch', 'RNA extraction batch']]
                 .rename(columns={'SeqID':'Sample_id'}), on='Sample_id', how='outer')
     )
