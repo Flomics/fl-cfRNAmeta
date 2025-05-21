@@ -44,7 +44,7 @@ def preprocess_zhu():
 
 def preprocess_roskams():
     csv_path = "../sra_metadata/roskams_metadata.csv"
-    print(df.columns.tolist())
+    df = pd.read_csv(csv_path)
     df["dataset_short_name"] = "roskams"
     df["dataset_batch"] = np.where(df["Cohort"] == "pilot", "roskams_1", "roskams_2")
     #df["biomaterial"] = "blood plasma"
