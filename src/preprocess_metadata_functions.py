@@ -265,6 +265,8 @@ def preprocess_wei():
     #df["dnase"]="No"
     #df["library_prep_kit"]="Truseq Nano DNA HT"
     #df["library_prep_kit_short"]="Truseq Nano DNA HT"
+    # Select only the plasma samples, remove the tissue "tissue" ones
+    df = df[(df['tissue'] == 'plasma')]
     df.to_csv("../sra_metadata/wei_metadata_preprocessed.csv", index=False)
 
     return df
