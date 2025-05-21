@@ -441,6 +441,8 @@ def preprocess_reggiardo():
     #df["dnase"]="No"
     #df["library_prep_kit"]="Takara SMART-Seq HT kit+Illumina Nextera XT DNA Prep "
     #df["library_prep_kit_short"]="SMART-Seq"
+    # Select only Illumina samples
+    df = df[(df['Platform'] == 'ILLUMINA')]
     df.to_csv("../sra_metadata/reggiardo_metadata_preprocessed.csv", index=False)
 
     return df
