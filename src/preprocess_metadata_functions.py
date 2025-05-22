@@ -359,10 +359,13 @@ def preprocess_giraldez():
     df = pd.read_csv(csv_path)
 
     df["dataset_short_name"] = "giraldez"
-    df["dataset_batch"] = np.where(
-        abs(df["AvgSpotLen"] - 25) < abs(df["AvgSpotLen"] - 50),
-        "giraldez_1", "giraldez_2"
-    )
+    
+    # Filter out the 2 synthetic samples
+    df = df[~df['source_name'].str.contains('Synthetic sRNA equimolar pool')]
+    
+    # Filter out protocol optimization samples
+    df = df[df["SRA Study"] == "SRP183468"]
+    
     #df["biomaterial"] = "blood plasma"
     df["nucleic_acid_type"] = "total RNA"
     df["library_selection"] = "whole-transcriptome"
@@ -372,6 +375,23 @@ def preprocess_giraldez():
     #df["dnase"]="No"
     #df["library_prep_kit"]="Illumina TruSeq small RNA"
     #df["library_prep_kit_short"]="Illumina TruSeq small RNA"
+
+
+    # Standard library prep
+    index = df[df['treatment'].isin(['none', 'Untreated'])].index
+    df.loc[index, "library_prep_kit"] = "Illumina TruSeq small RNA"
+    df.loc[index, "library_prep_kit_short"] = "Illumina TruSeq small RNA"
+    df.loc[index, "Assay name"] = "RNA-seq"
+    df.loc[index, "dataset_batch"] = "giraldez_1"
+
+    # phospho-RNA-seq library prep
+    index = df[df['treatment'].isin(['T4PNK', 'PNK'])].index
+    df.loc[index, "library_prep_kit"] = "polynucleotide kinase (PNK) treated, Illumina TruSeq small RNA"
+    df.loc[index, "library_prep_kit_short"] = "PNK-treated Illumina TruSeq small RNA"
+    df.loc[index, "Assay name"] = "phospho-RNA-seq"
+    df.loc[index, "dataset_batch"] = "giraldez_2"
+
+
     df.to_csv("../sra_metadata/giraldez_metadata_preprocessed.csv", index=False)
 
     return df
