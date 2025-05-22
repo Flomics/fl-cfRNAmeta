@@ -157,15 +157,25 @@ def preprocess_chalasani():
     #df["biomaterial"] = "blood serum"
     df["nucleic_acid_type"] = "total RNA"
     df["library_selection"] = "whole-exome capture"
+
+    # Create a new column with the cleaned isolate ID
+    df["isolate_base"] = df["isolate"].str.replace(r"-[A-Z]\d*$", "", regex=True)
+
+    # Drop duplicates based on isolate_base
+    df_unique = df.drop_duplicates(subset="isolate_base", keep="first").copy()
+
+    # Overwrite Run column with isolate_base
+    df_unique["Run"] = df_unique["isolate_base"]
+
     #df["plasma_tubes"] = "BD Vacutainer clotting tubes"
     #df["rna_extraction_kit"]="Qiagen QIAamp Circulating Nucleic Acid Kit"
     #df["rna_extraction_kit_short"]="Qiagen QIAamp"
     #df["dnase"]="Turbo DNAse"
     #df["library_prep_kit"]="Unspecified"
     #df["library_prep_kit_short"]="Unspecified"
-    df.to_csv("../sra_metadata/chalasani_metadata_preprocessed.csv", index=False)
+    df_unique.to_csv("../sra_metadata/chalasani_metadata_preprocessed.csv", index=False)
 
-    return df
+    return df_unique
 
 def preprocess_block():
     csv_path = "../sra_metadata/block_metadata.csv"
