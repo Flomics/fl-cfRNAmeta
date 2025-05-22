@@ -364,7 +364,7 @@ def preprocess_giraldez():
     df = df[~df['source_name'].str.contains('Synthetic sRNA equimolar pool')]
     
     # Filter out protocol optimization samples
-    df = df[df["AvgSpotLen"] > 40]
+    df = df[df["SRA Study"] == "SRP183468"]
     
     #df["biomaterial"] = "blood plasma"
     df["nucleic_acid_type"] = "total RNA"
