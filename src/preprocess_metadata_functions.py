@@ -2,61 +2,73 @@ import pandas as pd
 import numpy as np
 import re
 import pdb
+from sra_columns_mapping import rename_columns_and_values
+pd.set_option('display.max_columns', None)
 
 
-def preprocess_chen():
+
+def simplify_column_names(cols):
+    if type(cols) is not pd.Series:
+        cols = pd.Series(cols)
+    cols = (cols
+            .str.lower()
+            .str.replace(r'\s', r'_', regex=True)
+            .str.replace(r'[()]', r'', regex=True)
+           ).to_list()
+    return cols
+
+
+dataset_column_list = [
+    'dataset_short_name',
+    'SRA link',
+    'Biomaterial',
+    'Nucleic acid type',
+    'Library selection',
+    'Assay name',
+    'Plasma volume',
+    'Plasma tubes',
+    'RNA extraction kit',
+    'RNA extraction kit (short name)',
+    'DNAse',
+    'Library prep kit',
+    'Library prep kit (short name)',
+    'cDNA library type',
+    ]
+dataset_column_list = simplify_column_names(dataset_column_list)
+
+
+def preprocess_chen(dataset_metadata):
     csv_path = "../sra_metadata/chen_metadata.csv"
     df = pd.read_csv(csv_path)
+    df.columns = simplify_column_names(df.columns)
 
-    df["dataset_short_name"] = "chen"
     df["dataset_batch"] = "chen"
-    #df["biomaterial"] = "blood plasma"
-    df["nucleic_acid_type"] = "total RNA"
-    df["library_selection"] = "whole-transcriptome"
-    #df["plasma_tubes"] = "EDTA-coated vacutainer"
-    #df["rna_extraction_kit"]="Norgen Plasma/Serum Circulating RNA and Exosomal Purification kit"
-    #df["rna_extraction_kit_short"]="Norgen"
-    #df["dnase"]="DNase I"
-    #df["library_prep_kit"]="SMARTer Stranded Pico v2"
-    #df["library_prep_kit_short"]="SMARTer Pico v2"
-    df.to_csv("../sra_metadata/chen_metadata_preprocessed.csv", index=False)
 
+    df = df.drop(dataset_column_list, axis=1).merge(dataset_metadata[dataset_column_list],
+                 on='dataset_short_name', how='left')
+
+    df.to_csv("../sra_metadata/chen_metadata_preprocessed.csv", index=False)
     return df
 
 def preprocess_zhu():
     csv_path = "../sra_metadata/zhu_metadata.csv"
     df = pd.read_csv(csv_path)
+    df.columns = simplify_column_names(df.columns)
 
-    df["dataset_short_name"] = "zhu"
     df["dataset_batch"] = "zhu"
-    #df["biomaterial"] = "blood plasma"
-    df["nucleic_acid_type"] = "total RNA"
-    df["library_selection"] = "whole-transcriptome"
-    #df["plasma_tubes"] = "Unspecified"
-    #df["rna_extraction_kit"]="Norgen Plasma/Serum Circulating RNA and Exosomal Purification kit"
-    #df["rna_extraction_kit_short"]="Norgen"
-    #df["dnase"]="DNase I"
-    #df["library_prep_kit"]="SMARTer Stranded Pico v2"
-    #df["library_prep_kit_short"]="SMARTer Pico v2"
-    df.to_csv("../sra_metadata/zhu_metadata_preprocessed.csv", index=False)
 
+    df = df.drop(dataset_column_list, axis=1).merge(dataset_metadata[dataset_column_list],
+                 on='dataset_short_name', how='left')
+
+    df.to_csv("../sra_metadata/zhu_metadata_preprocessed.csv", index=False)
     return df
 
 def preprocess_roskams():
     csv_path = "../sra_metadata/roskams_metadata.csv"
     df = pd.read_csv(csv_path)
+    df.columns = simplify_column_names(df.columns)
 
-    df["dataset_short_name"] = "roskams"
     df["dataset_batch"] = np.where(df["Cohort"] == "pilot", "roskams_1", "roskams_2")
-    #df["biomaterial"] = "blood plasma"
-    df["nucleic_acid_type"] = "total RNA"
-    df["library_selection"] = "whole-transcriptome"
-    #df["plasma_tubes"] = "EDTA-anticoagulated vacutainers"
-    #df["rna_extraction_kit"]="Norgen Plasma/Serum Circulating RNA and Exosomal Purification kit"
-    #df["rna_extraction_kit_short"]="Norgen"
-    #df["dnase"]="Baseline-ZERO"
-    #df["library_prep_kit"]="SMARTer Stranded Pico v2"
-    #df["library_prep_kit_short"]="SMARTer Pico v2"
 
     # The supplementary table 2 contains sample-level information about the RNA
     # extraction and library preparation batches
@@ -85,109 +97,84 @@ def preprocess_roskams():
                                      columns=['GSM_id', 'Sample_id'])
     # Merge the metadata table with the supp table using the sample id mapping
     df = (df
-        .merge(sample_id_mapping, on='GEO_Accession (exp)', how='outer')
+        .merge(sample_id_mapping, left_on='geo_accession_exp',
+               right_on='GEO_Accession (exp)', how='outer')
         .merge(supp_table[['SeqID', 'Library preparation batch', 'RNA extraction batch']]
                 .rename(columns={'SeqID':'Sample_id'}), on='Sample_id', how='outer')
     )
-    df.to_csv("../sra_metadata/roskams_metadata_preprocessed.csv", index=False)
+    df.columns = simplify_column_names(df.columns)
 
+    df = df.drop(dataset_column_list, axis=1).merge(dataset_metadata[dataset_column_list],
+                 on='dataset_short_name', how='left')
+
+    df.to_csv("../sra_metadata/roskams_metadata_preprocessed.csv", index=False)
     return df
 
 def preprocess_ngo():
     csv_path = "../sra_metadata/ngo_metadata.csv"
     df = pd.read_csv(csv_path)
+    df.columns = simplify_column_names(df.columns)
 
-    df["dataset_short_name"] = "ngo"
     df["dataset_batch"] = "ngo"
-    #df["biomaterial"] = "blood plasma"
-    df["nucleic_acid_type"] = "total RNA"
-    df["library_selection"] = "whole-transcriptome"
-    #df["plasma_tubes"] = "EDTA"
-    #df["rna_extraction_kit"]="Norgen Plasma/Serum Circulating RNA and Exosomal Purification kit"
-    #df["rna_extraction_kit_short"]="Norgen"
-    #df["dnase"]="Baseline-ZERO"
-    #df["library_prep_kit"]="SMARTer Stranded Pico v2"
-    #df["library_prep_kit_short"]="SMARTer Pico v2"
-    df.to_csv("../sra_metadata/ngo_metadata_preprocessed.csv", index=False)
 
+    df = df.drop(dataset_column_list, axis=1).merge(dataset_metadata[dataset_column_list],
+                 on='dataset_short_name', how='left')
+
+    df.to_csv("../sra_metadata/ngo_metadata_preprocessed.csv", index=False)
     return df
 
 def preprocess_ibarra():
     csv_path = "../sra_metadata/ibarra_metadata.csv"
     df = pd.read_csv(csv_path)
+    df.columns = simplify_column_names(df.columns)
 
-    df["dataset_short_name"] = "ibarra"
     df["dataset_batch"] = "ibarra"
+    # We overwrite the values that we merge above from the dataset_metadata table
     df["biomaterial"] = df["tissue"].str.lower()
-    df["nucleic_acid_type"] = "total RNA"
-    df["library_selection"] = "whole-exome capture"
     df["plasma_tubes"] = df["biomaterial"].apply(lambda x: "EDTA" if x == "plasma" else "BD Vacutainer clotting tubes" if x == "serum" else "")
-    #df["rna_extraction_kit"]="Qiagen QIAamp Circulating Nucleic Acid Kit"
-    #df["rna_extraction_kit_short"]="Qiagen QIAamp"
-    #df["dnase"]="Turbo DNAse"
-    #df["library_prep_kit"]="Unspecified"
-    #df["library_prep_kit_short"]="Unspecified"
-    df.to_csv("../sra_metadata/ibarra_metadata_preprocessed.csv", index=False)
+    # TODO Parse the phenotype from the Sample Name
 
+    df = df.drop(dataset_column_list, axis=1).merge(dataset_metadata[dataset_column_list],
+                 on='dataset_short_name', how='left')
+
+    df.to_csv("../sra_metadata/ibarra_metadata_preprocessed.csv", index=False)
     return df
 
 def preprocess_toden():
     csv_path = "../sra_metadata/toden_metadata.csv"
     df = pd.read_csv(csv_path)
+    df.columns = simplify_column_names(df.columns)
 
-    df["dataset_short_name"] = "toden"
     df["dataset_batch"] = "toden"
-    #df["biomaterial"] = "blood plasma"
-    df["nucleic_acid_type"] = "total RNA"
-    df["library_selection"] = "whole-exome capture"
-    #df["plasma_tubes"] = "Unspecified"
-    #df["rna_extraction_kit"]="Qiagen QIAamp Circulating Nucleic Acid Kit"
-    #df["rna_extraction_kit_short"]="Qiagen QIAamp"
-    #df["dnase"]="No"
-    #df["library_prep_kit"]="Swift 2S kit"
-    #df["library_prep_kit_short"]="Swift 2S kit"
-    df.to_csv("../sra_metadata/toden_metadata_preprocessed.csv", index=False)
 
+    df = df.drop(dataset_column_list, axis=1).merge(dataset_metadata[dataset_column_list],
+                 on='dataset_short_name', how='left')
+
+    df.to_csv("../sra_metadata/toden_metadata_preprocessed.csv", index=False)
     return df
 
 def preprocess_chalasani():
     csv_path = "../sra_metadata/chalasani_metadata.csv"
     df = pd.read_csv(csv_path)
 
-    df["dataset_short_name"] = "chalasani"
     df["dataset_batch"] = "chalasani"
-    #df["biomaterial"] = "blood serum"
-    df["nucleic_acid_type"] = "total RNA"
-    df["library_selection"] = "whole-exome capture"
-    #df["plasma_tubes"] = "BD Vacutainer clotting tubes"
-    #df["rna_extraction_kit"]="Qiagen QIAamp Circulating Nucleic Acid Kit"
-    #df["rna_extraction_kit_short"]="Qiagen QIAamp"
-    #df["dnase"]="Turbo DNAse"
-    #df["library_prep_kit"]="Unspecified"
-    #df["library_prep_kit_short"]="Unspecified"
-    df.to_csv("../sra_metadata/chalasani_metadata_preprocessed.csv", index=False)
+    # TODO parse the donor id from the sample name
+    # TODO define sample id for the merged fastq file processed by fl-rnaseq.
 
+    df = df.drop(dataset_column_list, axis=1).merge(dataset_metadata[dataset_column_list],
+                 on='dataset_short_name', how='left')
+
+    df.to_csv("../sra_metadata/chalasani_metadata_preprocessed.csv", index=False)
     return df
 
 def preprocess_block():
     csv_path = "../sra_metadata/block_metadata.csv"
     df = pd.read_csv(csv_path)
 
-    df["dataset_short_name"] = "block"
     df["dataset_batch"] = np.where(
         abs(df["AvgSpotLen"] - 150) < abs(df["AvgSpotLen"] - 300),
         "block_1", "block_2"
     )
-    #df["biomaterial"] = "blood plasma"
-    df["nucleic_acid_type"] = "total RNA"
-    df["library_selection"] = "whole-transcriptome"
-    #df["plasma_tubes"] = "Unspecified"
-    #df["rna_extraction_kit"]="Qiagen RNeasy Serum/Plasma Kit"
-    #df["rna_extraction_kit_short"]="Qiagen RNeasy Plasma"
-    #df["dnase"]="No"
-    #df["library_prep_kit"]="SMARTer Stranded Pico v2"
-    #df["library_prep_kit_short"]="SMARTer Pico v2"
-
     # Exclude non-plasma samples: Tissue, and Plasma-derived vesicles.
     df = df.rename(columns={'tissue':'biomaterial'})
     df = df[df['biomaterial'] == 'Plasma']
@@ -204,6 +191,9 @@ def preprocess_block():
     # Merge with the sample-level metadata dataframe
     df['Patient_id'] = df['Sample_ID'].str.extract(r'(.+\d)[^\d]*$')
     df = df.merge(supp_table, on='Patient_id', how='left')
+
+    df = df.drop(dataset_column_list, axis=1).merge(dataset_metadata[dataset_column_list],
+                 on='dataset_short_name', how='left')
 
     df.to_csv("../sra_metadata/block_metadata_preprocessed.csv", index=False)
 
@@ -451,20 +441,27 @@ def preprocess_reggiardo():
 
 
 if __name__ == "__main__":
-    preprocess_chen()
-    preprocess_zhu()
-    preprocess_roskams()
-    preprocess_ngo()
-    preprocess_ibarra()
-    preprocess_toden()
-    preprocess_chalasani()
-    preprocess_block()
-    preprocess_rozowsky()
-    preprocess_tao()
-    preprocess_wei()
-    preprocess_moufarrej()
-    preprocess_wang()
-    preprocess_giraldez()
-    preprocess_sun()
-    preprocess_decruyenaere()
-    preprocess_reggiardo()
+    # Read plasma cfRNA-seq workflow comparison
+    csv_path = "../sra_metadata/dataset_metadata.tsv"
+    dataset_metadata = pd.read_csv(csv_path, sep = "\t")
+    # Simplify column names
+    dataset_metadata.columns = dataset_metadata.columns.str.lower().replace(r'\s', '_')
+
+    chen = preprocess_chen(dataset_metadata)
+    zhu = preprocess_zhu(dataset_metadata)
+    roskams = preprocess_roskams(dataset_metadata)
+    ngo = preprocess_ngo(dataset_metadata)
+    ibarra = preprocess_ibarra(dataset_metadata)
+    toden = preprocess_toden(dataset_metadata)
+    chalasani = preprocess_chalasani(dataset_metadata)
+    block = preprocess_block(dataset_metadata)
+    rozowsky = preprocess_rozowsky(dataset_metadata)
+    tao = preprocess_tao(dataset_metadata)
+    wei = preprocess_wei(dataset_metadata)
+    moufarrej = preprocess_moufarrej(dataset_metadata)
+    wang = preprocess_wang(dataset_metadata)
+    giraldez = preprocess_giraldez(dataset_metadata)
+    sun = preprocess_sun(dataset_metadata)
+    decruyenaere = preprocess_decruyenaere(dataset_metadata)
+    reggiardo = preprocess_reggiardo(dataset_metadata)
+
