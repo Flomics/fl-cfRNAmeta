@@ -40,8 +40,8 @@ def rename_columns_and_values(df):
         'Illumina NovaSeq 6000':'Illumina NovaSeq 6000',
         'MinION':'MinION'
     }
-    df['Instrument'] = df['Instrument'].replace(mapping)
-    print("df['Instrument'].unique():\n", df['Instrument'].unique())
+    df['instrument'] = df['instrument'].replace(mapping)
+    print("df['instrument'].unique():\n", df['instrument'].unique())
 
     # sex
     mapping = {
