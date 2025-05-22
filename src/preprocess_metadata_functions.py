@@ -382,15 +382,14 @@ def preprocess_giraldez():
     df.loc[index, "library_prep_kit"] = "Illumina TruSeq small RNA"
     df.loc[index, "library_prep_kit_short"] = "Illumina TruSeq small RNA"
     df.loc[index, "Assay name"] = "RNA-seq"
+    df.loc[index, "dataset_batch"] = "giraldez_1"
 
     # phospho-RNA-seq library prep
     index = df[df['treatment'].isin(['T4PNK', 'PNK'])].index
     df.loc[index, "library_prep_kit"] = "polynucleotide kinase (PNK) treated, Illumina TruSeq small RNA"
     df.loc[index, "library_prep_kit_short"] = "PNK-treated Illumina TruSeq small RNA"
     df.loc[index, "Assay name"] = "phospho-RNA-seq"
-
-    # Define giraldez_1 and giraldez_2 based on library preparation
-    df["dataset_batch"] = np.where(df["treatment"] == "Untreated", "giraldez_1", "giraldez_2")
+    df.loc[index, "dataset_batch"] = "giraldez_2"
 
 
     df.to_csv("../sra_metadata/giraldez_metadata_preprocessed.csv", index=False)
