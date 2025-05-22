@@ -83,7 +83,7 @@ def preprocess_roskams(dataset_metadata):
     df.columns = simplify_column_names(df.columns)    
 
     df["dataset_short_name"] = "roskams"
-    df["dataset_batch"] = np.where(df["Cohort"] == "pilot", "roskams_1", "roskams_2")
+    df["dataset_batch"] = np.where(df["cohort"] == "pilot", "roskams_1", "roskams_2")
 
     # The supplementary table 2 contains sample-level information about the RNA
     # extraction and library preparation batches
@@ -188,7 +188,7 @@ def preprocess_block(dataset_metadata):
 
     df["dataset_short_name"] = "block"
     df["dataset_batch"] = np.where(
-        abs(df["AvgSpotLen"] - 150) < abs(df["AvgSpotLen"] - 300),
+        abs(df["avgspotlen"] - 150) < abs(df["avgspotlen"] - 300),
         "block_1", "block_2"
     )
     # Exclude non-plasma samples: Tissue, and Plasma-derived vesicles.
@@ -202,8 +202,8 @@ def preprocess_block(dataset_metadata):
     supp_table = supp_table.iloc[1:, :].drop('Unnamed: 0', axis=1)
     supp_table = (supp_table[['Source/Place', 'Bleed date']].dropna(how='all')
                   .reset_index()
-                  .rename(columns={'Patient ID':'Patient_id', 
-                                   'Source/Place':'Collection_center'}))
+                  .rename(columns={'Patient ID':'patient_id', 
+                                   'Source/Place':'collection_center'}))
     # Merge with the sample-level metadata dataframe
     df['patient_id'] = df['sample_id'].str.extract(r'(.+\d)[^\d]*$')
     df = df.merge(supp_table, on='patient_id', how='left')
@@ -303,7 +303,7 @@ def preprocess_wang(dataset_metadata):
         else:
             return np.nan
 
-    df['plasma_volume'] = df['Sample Name'].map(parse_plasma_volume_wang).dropna()
+    df['plasma_volume'] = df['sample_name'].map(parse_plasma_volume_wang).dropna()
     
     # During technology optimization, different modifications of the library prep
     # protocol were tested. We discard the samples for which irrelevant modifications
@@ -336,7 +336,10 @@ def preprocess_wang(dataset_metadata):
         'USER(-)-2',
     ]).reset_index())
 
-    df = merge_sample_with_dataset_metadata(df, dataset_metadata)
+    df = merge_sample_with_dataset_metadata(
+        df, dataset_metadata, keep_sample_cols=["library_prep_kit",
+                                                "library_prep_kit_short",
+                                                "plasma_volume"])
 
     df.to_csv("../sra_metadata/wang_metadata_preprocessed.csv", index=False)
 
@@ -353,23 +356,26 @@ def preprocess_giraldez(dataset_metadata):
     df = df[~df['source_name'].str.contains('Synthetic sRNA equimolar pool')]
     
     # Filter out protocol optimization samples
-    df = df[df["SRA Study"] == "SRP183468"]
+    df = df[df["sra_study"] == "SRP183468"]
 
     # Standard library prep
     index = df[df['treatment'].isin(['none', 'Untreated'])].index
     df.loc[index, "library_prep_kit"] = "Illumina TruSeq small RNA"
     df.loc[index, "library_prep_kit_short"] = "Illumina TruSeq small RNA"
-    df.loc[index, "Assay name"] = "RNA-seq"
+    df.loc[index, "assay_name"] = "RNA-seq"
     df.loc[index, "dataset_batch"] = "giraldez_1"
 
     # phospho-RNA-seq library prep
     index = df[df['treatment'].isin(['T4PNK', 'PNK'])].index
     df.loc[index, "library_prep_kit"] = "polynucleotide kinase (PNK) treated, Illumina TruSeq small RNA"
     df.loc[index, "library_prep_kit_short"] = "PNK-treated Illumina TruSeq small RNA"
-    df.loc[index, "Assay name"] = "phospho-RNA-seq"
+    df.loc[index, "assay_name"] = "phospho-RNA-seq"
     df.loc[index, "dataset_batch"] = "giraldez_2"
 
-    df = merge_sample_with_dataset_metadata(df, dataset_metadata)
+    df = merge_sample_with_dataset_metadata(
+        df, dataset_metadata, keep_sample_cols=["library_prep_kit",
+                                                "library_prep_kit_short",
+                                                "assay_name"])
 
     df.to_csv("../sra_metadata/giraldez_metadata_preprocessed.csv", index=False)
 
@@ -411,19 +417,9 @@ def preprocess_decruyenaere(dataset_metadata):
 
     df["dataset_short_name"] = "decruyenaere"
     df["dataset_batch"] = "decruyenaere"
+    df = df.drop('library_selection', axis=1)
     
-    df["biomaterial"] = "Blood plasma"
-    df["nucleic_acid_type"] = "total RNA"
-    df["library_selection"] = "whole-transcriptome" # Overwrites existing column ( with values='cDNA_randomPriming')
-    #df["plasma_tubes"] = "PAXgene blood ccfDNA"
-    #df["rna_extraction_kit"]="Qiagen miRNeasy Serum/Plasma kit"
-    #df["rna_extraction_kit_short"]="Qiagen miRNeasy Plasma"
-    #df["dnase"]="HL-dsDNase"
-    #df["library_prep_kit"]="SMARTer stranded Pico v3"
-    #df["library_prep_kit_short"]="SMARTer Pico v3"
-
-    df = merge_sample_with_dataset_metadata(
-        df, dataset_metadata, keep_sample_cols=["biomaterial"])
+    df = merge_sample_with_dataset_metadata(df, dataset_metadata)
 
     df.to_csv("../sra_metadata/decruyenaere_metadata_preprocessed.csv", index=False)
 
