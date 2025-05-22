@@ -303,7 +303,8 @@ def preprocess_decruyenaere():
     col_names = [
         'sample_alias', 'sample_accession_id', 'biosample_id', 'run_accession_id', 'experiment_accession_id', 'study_accession_id', 'instrument_platform', 'instrument_model', 'library_layout', 'library_name', 'library_strategy', 'library_source', 'library_selection', 'run_file_type', 'design_description', 'description',
         'sample_title', 'phenotype', 'case_or_control', 'biological_sex', 'subject_id', 'cell_line', 'ENA-CHECKLIST',
-        'organism_part', 'region'
+        'organism_part', 'region',
+        #'file_name_1' # needed to extract the 'sample_name'
     ]
     
     csv_path = "../sra_metadata/decruyenaere_metadata.csv"
@@ -314,11 +315,17 @@ def preprocess_decruyenaere():
     # only dataset from EGA-archive
     df = df.rename(columns={"sample_alias":"Run"})
 
+    # add columns expected by snakeDA
+    #df["sample_name"]      = df["file_name_1"].apply(lambda x: '_'.join(x.split('_')[:2]))
+    df["sample_name"]      = df["Run"]
+    df["sequencing_batch"] = "decruyenaere"
+    df["status"]           = df['phenotype'].apply(lambda x: 'healthy' if x=='control' else 'cancer')
+
     df["dataset_short_name"] = "decruyenaere"
     df["dataset_batch"] = "decruyenaere"
     df["biomaterial"] = "Blood plasma"
     df["nucleic_acid_type"] = "total RNA"
-    df["library_selection"] = "whole-transcriptome" # Overwrites existing column ( with values='cDNA_randomPriming')
+    df["library_selection"] = "whole-transcriptome" # Overwrites existing column (with values='cDNA_randomPriming')
     #df["plasma_tubes"] = "PAXgene blood ccfDNA"
     #df["rna_extraction_kit"]="Qiagen miRNeasy Serum/Plasma kit"
     #df["rna_extraction_kit_short"]="Qiagen miRNeasy Plasma"
