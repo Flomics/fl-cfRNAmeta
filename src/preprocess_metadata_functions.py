@@ -161,11 +161,18 @@ def preprocess_chalasani():
     # Create a new column with the cleaned isolate ID
     df["isolate_base"] = df["isolate"].str.replace(r"-[A-Z]\d*$", "", regex=True)
 
+    # Sum the values from the "Bases" column for each isolate
+    df["Bases"] = pd.to_numeric(df["Bases"].str.replace(" ", "").str.replace("[GMK]", "", regex=True), errors="coerce")
+    grouped = df.groupby("isolate_base", as_index=False)
+
+    df_agg = grouped.first()
+    df_agg["Bases"] = grouped["Bases"].sum().values
+
     # Drop duplicates based on isolate_base
-    df_unique = df.drop_duplicates(subset="isolate_base", keep="first").copy()
+    df_agg = df.drop_duplicates(subset="isolate_base", keep="first").copy()
 
     # Overwrite Run column with isolate_base
-    df_unique["Run"] = df_unique["isolate_base"]
+    df_agg["Run"] = df_agg["isolate_base"]
 
     #df["plasma_tubes"] = "BD Vacutainer clotting tubes"
     #df["rna_extraction_kit"]="Qiagen QIAamp Circulating Nucleic Acid Kit"
@@ -173,9 +180,9 @@ def preprocess_chalasani():
     #df["dnase"]="Turbo DNAse"
     #df["library_prep_kit"]="Unspecified"
     #df["library_prep_kit_short"]="Unspecified"
-    df_unique.to_csv("../sra_metadata/chalasani_metadata_preprocessed.csv", index=False)
+    df_agg.to_csv("../sra_metadata/chalasani_metadata_preprocessed.csv", index=False)
 
-    return df_unique
+    return df_agg
 
 def preprocess_block():
     csv_path = "../sra_metadata/block_metadata.csv"
