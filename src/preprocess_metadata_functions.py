@@ -59,12 +59,34 @@ def preprocess_chen(dataset_metadata):
     df["dataset_short_name"] = "chen"
     df["dataset_batch"] = "chen"
     # Exclude the two E. coli samples and the brain tissue sample
-    df = df[~df['sample_name'].isin([
-        'ET_L2'
-        'EH_L2'
-        'NC_L2'
-    ])]
+    df = df[~(df['sample_name'].isin([
+        'ET_L2',
+        'EH_L2',
+        'NC_L2',
+    ]))]
 
+    # Parse the GEO series matrix file, which contains the
+    # the GEO/GSM ids and the collection center (hospital).
+    with open("../sra_metadata/chen_GSE174302_series_matrix.txt") as f:
+        GEO_matrix = f.readlines()
+
+    line = [line for line in GEO_matrix if re.search(r'!Series_sample_id', line)][0]
+    s = re.search(r'^!Series_sample_id\t"(.+)"\s*', line).group(1).strip()
+    GSM_ids = s.split()
+
+    line = [line for line in GEO_matrix if re.search(r'!Sample_description', line)][1]
+    s = re.search(r'^!Sample_description\t"(.+)"\s*', line).group(1).strip()
+    sample_descriptions = s.split('"\t"')
+    collection_centers = [re.search(r'Provided by (.+?)\.?;', s).group(1) for s in sample_descriptions]
+
+    if len(collection_centers) != len(GSM_ids):
+        raise RuntimeError("Parsing the series matrix file, found different number of sample ids and collection_centers.")
+    gsm_id_collection_center = pd.DataFrame(np.transpose([GSM_ids, collection_centers]),
+                                            columns=['GSM_id', 'collection_center'])
+    df = (df
+        .merge(gsm_id_collection_center, left_on='geo_accession_exp',
+                right_on='GSM_id', how='left')
+    )
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
 
     df.to_csv("../sra_metadata/chen_metadata_preprocessed.csv", index=False)
