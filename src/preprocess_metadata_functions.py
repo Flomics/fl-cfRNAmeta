@@ -58,6 +58,12 @@ def preprocess_chen(dataset_metadata):
 
     df["dataset_short_name"] = "chen"
     df["dataset_batch"] = "chen"
+    # Exclude the two E. coli samples and the brain tissue sample
+    df = df[~df['sample_name'].isin([
+        'ET_L2'
+        'EH_L2'
+        'NC_L2'
+    ])]
 
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
 
