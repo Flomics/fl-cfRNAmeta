@@ -80,8 +80,8 @@ def preprocess_zhu(dataset_metadata):
 def preprocess_roskams(dataset_metadata):
     csv_path = "../sra_metadata/roskams_metadata.csv"
     df = pd.read_csv(csv_path)
-    df.columns = simplify_column_names(df.columns)
-    
+    df.columns = simplify_column_names(df.columns)    
+
     df["dataset_short_name"] = "roskams"
     df["dataset_batch"] = np.where(df["Cohort"] == "pilot", "roskams_1", "roskams_2")
 
@@ -92,7 +92,6 @@ def preprocess_roskams(dataset_metadata):
                                           .str.extract(r'batch\s*(\d+)'))
     supp_table['Library preparation batch'] = (supp_table['Library Preparation']
                                                .str.extract(r'batch\s*(\d+)'))
-
     # Parse the GEO series matrix file, which contains the mapping between
     # the GEO/GSM ids and the sample names in the study (PP02, etc)
     with open("../sra_metadata/roskams_GSE182824_series_matrix.txt") as f:
@@ -113,7 +112,7 @@ def preprocess_roskams(dataset_metadata):
     # Merge the metadata table with the supp table using the sample id mapping
     df = (df
         .merge(sample_id_mapping, left_on='geo_accession_exp',
-               right_on='GEO_Accession (exp)', how='outer')
+               right_on='GSM_id', how='outer')
         .merge(supp_table[['SeqID', 'Library preparation batch', 'RNA extraction batch']]
                 .rename(columns={'SeqID':'Sample_id'}), on='Sample_id', how='outer')
     )
@@ -349,10 +348,26 @@ def preprocess_giraldez(dataset_metadata):
     df.columns = simplify_column_names(df.columns)
 
     df["dataset_short_name"] = "giraldez"
-    df["dataset_batch"] = np.where(
-        abs(df["AvgSpotLen"] - 25) < abs(df["AvgSpotLen"] - 50),
-        "giraldez_1", "giraldez_2"
-    )
+    
+    # Filter out the 2 synthetic samples
+    df = df[~df['source_name'].str.contains('Synthetic sRNA equimolar pool')]
+    
+    # Filter out protocol optimization samples
+    df = df[df["SRA Study"] == "SRP183468"]
+
+    # Standard library prep
+    index = df[df['treatment'].isin(['none', 'Untreated'])].index
+    df.loc[index, "library_prep_kit"] = "Illumina TruSeq small RNA"
+    df.loc[index, "library_prep_kit_short"] = "Illumina TruSeq small RNA"
+    df.loc[index, "Assay name"] = "RNA-seq"
+    df.loc[index, "dataset_batch"] = "giraldez_1"
+
+    # phospho-RNA-seq library prep
+    index = df[df['treatment'].isin(['T4PNK', 'PNK'])].index
+    df.loc[index, "library_prep_kit"] = "polynucleotide kinase (PNK) treated, Illumina TruSeq small RNA"
+    df.loc[index, "library_prep_kit_short"] = "PNK-treated Illumina TruSeq small RNA"
+    df.loc[index, "Assay name"] = "phospho-RNA-seq"
+    df.loc[index, "dataset_batch"] = "giraldez_2"
 
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
 
