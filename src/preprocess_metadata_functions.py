@@ -431,7 +431,8 @@ def preprocess_decruyenaere(dataset_metadata):
     col_names = [
         'sample_alias', 'sample_accession_id', 'biosample_id', 'run_accession_id', 'experiment_accession_id', 'study_accession_id', 'instrument_platform', 'instrument_model', 'library_layout', 'library_name', 'library_strategy', 'library_source', 'library_selection', 'run_file_type', 'design_description', 'description',
         'sample_title', 'phenotype', 'case_or_control', 'biological_sex', 'subject_id', 'cell_line', 'ENA-CHECKLIST',
-        'organism_part', 'region'
+        'organism_part', 'region',
+        #'file_name_1' # needed to extract the 'sample_name'
     ]
     
     csv_path = "../sra_metadata/decruyenaere_metadata.csv"
@@ -445,6 +446,7 @@ def preprocess_decruyenaere(dataset_metadata):
 
     df["dataset_short_name"] = "decruyenaere"
     df["dataset_batch"] = "decruyenaere"
+
     df = df.drop('library_selection', axis=1)
     
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
