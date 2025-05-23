@@ -418,8 +418,69 @@ def preprocess_sun(dataset_metadata):
     df["biomaterial"] = df["tissue"].apply(lambda x: "blood plasma" if x == "plasma" else "blood serum" if x == "serum" else "")
     df["dataset_batch"] = np.where(df["biomaterial"] == "blood plasma", "sun_1", "sun_2")
 
+    # Exclude cfDNA samples
+    df = df[df['assay_type'] == 'RNA-Seq']
+
+    # Assign sequencing batches based on the sequencing platform instrument
+    # These also correspond to two separate datasets on GEO
+    df.loc[df['instrument'] == 'HiSeq X Ten', 'sequencing_batch'] = 's1'
+    df.loc[df['instrument'] == 'Illumina NovaSeq 6000', 'sequencing_batch'] = 's2'
+
+    # Parse the GEO series matrix file, which contains the mapping between
+    # the GEO/GSM ids and the sample names in the study
+    GSM_ids = []
+    sample_titles = []
+    for matrix_file in ["../sra_metadata/sun_GSE210775-GPL20795_series_matrix.txt",
+                        "../sra_metadata/sun_GSE210775-GPL24676_series_matrix.txt"]:
+        with open(matrix_file) as f:
+            GEO_matrix = f.readlines()
+
+        line = [line for line in GEO_matrix if re.search(r'!Sample_geo_accession', line)][0]
+        s = re.search(r'^!Sample_geo_accession\t"(.+)"\s*', line).group(1)
+        GSM_ids_1 = s.split()
+        GSM_ids_1 = [e.strip('" ') for e in GSM_ids_1]
+        GSM_ids += GSM_ids_1
+        
+        line = [line for line in GEO_matrix if re.search(r'!Sample_title', line)][0]
+        s = re.search(r'^!Sample_title\t"(.+)"\s*', line).group(1).strip()
+        sample_titles_1 = s.split('"\t"')
+        sample_titles += sample_titles_1
+
+    if len(sample_titles) != len(GSM_ids):
+        raise RuntimeError("Parsing the series matrix file, found different number of sample ids and sample titles.")
+    matrix_metadata = pd.DataFrame(np.transpose([GSM_ids, sample_titles]),
+                                columns=['GSM_id', 'sample_title'])
+    # RNA extraction kit (inferred from "Internal ID" and manuscript)
+    matrix_metadata['rna_extraction_kit'] = np.nan
+    matrix_metadata['rna_extraction_kit_short_name'] = np.nan
+    index = (matrix_metadata[matrix_metadata['sample_title']
+             .str.contains('with_MOF|Training_set|Validation_set')])
+    matrix_metadata.loc[index, 'rna_extraction_kit'] = "MOF method"
+    matrix_metadata.loc[index, 'rna_extraction_kit_short_name'] = "MOF"
+
+    df = (df.merge(matrix_metadata, left_on='sample_name',
+                   right_on='GSM_id', how='left'))
+
+    # Exclude the 15 protocol optimization samples
+    GSM_ids_to_exclude = """GSM6437012
+    GSM6437013
+    GSM6437014
+    GSM6437015
+    GSM6437016
+    GSM6437017
+    GSM6437018
+    GSM6437019
+    GSM6437020
+    GSM6437021
+    GSM6437022
+    GSM6437023
+    GSM6437024
+    GSM6437025
+    GSM6437026""".split()
+    df = df[~df['sample_name'].isin(GSM_ids_to_exclude)]
+
     df = merge_sample_with_dataset_metadata(
-        df, dataset_metadata, keep_sample_cols=["biomaterial"])
+        df, dataset_metadata, keep_sample_cols=["biomaterial", "rna_extraction_kit", "rna_extraction_kit_short_name"])
 
     df.to_csv("../sra_metadata/sun_metadata_preprocessed.csv", index=False)
 
