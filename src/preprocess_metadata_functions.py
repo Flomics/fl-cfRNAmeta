@@ -454,7 +454,7 @@ def preprocess_sun(dataset_metadata):
     matrix_metadata['rna_extraction_kit'] = np.nan
     matrix_metadata['rna_extraction_kit_short_name'] = np.nan
     index = (matrix_metadata[matrix_metadata['sample_title']
-             .str.contains('with_MOF|Training_set|Validation_set')])
+             .str.contains('with_MOF|Training_set|Validation_set')].index)
     matrix_metadata.loc[index, 'rna_extraction_kit'] = "MOF method"
     matrix_metadata.loc[index, 'rna_extraction_kit_short_name'] = "MOF"
 
@@ -487,7 +487,6 @@ def preprocess_sun(dataset_metadata):
     return df
 
 def preprocess_decruyenaere(dataset_metadata):
-    # TODO wait on Pablo to push his branch
     # Most relevant variables:
     col_names = [
         'sample_alias', 'sample_accession_id', 'biosample_id', 'run_accession_id', 'experiment_accession_id', 'study_accession_id', 'instrument_platform', 'instrument_model', 'library_layout', 'library_name', 'library_strategy', 'library_source', 'library_selection', 'run_file_type', 'design_description', 'description',
@@ -501,9 +500,12 @@ def preprocess_decruyenaere(dataset_metadata):
     csv_path = "../sra_metadata/decruyenaere_metadata_ext.tsv"
     df = pd.read_csv(csv_path, sep='\t')[col_names]
     df.columns = simplify_column_names(df.columns)
-    
-    # only dataset from EGA-archive
-    df = df.rename(columns={"sample_alias":"Run"})
+
+    # Rename columns from the EGA-archive to the corresponding SRA metadata columns
+    df = df.rename(columns={
+        "sample_alias":"Run",
+        "instrument_model":"instrument"
+        })
 
     df["dataset_short_name"] = "decruyenaere"
     df["dataset_batch"] = "decruyenaere"
