@@ -170,10 +170,31 @@ def preprocess_ibarra(dataset_metadata):
 
     df["dataset_short_name"] = "ibarra"
     df["dataset_batch"] = "ibarra"
-    # We overwrite the values that we merge above from the dataset_metadata table
     df["biomaterial"] = df["tissue"].str.lower()
     df["plasma_tubes"] = df["biomaterial"].apply(lambda x: "EDTA" if x == "plasma" else "BD Vacutainer clotting tubes" if x == "serum" else "")
-    # TODO Parse the phenotype from the Sample Name
+
+    # **Guessing** the phenotype from the sample name
+    # Warning: this information is *not* reliable.
+    def parse_phenotype(s):
+        m = re.search(r'MM', s)
+        if m:
+            return pd.Series({"phenotype":"Multiple myeloma",
+                            "collection_center":"Scripps Bone Marrow Transplant Center"})
+        m = re.search(r'EPO', s)
+        if m:
+            return pd.Series({"phenotype":"Chronic kidney failure EPO-treated",
+                            "collection_center":"Scripps Clinic Cancer Center"})
+        m = re.search(r'AML', s)
+        if m:
+            return pd.Series({"phenotype":"Acute Myeloid Leukemia",
+                            "collection_center":""})
+        m = re.search(r'GCSF', s)
+        if m:
+            return pd.Series({"phenotype":"G-CSF-treated healthy donors",
+                            "collection_center":"Scripps"})
+        return pd.Series(dtype='object')
+
+    df = df.join(df['sample_name'].apply(parse_phenotype))
 
     df = merge_sample_with_dataset_metadata(
         df, dataset_metadata, keep_sample_cols=["biomaterial", "plasma_tubes"])
