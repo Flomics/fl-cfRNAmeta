@@ -489,12 +489,33 @@ def preprocess_sun(dataset_metadata):
 def preprocess_decruyenaere(dataset_metadata):
     # Most relevant variables:
     col_names = [
-        'sample_alias', 'sample_accession_id', 'biosample_id', 'run_accession_id', 'experiment_accession_id', 'study_accession_id', 'instrument_platform', 'instrument_model', 'library_layout', 'library_name', 'library_strategy', 'library_source', 'library_selection', 'run_file_type', 'design_description', 'description',
-        'sample_title', 'phenotype', 'case_or_control', 'biological_sex', 'subject_id', 'cell_line', 'ENA-CHECKLIST',
-        'organism_part', 'region',
-        #'file_name_1' # needed to extract the 'sample_name'
+        'sample_alias',
+        # 'sample_accession_id',
+        # 'biosample_id',
+        # 'run_accession_id',
+        # 'experiment_accession_id',
+        # 'study_accession_id',
+        # 'instrument_platform',
+        'instrument_model',
+        # 'library_layout',
+        # 'library_name',
+        # 'library_strategy',
+        # 'library_source',
+        # 'library_selection',
+        'sample_title',
+        # 'run_file_type',
+        # 'design_description',
+        'description',
+        'biological_sex',
+        'subject_id',
+        'phenotype',
+        'case_or_control',
+        # 'cell_line',
+        # 'ENA-CHECKLIST',
+        'organism_part',
+        # 'region',
     ]
-    
+
     csv_path = "../sra_metadata/decruyenaere_metadata.csv"
     # TODO include parsing of the original metadata column "sample_attributes"
     csv_path = "../sra_metadata/decruyenaere_metadata_ext.tsv"
@@ -503,15 +524,19 @@ def preprocess_decruyenaere(dataset_metadata):
 
     # Rename columns from the EGA-archive to the corresponding SRA metadata columns
     df = df.rename(columns={
-        "sample_alias":"Run",
-        "instrument_model":"instrument"
+        "sample_alias":"run",
+        "instrument_model":"instrument",
+        "biosample_id":"biosample",
         })
 
     df["dataset_short_name"] = "decruyenaere"
     df["dataset_batch"] = "decruyenaere"
 
-    df = df.drop('library_selection', axis=1)
-    
+    # Exclude FFPE samples
+    print(len(df))
+    df = df[df['organism_part'] != 'FFPE homo sapiens']
+    print(len(df))
+
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
 
     df.to_csv("../sra_metadata/decruyenaere_metadata_preprocessed.csv", index=False)
