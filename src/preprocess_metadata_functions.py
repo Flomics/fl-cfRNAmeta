@@ -420,7 +420,8 @@ def preprocess_decruyenaere():
     col_names = [
         'sample_alias', 'sample_accession_id', 'biosample_id', 'run_accession_id', 'experiment_accession_id', 'study_accession_id', 'instrument_platform', 'instrument_model', 'library_layout', 'library_name', 'library_strategy', 'library_source', 'library_selection', 'run_file_type', 'design_description', 'description',
         'sample_title', 'phenotype', 'case_or_control', 'biological_sex', 'subject_id', 'cell_line', 'ENA-CHECKLIST',
-        'organism_part', 'region'
+        'organism_part', 'region',
+        #'file_name_1' # needed to extract the 'sample_name'
     ]
     
     csv_path = "../sra_metadata/decruyenaere_metadata.csv"
@@ -435,7 +436,7 @@ def preprocess_decruyenaere():
     df["dataset_batch"] = "decruyenaere"
     df["biomaterial"] = "Blood plasma"
     df["nucleic_acid_type"] = "total RNA"
-    df["library_selection"] = "whole-transcriptome" # Overwrites existing column ( with values='cDNA_randomPriming')
+    df["library_selection"] = "whole-transcriptome" # Overwrites existing column (with values='cDNA_randomPriming')
     #df["plasma_tubes"] = "PAXgene blood ccfDNA"
     #df["rna_extraction_kit"]="Qiagen miRNeasy Serum/Plasma kit"
     #df["rna_extraction_kit_short"]="Qiagen miRNeasy Plasma"
