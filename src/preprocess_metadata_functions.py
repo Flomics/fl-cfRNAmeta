@@ -171,7 +171,7 @@ def preprocess_ibarra(dataset_metadata):
     df["dataset_short_name"] = "ibarra"
     df["biomaterial"] = df["tissue"].str.lower()
     df["plasma_tubes"] = df["biomaterial"].apply(lambda x: "EDTA" if x == "plasma" else "BD Vacutainer clotting tubes" if x == "serum" else "")
-    df["dataset_batch"] = df["biomaterial"].apply(lambda x: "ibarra_plasma" if x == "plasma" else "ibarra_serum" if x == "serum" else "ibarra_buffy_coat" if x == "Buffy Coat" else "")
+    df["dataset_batch"] = df["biomaterial"].apply(lambda x: "ibarra_plasma" if x == "plasma" else "ibarra_serum" if x == "serum" else "ibarra_buffy_coat" if x == "buffy coat" else "")
 
     # **Guessing** the phenotype from the sample name
     # Warning: this information is *not* reliable.
