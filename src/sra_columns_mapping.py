@@ -1,4 +1,5 @@
 import numpy as np
+import pdb
 
 def rename_columns_and_values(df):
     # disease, disease_state, subject_status
@@ -23,7 +24,10 @@ def rename_columns_and_values(df):
         'HCC':'Liver cancer',
         'CHB':'Chronic hepatitis B',
         'pancreatic cancer patient':'Pancreatic cancer',
-        'normal healthy donor':'Control'
+        'normal healthy donor':'Control',
+        'control':'Control',
+        'DLBCL': 'Diffuse large B-cell lymphoma cancer',        # Blood cancer
+        'PMBCL': 'Primary mediastinal B-cell lymphoma cancer',  # Blood cancer
     }
     df['disease'] = df['disease'].fillna(df['disease_state']).fillna(df['subject_status'])
     df = df.drop(['disease_state', 'subject_status'], axis=1)
@@ -97,5 +101,22 @@ def rename_columns_and_values(df):
     df[main_col] = df[main_col].fillna(df[cols[1]])
     df = df.drop([cols[1]], axis=1)
     print(f"df['{main_col}'].unique():\n", df[main_col].unique())
+
+    # Improve compatibility with snakeDA (reserved vars: ['sequencing_batch', 'sample_name'])
+    # TODO: Work in progress
+    df = df.rename(
+        columns={'sequencing_batch':'sequencing_batch_other', 'sample_name':'sample_name_other', 'sample_id':'sample_id_other'}
+    )
+    df['sample_name']      = df['run']
+    df['sequencing_batch'] = df['dataset_batch']
+    # add 'status' column
+    def map_status(x):
+        if x == 'Control':
+            return 'healthy'
+        elif ('cancer' in x):
+            return 'cancer'
+        else:
+            return 'non-cancer disease'
+    df['status'] =  df['disease'].apply(lambda x: map_status(str(x)))
 
     return df

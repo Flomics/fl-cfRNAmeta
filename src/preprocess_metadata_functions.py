@@ -514,10 +514,10 @@ def preprocess_decruyenaere(dataset_metadata):
         # 'ENA-CHECKLIST',
         'organism_part',
         # 'region',
+        #'file_name_1' # needed to extract the 'sample_name'
     ]
 
     csv_path = "../sra_metadata/decruyenaere_metadata.csv"
-    # TODO include parsing of the original metadata column "sample_attributes"
     csv_path = "../sra_metadata/decruyenaere_metadata_ext.tsv"
     df = pd.read_csv(csv_path, sep='\t')[col_names]
     df.columns = simplify_column_names(df.columns)
@@ -528,14 +528,19 @@ def preprocess_decruyenaere(dataset_metadata):
         "instrument_model":"instrument",
         "biosample_id":"biosample",
         })
+    #df["run"] = df["file_name_1"].apply(lambda x: '_'.join(x.split('_')[:2]))
+    # remove 'file_name_1' col
+    #df = df.drop('file_name_1', axis=1)
 
     df["dataset_short_name"] = "decruyenaere"
-    df["dataset_batch"] = "decruyenaere"
+    df["dataset_batch"]      = "decruyenaere"
+    df["disease"]            = df["phenotype"]
+
 
     # Exclude FFPE samples
-    print(len(df))
+    #print(len(df))
     df = df[df['organism_part'] != 'FFPE homo sapiens']
-    print(len(df))
+    #print(len(df))
 
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
 
