@@ -582,7 +582,48 @@ def preprocess_reggiardo(dataset_metadata):
     return df
 
 
-if __name__ == "__main__":
+def summarize_metadata_batch_level(sample_metadata):
+    sample_metadata2 = sample_metadata.dropna(axis=1, how='all').copy()
+    # Count how many unique values each column contains
+    sample_metadata2.loc[:, 'n_samples'] = sample_metadata2.groupby('dataset_batch')['run'].transform('count')
+    n_values_per_group = sample_metadata2.groupby('dataset_batch').nunique()
+    n_values_per_group2 = n_values_per_group.reset_index()
+    n_values_per_group2['dataset_batch'] = 1
+    cols_with_unique_value = n_values_per_group2.apply(lambda col: all(col <= 1), axis=0)
+    cols_with_nonunique_value = n_values_per_group2.apply(lambda col: any(col > 1), axis=0)
+    cols_with_nonunique_value = cols_with_nonunique_value[cols_with_nonunique_value].index.to_list()
+
+    # Columns with multiple values in the same batch
+    # Some of these columns might be used to define new batches within datasets
+    # for col in cols_with_nonunique_value:
+    #     print("\nColumn:", col)
+    #     batch_list = n_values_per_group[n_values_per_group[col] > 1].index
+    #     col_values_in_batch = sample_metadata2[sample_metadata2['dataset_batch'].isin(batch_list)][['dataset_batch', col]].drop_duplicates()
+    #     print(col_values_in_batch)
+    # interesting_cols = [
+    #     'instrument',
+    #     'collection_center',
+    #     'plasma_tubes',
+    #     'plasma_volume',
+    #     'library_preparation_batch',
+    #     'rna_extraction_batch'
+    # ]
+
+    # Keep only columns which contain a unique value within each batch, drop all other columns
+    sample_metadata3 = sample_metadata2.loc[:, cols_with_unique_value].copy()
+    sample_metadata3 = sample_metadata3.dropna(axis=1, how='all')
+    batch_metadata = sample_metadata3.drop_duplicates()
+    if batch_metadata['dataset_batch'].nunique() != len(batch_metadata):
+        raise ValueError("The dataset_batch columns are duplicated values.")
+    # Reorder columns
+    first_cols = ['dataset_short_name', 'dataset_batch']
+    batch_metadata = pd.concat([batch_metadata[first_cols],
+                                batch_metadata[[c for c in batch_metadata.columns if c not in first_cols]]],
+                                axis=1)
+    return batch_metadata
+
+
+def main():
     # Read plasma cfRNA-seq workflow comparison
     csv_path = "../sra_metadata/dataset_metadata.tsv"
     dataset_metadata = pd.read_csv(csv_path, sep = "\t")
@@ -609,8 +650,16 @@ if __name__ == "__main__":
 
     dfs = [chen, zhu, roskams, ngo, ibarra, toden, chalasani, block, rozowsky, tao, wei, moufarrej, wang, giraldez, sun, decruyenaere, reggiardo]
 
-    merged_metadata = pd.concat(dfs, axis=0, join="outer", ignore_index=True)
+    sample_metadata = pd.concat(dfs, axis=0, join="outer", ignore_index=True)
 
-    merged_metadata = rename_columns_and_values(merged_metadata)
+    sample_metadata = rename_columns_and_values(sample_metadata)
 
-    merged_metadata.to_csv("../tables/cfRNA-meta_per_sample_metadata.tsv", sep="\t", index=False)
+    sample_metadata.to_csv("../tables/cfRNA-meta_per_sample_metadata.tsv", sep="\t", index=False)
+
+    # Summarize metadata at the batch level
+    batch_metadata = summarize_metadata_batch_level(sample_metadata)
+    batch_metadata.to_csv("../tables/cfRNA-meta_per_batch_metadata.tsv", sep="\t", index=False)
+
+
+if __name__ == "__main__":
+    main()
