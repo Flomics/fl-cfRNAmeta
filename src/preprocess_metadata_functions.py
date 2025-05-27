@@ -52,6 +52,7 @@ def merge_sample_with_dataset_metadata(df, dataset_metadata, keep_sample_cols=[]
 
 
 def preprocess_chen(dataset_metadata):
+    print("### Dataset: chen")
     csv_path = "../sra_metadata/chen_metadata.csv"
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
@@ -93,6 +94,7 @@ def preprocess_chen(dataset_metadata):
     return df
 
 def preprocess_zhu(dataset_metadata):
+    print("### Dataset: zhu")
     csv_path = "../sra_metadata/zhu_metadata.csv"
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
@@ -106,6 +108,7 @@ def preprocess_zhu(dataset_metadata):
     return df
 
 def preprocess_roskams(dataset_metadata):
+    print("### Dataset: roskams")
     csv_path = "../sra_metadata/roskams_metadata.csv"
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)    
@@ -151,6 +154,7 @@ def preprocess_roskams(dataset_metadata):
     return df
 
 def preprocess_ngo(dataset_metadata):
+    print("### Dataset: ngo")
     csv_path = "../sra_metadata/ngo_metadata.csv"
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
@@ -164,6 +168,7 @@ def preprocess_ngo(dataset_metadata):
     return df
 
 def preprocess_ibarra(dataset_metadata):
+    print("### Dataset: ibarra")
     csv_path = "../sra_metadata/ibarra_metadata.csv"
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
@@ -203,6 +208,7 @@ def preprocess_ibarra(dataset_metadata):
     return df
 
 def preprocess_toden(dataset_metadata):
+    print("### Dataset: toden")
     csv_path = "../sra_metadata/toden_metadata.csv"
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
@@ -216,6 +222,7 @@ def preprocess_toden(dataset_metadata):
     return df
 
 def preprocess_chalasani(dataset_metadata):
+    print("### Dataset: chalasani")
     csv_path = "../sra_metadata/chalasani_metadata.csv"
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
@@ -231,6 +238,7 @@ def preprocess_chalasani(dataset_metadata):
     return df
 
 def preprocess_block(dataset_metadata):
+    print("### Dataset: block")
     csv_path = "../sra_metadata/block_metadata.csv"
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
@@ -242,7 +250,10 @@ def preprocess_block(dataset_metadata):
     )
     # Exclude non-plasma samples: Tissue, and Plasma-derived vesicles.
     df = df.rename(columns={'tissue':'biomaterial'})
+    n1 = len(df)
     df = df[df['biomaterial'] == 'Plasma']
+    n2 = len(df)
+    print(f"Exclude non-plasma samples: Tissue, and Plasma-derived vesicles. N = {n1 - n2}")
 
     # Add information from supplementary table 7.
     # Characteristics of HCC and CCA patients whose specimens were used. CH, NJ: Capital Health Cancer Center, NJ. UPEN, PA: Veterans hospital University of Pennysylvania, PA. Biochemed.
@@ -265,6 +276,7 @@ def preprocess_block(dataset_metadata):
     return df
 
 def preprocess_rozowsky(dataset_metadata):
+    print("### Dataset: block")
     # Warning: this metadata does not come from SRA 
     csv_path = "../sra_metadata/rozowsky_metadata.csv"
     df = pd.read_csv(csv_path)
@@ -280,6 +292,7 @@ def preprocess_rozowsky(dataset_metadata):
     return df
 
 def preprocess_tao(dataset_metadata):
+    print("### Dataset: tao")
     csv_path = "../sra_metadata/tao_metadata.csv"
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
@@ -287,8 +300,11 @@ def preprocess_tao(dataset_metadata):
     df["dataset_short_name"] = "tao"
     df["dataset_batch"] = "tao"
     # Select only the cfRNA-seq samples, filter out tissue and PBMC, and other assays like MeDIP-Seq, miRNA-Seq
+    n1 = len(df)
     df = df[(df['source_name'] == 'plasma') &
             (df['assay_type'] == 'RNA-Seq')]
+    n2 = len(df)
+    print(f"Exclude tissue and PBMC, and other assays like MeDIP-Seq, miRNA-Seq. N = {n1 - n2}")
 
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
 
@@ -297,6 +313,7 @@ def preprocess_tao(dataset_metadata):
     return df
 
 def preprocess_wei(dataset_metadata):
+    print("### Dataset: wei")
     csv_path = "../sra_metadata/wei_metadata.csv"
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
@@ -304,7 +321,10 @@ def preprocess_wei(dataset_metadata):
     df["dataset_short_name"] = "wei"
     df["dataset_batch"] = "wei"
     # Select only the plasma samples, remove the tissue "tissue" ones
+    n1 = len(df)
     df = df[(df['tissue'] == 'plasma')]
+    n2 = len(df)
+    print(f"Exclude tissue samples. N = {n1 - n2}")
 
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
 
@@ -313,6 +333,7 @@ def preprocess_wei(dataset_metadata):
     return df
 
 def preprocess_moufarrej(dataset_metadata):
+    print("### Dataset: moufarrej")
     # Note: we need to find a way to separate this dataset into the "sites" and into the cohorts. also decide if we want to merge by replicate
     csv_path = "../sra_metadata/moufarrej_metadata.csv"
     df = pd.read_csv(csv_path)
@@ -331,6 +352,7 @@ def preprocess_moufarrej(dataset_metadata):
     return df
 
 def preprocess_wang(dataset_metadata):
+    print("### Dataset: wang")
     csv_path = "../sra_metadata/wang_metadata.csv"
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
@@ -340,10 +362,13 @@ def preprocess_wang(dataset_metadata):
 
     # There are 3 samples that were processed with a different library prep kit.
     # Discard them.
+    n1 = len(df)
     index = df[df['sample_name'].str.startswith("NEB")].index
     df.loc[index, "library_prep_kit"] = "NEBNext Small RNA Library Prep Set"
     df.loc[index, "library_prep_kit_short"] = "NEBNext"
     df = df.loc[df.index.difference(index)]
+    n2 = len(df)
+    print(f"Exclude other library prep. N = {n1 - n2}")
 
     def parse_plasma_volume_wang(s):
         m = re.search(r'^Input\(([\d.]+?)\).*$', s, re.I)
@@ -358,6 +383,7 @@ def preprocess_wang(dataset_metadata):
     # protocol were tested. We discard the samples for which irrelevant modifications
     # were applied to the protocol, such as removing the ExoI enzyme or changing
     # the concentration of the RT primers.
+    n1 = len(df)
     df = (df.set_index('sample_name').drop([
         'USER(-)-1',
         'ExoI(-)-3',
@@ -384,6 +410,8 @@ def preprocess_wang(dataset_metadata):
         'USER(-)-3',
         'USER(-)-2',
     ]).reset_index())
+    n2 = len(df)
+    print(f"Exclude other library prep protocols. N = {n1 - n2}")
 
     df = merge_sample_with_dataset_metadata(
         df, dataset_metadata, keep_sample_cols=["library_prep_kit",
@@ -395,6 +423,7 @@ def preprocess_wang(dataset_metadata):
     return df
 
 def preprocess_giraldez(dataset_metadata):
+    print("### Dataset: giraldez")
     csv_path = "../sra_metadata/giraldez_metadata.csv"
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
@@ -402,10 +431,16 @@ def preprocess_giraldez(dataset_metadata):
     df["dataset_short_name"] = "giraldez"
     
     # Filter out the 2 synthetic samples
+    n1 = len(df)
     df = df[~df['source_name'].str.contains('Synthetic sRNA equimolar pool')]
+    n2 = len(df)
+    print(f"Exclude synthetic samples. N = {n1 - n2}")
     
     # Filter out protocol optimization samples
+    n1 = len(df)
     df = df[df["sra_study"] == "SRP183468"]
+    n2 = len(df)
+    print(f"Exclude protocol optimization samples. N = {n1 - n2}")
 
     # Standard library prep
     index = df[df['treatment'].isin(['none', 'Untreated'])].index
@@ -431,6 +466,7 @@ def preprocess_giraldez(dataset_metadata):
     return df
 
 def preprocess_sun(dataset_metadata):
+    print("### Dataset: sun")
     csv_path = "../sra_metadata/sun_metadata.csv"
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
@@ -440,7 +476,10 @@ def preprocess_sun(dataset_metadata):
     df["dataset_batch"] = np.where(df["biomaterial"] == "blood plasma", "sun_1", "sun_2")
 
     # Exclude cfDNA samples
+    n1 = len(df)
     df = df[df['assay_type'] == 'RNA-Seq']
+    n2 = len(df)
+    print(f"Exclude cfDNA samples. N = {n1 - n2}")
 
     # Assign sequencing batches based on the sequencing platform instrument
     # These also correspond to two separate datasets on GEO
@@ -483,6 +522,7 @@ def preprocess_sun(dataset_metadata):
                    right_on='GSM_id', how='left'))
 
     # Exclude the 15 protocol optimization samples
+    n1 = len(df)
     GSM_ids_to_exclude = """GSM6437012
     GSM6437013
     GSM6437014
@@ -499,6 +539,8 @@ def preprocess_sun(dataset_metadata):
     GSM6437025
     GSM6437026""".split()
     df = df[~df['sample_name'].isin(GSM_ids_to_exclude)]
+    n2 = len(df)
+    print(f"Exclude the 15 protocol optimization samples. N = {n1 - n2}")
 
     df = merge_sample_with_dataset_metadata(
         df, dataset_metadata, keep_sample_cols=["biomaterial", "rna_extraction_kit", "rna_extraction_kit_short_name"])
@@ -508,6 +550,7 @@ def preprocess_sun(dataset_metadata):
     return df
 
 def preprocess_decruyenaere(dataset_metadata):
+    print("### Dataset: decruyenaere")
     # Most relevant variables:
     col_names = [
         'sample_alias',
@@ -554,9 +597,10 @@ def preprocess_decruyenaere(dataset_metadata):
     df["dataset_batch"] = "decruyenaere"
 
     # Exclude FFPE samples
-    print(len(df))
+    n1 = len(df)
     df = df[df['organism_part'] != 'FFPE homo sapiens']
-    print(len(df))
+    n2 = len(df)
+    print(f"Exclude FFPE samples. N = {n1 - n2}")
 
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
 
@@ -565,6 +609,7 @@ def preprocess_decruyenaere(dataset_metadata):
     return df
 
 def preprocess_reggiardo(dataset_metadata):
+    print("### Dataset: reggiardo")
     csv_path = "../sra_metadata/reggiardo_metadata.csv"
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
@@ -573,7 +618,10 @@ def preprocess_reggiardo(dataset_metadata):
     df["dataset_batch"] = "reggiardo"
 
     # Select only Illumina samples and exclude ONT samples
+    n1 = len(df)
     df = df[(df['platform'] == 'ILLUMINA')]
+    n2 = len(df)
+    print(f"Exclude ONT samples. N = {n1 - n2}")
 
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
 
