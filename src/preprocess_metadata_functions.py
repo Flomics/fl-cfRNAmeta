@@ -161,21 +161,24 @@ def preprocess_chalasani():
     # Create a new column with the cleaned isolate ID
     df["isolate_base"] = df["isolate"].str.replace(r"-[A-Z]\d*$", "", regex=True)
 
-    # Drop duplicates based on isolate_base
-    df_unique = df.drop_duplicates(subset="isolate_base", keep="first").copy()
+    # Aggregate Bases by isolate
+    df_sum = df.groupby("isolate_base", as_index=False)["Bases"].sum()
 
-    # Overwrite Run column with isolate_base
-    df_unique["Run"] = df_unique["isolate_base"]
+    df_first = df.drop_duplicates(subset="isolate_base", keep="first").copy()
 
-    #df["plasma_tubes"] = "BD Vacutainer clotting tubes"
-    #df["rna_extraction_kit"]="Qiagen QIAamp Circulating Nucleic Acid Kit"
-    #df["rna_extraction_kit_short"]="Qiagen QIAamp"
-    #df["dnase"]="Turbo DNAse"
-    #df["library_prep_kit"]="Unspecified"
-    #df["library_prep_kit_short"]="Unspecified"
-    df_unique.to_csv("../sra_metadata/chalasani_metadata_preprocessed.csv", index=False)
+    df_merged = df_first.drop(columns="Bases").merge(df_sum, on="isolate_base", how="left")
 
-    return df_unique
+    # Set Run = isolate_base
+    df_merged["Run"] = df_merged["isolate_base"]
+
+    cols = df_merged.columns.tolist()
+    cols.insert(0, cols.pop(cols.index("Run")))
+    df_merged = df_merged[cols]
+
+    df_merged.drop(columns="isolate_base", inplace=True)
+
+    df_merged.to_csv("../sra_metadata/chalasani_metadata_preprocessed.csv", index=False)
+    return df_merged
 
 def preprocess_block():
     csv_path = "../sra_metadata/block_metadata.csv"
