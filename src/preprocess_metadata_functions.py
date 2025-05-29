@@ -216,10 +216,23 @@ def preprocess_toden(dataset_metadata):
     df["dataset_short_name"] = "toden"
     df["dataset_batch"] = "toden"
 
-    df = merge_sample_with_dataset_metadata(df, dataset_metadata)
+    df_first = df.drop_duplicates(subset="isolate", keep="first").copy()
 
-    df.to_csv("../sra_metadata/toden_metadata_preprocessed.csv", index=False)
-    return df
+    df_grouped = df.groupby("isolate")["run"].apply(lambda x: "|".join(sorted(x))).reset_index()
+    df_grouped.columns = ["isolate", "merged_runs"]
+
+    df_merged = df_first.merge(df_grouped, on="isolate", how="left")
+
+    df_merged["Run"] = "SRRISOLATE_" + df_merged["isolate"].astype(str)
+
+    cols = df_merged.columns.tolist()
+    cols.insert(0, cols.pop(cols.index("Run")))
+    df_merged = df_merged[cols]
+
+    df_merged = merge_sample_with_dataset_metadata(df_merged, dataset_metadata)
+
+    df_merged.to_csv("../sra_metadata/toden_metadata_preprocessed.csv", index=False)
+    return df_merged
 
 def preprocess_chalasani(dataset_metadata):
     print("### Dataset: chalasani")
