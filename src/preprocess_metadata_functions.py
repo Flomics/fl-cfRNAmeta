@@ -223,10 +223,10 @@ def preprocess_toden(dataset_metadata):
 
     df_merged = df_first.merge(df_grouped, on="isolate", how="left")
 
-    df_merged["Run"] = "SRRISOLATE_" + df_merged["isolate"].astype(str)
+    df_merged["run"] = "SRRISOLATE_" + df_merged["isolate"].astype(str)
 
     cols = df_merged.columns.tolist()
-    cols.insert(0, cols.pop(cols.index("Run")))
+    cols.insert(0, cols.pop(cols.index("run")))
     df_merged = df_merged[cols]
 
     df_merged = merge_sample_with_dataset_metadata(df_merged, dataset_metadata)
