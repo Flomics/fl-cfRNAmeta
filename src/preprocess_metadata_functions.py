@@ -227,8 +227,6 @@ def preprocess_chalasani(dataset_metadata):
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
 
-    print("Available columns after simplify_column_names():", df.columns.tolist())  # DEBUG LINE
-
     df["dataset_short_name"] = "chalasani"
     df["dataset_batch"] = "chalasani"
     #df["biomaterial"] = "blood serum"
@@ -245,11 +243,11 @@ def preprocess_chalasani(dataset_metadata):
 
     df_merged = df_first.drop(columns="bases").merge(df_sum, on="isolate_base", how="left")
 
-    # Set Run = isolate_base
-    df_merged["Run"] = df_merged["isolate_base"]
+    # Set Run = isolate_base, and prepend and X because the files out of fl-rnaseq add the X as well
+    df_merged["run"] = "X" + df_merged["isolate_base"].astype("str")
 
     cols = df_merged.columns.tolist()
-    cols.insert(0, cols.pop(cols.index("Run")))
+    cols.insert(0, cols.pop(cols.index("run")))
     df_merged = df_merged[cols]
 
     df_merged.drop(columns="isolate_base", inplace=True)
