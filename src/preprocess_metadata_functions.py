@@ -227,6 +227,8 @@ def preprocess_chalasani(dataset_metadata):
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
 
+    print("Available columns after simplify_column_names():", df.columns.tolist())  # DEBUG LINE
+
     df["dataset_short_name"] = "chalasani"
     df["dataset_batch"] = "chalasani"
     #df["biomaterial"] = "blood serum"
@@ -237,11 +239,11 @@ def preprocess_chalasani(dataset_metadata):
     df["isolate_base"] = df["isolate"].str.replace(r"-[A-Z]\d*$", "", regex=True)
 
     # Aggregate Bases by isolate
-    df_sum = df.groupby("isolate_base", as_index=False)["Bases"].sum()
+    df_sum = df.groupby("isolate_base", as_index=False)["bases"].sum()
 
     df_first = df.drop_duplicates(subset="isolate_base", keep="first").copy()
 
-    df_merged = df_first.drop(columns="Bases").merge(df_sum, on="isolate_base", how="left")
+    df_merged = df_first.drop(columns="bases").merge(df_sum, on="isolate_base", how="left")
 
     # Set Run = isolate_base
     df_merged["Run"] = df_merged["isolate_base"]
