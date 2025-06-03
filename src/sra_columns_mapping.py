@@ -53,6 +53,20 @@ def rename_columns_and_values(df):
     df = df.drop(['gender'], axis=1)
     print("df['sex'].unique():\n", df['sex'].unique())
 
+    # age
+    def parse_age(s):
+        if type(s) is not str:
+            return float(s)
+        else:
+            if s in ['not applicable', 'na', 'nan', 'missing', 'not collected']:
+                return np.nan
+            m = re.search(r'(\d+)\s*year', s, re.I)
+            if m:
+                return float(m.group(1))
+            return float(s)
+    df['age'] = df['age'].map(parse_age)
+    print("df['age'].unique():\n", df['age'].unique())
+
     # biomaterial, sample_type, source_name
     # The first column name in the mapping dic will be considered as the main column
     # The second, third, ... columns will be copied over in the first column.
