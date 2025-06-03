@@ -63,29 +63,30 @@ def rename_columns_and_values(df):
             'buffy coat':'buffy coat',
             'blood serum':'serum',
             'blood plasma':'plasma',
-            'Blood plasma':'plasma'},
+            'Blood plasma':'plasma',
+            },
         'sample_type': {
-            'Cell culture':'cell culture',
+            'cell culture':'cell culture',
             'plasma':'plasma',
             'serum':'serum',
-            'RNA':'tissue',
+            'rna':'tissue',
             'tissue':'tissue'},
         'source_name': {
             'plasma':'plasma',
             "liver cancer patient's plasma":'plasma',
             "healthy donor's plasma":'plasma',
-            'Human non-cancer donor plasma':'plasma',
-            'Human multiple myeloma plasma':'plasma',
-            'Human MGUS plasma':'plasma',
-            'Human liver cancer plasma':'plasma',
-            'Human liver cirrhosis plasma':'plasma',
-            'PBMC':'PBMC',
-            'Tumor':'tumor tissue',
-            'Normal adjacent tumor tissue':'normal adjacent tumor tissue',
-            'Synthetic sRNA equimolar pool (SynthRNA476v1)':np.nan,
+            'human non-cancer donor plasma':'plasma',
+            'human multiple myeloma plasma':'plasma',
+            'human mgus plasma':'plasma',
+            'human liver cancer plasma':'plasma',
+            'human liver cirrhosis plasma':'plasma',
+            'pbmc':'PBMC',
+            'tumor':'tumor tissue',
+            'normal adjacent tumor tissue':'normal adjacent tumor tissue',
+            'synthetic srna equimolar pool (synthrna476v1)':np.nan,
             'platelet-poor blood plasma':'plasma',
             'serum':'serum',
-            'Blood Plasma':'plasma'
+            'blood plasma':'plasma'
         }
     }
     # For the sun dataset, both the "biomaterial" and the "source_name" columns contain similar information about the biomaterial. We simply keep the main column and discard the "source_name" column.
@@ -93,9 +94,10 @@ def rename_columns_and_values(df):
     print(cols)
     main_col = cols[0]
     for col in cols:
-        df[col] = df[col].replace(mapping[col])
-    df[main_col] = df[main_col].fillna(df[cols[1]])
-    df = df.drop([cols[1]], axis=1)
+        df[col] = df[col].str.lower().replace(mapping[col])
+        print(df[col])
+    df[main_col] = df[main_col].fillna(df[cols[1]]).fillna(df[cols[2]])
+    df = df.drop(cols[1:], axis=1)
     print(f"df['{main_col}'].unique():\n", df[main_col].unique())
 
     return df
