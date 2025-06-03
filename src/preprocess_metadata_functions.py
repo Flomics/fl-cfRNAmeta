@@ -216,10 +216,23 @@ def preprocess_toden(dataset_metadata):
     df["dataset_short_name"] = "toden"
     df["dataset_batch"] = "toden"
 
-    df = merge_sample_with_dataset_metadata(df, dataset_metadata)
+    df_first = df.drop_duplicates(subset="isolate", keep="first").copy()
 
-    df.to_csv("../sra_metadata/toden_metadata_preprocessed.csv", index=False)
-    return df
+    df_grouped = df.groupby("isolate")["run"].apply(lambda x: "|".join(sorted(x))).reset_index()
+    df_grouped.columns = ["isolate", "merged_runs"]
+
+    df_merged = df_first.merge(df_grouped, on="isolate", how="left")
+
+    df_merged["run"] = "SRRISOLATE_" + df_merged["isolate"].astype(str)
+
+    cols = df_merged.columns.tolist()
+    cols.insert(0, cols.pop(cols.index("run")))
+    df_merged = df_merged[cols]
+
+    df_merged = merge_sample_with_dataset_metadata(df_merged, dataset_metadata)
+
+    df_merged.to_csv("../sra_metadata/toden_metadata_preprocessed.csv", index=False)
+    return df_merged
 
 def preprocess_chalasani(dataset_metadata):
     print("### Dataset: chalasani")
@@ -229,13 +242,32 @@ def preprocess_chalasani(dataset_metadata):
 
     df["dataset_short_name"] = "chalasani"
     df["dataset_batch"] = "chalasani"
-    # TODO parse the donor id from the sample name
-    # TODO define sample id for the merged fastq file processed by fl-rnaseq.
 
-    df = merge_sample_with_dataset_metadata(df, dataset_metadata)
+    # Create a new column with the cleaned isolate ID
+    df["isolate_base"] = df["isolate"].str.replace(r"-[A-Z]\d*$", "", regex=True)
 
-    df.to_csv("../sra_metadata/chalasani_metadata_preprocessed.csv", index=False)
-    return df
+    # Aggregate Bases by isolate
+    df_sum = df.groupby("isolate_base", as_index=False)["bases"].sum()
+
+    df_concat_run = df.groupby("isolate_base")["run"].apply(lambda x: "|".join(sorted(x))).reset_index()
+    df_concat_run.columns = ["isolate_base", "merged_runs"]
+
+    df_first = df.drop_duplicates(subset="isolate_base", keep="first").copy()
+    df_merged = (df_first.drop(columns=["bases", "run"])
+                .merge(df_sum, on="isolate_base", how="left")
+                .merge(df_concat_run, on="isolate_base", how="left"))
+
+    # Set Run = isolate_base, and prepend an "X" to match the output files of fl-rnaseq.
+    df_merged["run"] = "X" + df_merged["isolate_base"].astype("str")
+
+    cols = df_merged.columns.tolist()
+    cols.insert(0, cols.pop(cols.index("run")))
+    df_merged = df_merged[cols]
+    df_merged = df_merged.drop(columns="isolate_base")
+
+    df_merged.to_csv("../sra_metadata/chalasani_metadata_preprocessed.csv", index=False)
+    return df_merged
+
 
 def preprocess_block(dataset_metadata):
     print("### Dataset: block")
