@@ -239,9 +239,13 @@ def preprocess_chalasani(dataset_metadata):
     # Aggregate Bases by isolate
     df_sum = df.groupby("isolate_base", as_index=False)["bases"].sum()
 
-    df_first = df.drop_duplicates(subset="isolate_base", keep="first").copy()
+    df_concat_run = df.groupby("isolate_base")["run"].apply(lambda x: "|".join(sorted(x))).reset_index()
+    df_concat_run.columns = ["isolate_base", "merged_runs"]
 
-    df_merged = df_first.drop(columns="bases").merge(df_sum, on="isolate_base", how="left")
+    df_first = df.drop_duplicates(subset="isolate_base", keep="first").copy()
+    df_merged = (df_first.drop(columns=["bases", "run"])
+                .merge(df_sum, on="isolate_base", how="left")
+                .merge(df_concat_run, on="isolate_base", how="left"))
 
     # Set Run = isolate_base, and prepend and X because the files out of fl-rnaseq add the X as well
     df_merged["run"] = "X" + df_merged["isolate_base"].astype("str")
