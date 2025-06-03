@@ -229,9 +229,6 @@ def preprocess_chalasani(dataset_metadata):
 
     df["dataset_short_name"] = "chalasani"
     df["dataset_batch"] = "chalasani"
-    #df["biomaterial"] = "blood serum"
-    df["nucleic_acid_type"] = "total RNA"
-    df["library_selection"] = "whole-exome capture"
 
     # Create a new column with the cleaned isolate ID
     df["isolate_base"] = df["isolate"].str.replace(r"-[A-Z]\d*$", "", regex=True)
@@ -247,14 +244,13 @@ def preprocess_chalasani(dataset_metadata):
                 .merge(df_sum, on="isolate_base", how="left")
                 .merge(df_concat_run, on="isolate_base", how="left"))
 
-    # Set Run = isolate_base, and prepend and X because the files out of fl-rnaseq add the X as well
+    # Set Run = isolate_base, and prepend an "X" to match the output files of fl-rnaseq.
     df_merged["run"] = "X" + df_merged["isolate_base"].astype("str")
 
     cols = df_merged.columns.tolist()
     cols.insert(0, cols.pop(cols.index("run")))
     df_merged = df_merged[cols]
-
-    df_merged.drop(columns="isolate_base", inplace=True)
+    df_merged = df_merged.drop(columns="isolate_base")
 
     df_merged.to_csv("../sra_metadata/chalasani_metadata_preprocessed.csv", index=False)
     return df_merged
