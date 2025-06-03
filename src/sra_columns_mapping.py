@@ -91,13 +91,14 @@ def rename_columns_and_values(df):
     }
     # For the sun dataset, both the "biomaterial" and the "source_name" columns contain similar information about the biomaterial. We simply keep the main column and discard the "source_name" column.
     cols = list(mapping.keys())
-    print(cols)
     main_col = cols[0]
     for col in cols:
         df[col] = df[col].str.lower().replace(mapping[col])
-        print(df[col])
     df[main_col] = df[main_col].fillna(df[cols[1]]).fillna(df[cols[2]])
     df = df.drop(cols[1:], axis=1)
     print(f"df['{main_col}'].unique():\n", df[main_col].unique())
+
+    # Drop empty columns
+    df = df.dropna(how='all', axis=1)
 
     return df
