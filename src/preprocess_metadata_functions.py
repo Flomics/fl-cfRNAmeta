@@ -634,7 +634,12 @@ def preprocess_decruyenaere(dataset_metadata):
     n2 = len(df)
     print(f"Exclude FFPE samples. N = {n1 - n2}")
 
-    df = merge_sample_with_dataset_metadata(df, dataset_metadata)
+    # All remaining samples are blood plasma, as described in the column "organism_part"
+    df['biomaterial'] = df['organism_part'].replace({'blood plasma homo sapiens':'plasma'})
+    df = df.drop(columns=['organism_part'])
+
+    df = merge_sample_with_dataset_metadata(df, dataset_metadata,
+                                            keep_sample_cols=["biomaterial"])
 
     df.to_csv("../sra_metadata/decruyenaere_metadata_preprocessed.csv", index=False)
 
