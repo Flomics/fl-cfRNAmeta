@@ -1,6 +1,33 @@
 import numpy as np
 import re
 
+
+# List of essential columns that will be used in the meta-analysis
+essential_columns = """
+Run
+Assay Type
+AvgSpotLen
+Organism
+Sample Name
+Replicate_number
+Age
+Disease
+Instrument
+Sex
+Biomaterial
+sample_type
+source_name
+GEO_Accession (exp)
+library_prep_kit
+library_prep_kit_short
+library_selection
+RNA extraction kit
+RNA extraction kit (short name)
+Library prep kit
+Library prep kit (short name)
+Sequencing_batch
+""".split('\n')
+
 def rename_columns_and_values(df):
     # disease, disease_state, subject_status
     mapping = {
