@@ -33,7 +33,6 @@ dataset_column_list = [
     'Library prep kit',
     'Library prep kit (short name)',
     'cDNA library type',
-    'read_length',
     ]
 dataset_column_list = simplify_column_names(dataset_column_list)
 
@@ -44,12 +43,11 @@ def merge_sample_with_dataset_metadata(df, dataset_metadata, keep_sample_cols=[]
     df.columns = simplify_column_names(df.columns)
     cols_common = (set(df.columns).intersection(set(dataset_column_list))
                    - {'dataset_short_name'}
-                   - set(keep_sample_cols)
-                   - {'read_length'})
+                   - set(keep_sample_cols))
     if len(cols_common) > 0:
         raise RuntimeError(f"The following columns are present in the sample-level metadata dataframe and also in the dataset-level dataframe: {cols_common}")
     df = df.merge(
-        dataset_metadata[list(set(dataset_column_list) - set(keep_sample_cols) - {'read_length'})],on='dataset_short_name', how='left')
+        dataset_metadata[list(set(dataset_column_list) - set(keep_sample_cols))],on='dataset_short_name', how='left')
     return df
 
 
