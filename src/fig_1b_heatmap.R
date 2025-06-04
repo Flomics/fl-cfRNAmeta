@@ -28,7 +28,12 @@ n_values <- apply(metadata_matrix, 1, function(x) length(unique(x)))
 
 get_palette_with_na <- function(varname, base) {
   values <- unique(as.character(metadata_matrix[varname, ]))
-  values <- sort(values)
+  if (varname == "read_length") {
+    desired_order <- c("1x50", "1x75", "2x75", "2x100", "2x150", "NA")
+    values <- intersect(desired_order, c(values, "NA"))  # preserve actual values only, in desired order
+  } else {
+    values <- sort(values)
+  }
   
   real_values <- values[values != "NA"]
   n_real <- length(real_values)
@@ -61,7 +66,7 @@ palette_list <- list(
   library_prep_kit_short_name = get_palette_with_na("library_prep_kit_short_name", "Dark2"),
   dnase = get_palette_with_na("dnase", "Accent"),
   cdna_library_type  = get_palette_with_na("cdna_library_type", "Set3"),
-  read_length = get_palette_with_na("read_length", "Spectral")
+  read_length = get_palette_with_na("read_length", "Greens")
 )
 
 
@@ -143,7 +148,15 @@ heatmap_list <- lapply(rownames(metadata_matrix), function(var) {
     show_column_names = TRUE,
     column_names_rot = 45,
     row_names_side = "left",
-    height = unit(1, "cm")
+    height = unit(1, "cm"),
+    cell_fun = function(j, i, x, y, width, height, fill) {
+      grid.rect(
+        x = x, y = y,
+        width = width, height = height,
+        gp = gpar(fill = fill, col = "white", lwd = 0.5)
+      )
+    }
+    
   )
 }) %>% discard(is.null)
 
