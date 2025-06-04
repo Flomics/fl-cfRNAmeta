@@ -59,7 +59,7 @@ def preprocess_chen(dataset_metadata):
 
     df["dataset_short_name"] = "chen"
     df["dataset_batch"] = "chen"
-    df["read_length"] = "2x75"
+    df["read_length"] = "2x150"
     # Exclude the two E. coli samples and the brain tissue sample
     df = df[~(df['sample_name'].isin([
         'ET_L2',
