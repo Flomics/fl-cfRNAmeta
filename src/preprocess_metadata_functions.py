@@ -102,7 +102,7 @@ def preprocess_zhu(dataset_metadata):
 
     df["dataset_short_name"] = "zhu"
     df["dataset_batch"] = "zhu"
-    df["read_length"] = "2x75"
+    df["read_length"] = "2x150"
 
 
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
