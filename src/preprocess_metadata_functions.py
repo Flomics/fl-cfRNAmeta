@@ -211,6 +211,10 @@ def preprocess_ibarra(dataset_metadata):
         if m:
             return pd.Series({"phenotype":"Control",
                             "collection_center":"San Diego Blood Bank"})
+        m = re.search(r'Diverticulitis', s, re.I)
+        if m:
+            return pd.Series({"phenotype":"Diverticulitis",
+                            "collection_center":np.nan})
         return pd.Series(dtype='object')
 
     df = df.join(df['sample_name'].apply(parse_phenotype))
