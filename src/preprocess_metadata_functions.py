@@ -355,7 +355,14 @@ def preprocess_tao(dataset_metadata):
             (df['assay_type'] == 'RNA-Seq')]
     n2 = len(df)
     print(f"Exclude tissue and PBMC, and other assays like MeDIP-Seq, miRNA-Seq. N = {n1 - n2}")
-
+    
+    # **Guessing** the phenotype from the GEO sample names
+    # Warning: this information is *not* reliable.
+    pheno_data_file = "../sra_metadata/tao_phenotype_geo_mapping.tsv"
+    pheno_data = pd.read_csv(pheno_data_file, sep = "\t")
+    pheno_data["phenotype"] = pheno_data['geo_string'].str.split('-').str[0]
+    
+    df = df.merge(pheno_data, on='sample_name', how='left')
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
 
     df.to_csv("../sra_metadata/tao_metadata_preprocessed.csv", index=False)
