@@ -102,13 +102,11 @@ def rename_columns_and_values(df):
     df = df.drop([cols[1]], axis=1)
     print(f"df['{main_col}'].unique():\n", df[main_col].unique())
 
-    # Improve compatibility with snakeDA (reserved vars: ['sequencing_batch', 'sample_name'])
-    # TODO: Work in progress
+    # Improve compatibility with snakeDA (reserved vars: ['sample_id', 'sample_name'])
     df = df.rename(
-        columns={'sequencing_batch':'sequencing_batch_other', 'sample_name':'sample_name_other', 'sample_id':'sample_id_other'}
+        columns={'sample_name':'sample_name_other', 'sample_id':'sample_id_other'}
     )
-    df['sample_name']      = df['run']
-    df['sequencing_batch'] = df['dataset_batch']
+    df['sample_name'] = df['run']
     # add 'status' column
     def map_status(x):
         if x == 'Control':
