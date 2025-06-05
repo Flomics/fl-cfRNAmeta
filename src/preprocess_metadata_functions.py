@@ -400,6 +400,9 @@ def preprocess_moufarrej(dataset_metadata):
     # Dataset_metadata table says EDTA/Streck ?
     #df["plasma_tubes"] = "EDTA"
 
+    # Cohorts is composed of preeclampsia and healthy control (normotensive)
+    df.loc[df['disease'].isnull(), 'phenotype'] = 'Control, pregnant women normotensive'
+
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
 
     df.to_csv("../sra_metadata/moufarrej_metadata_preprocessed.csv", index=False)
