@@ -379,6 +379,8 @@ def preprocess_wei(dataset_metadata):
     n2 = len(df)
     print(f"Exclude tissue samples. N = {n1 - n2}")
 
+    df['phenotype'] = "Pancreatic cancer"
+
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
 
     df.to_csv("../sra_metadata/wei_metadata_preprocessed.csv", index=False)
