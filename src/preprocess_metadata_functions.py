@@ -243,6 +243,12 @@ def preprocess_toden(dataset_metadata):
     cols.insert(0, cols.pop(cols.index("run")))
     df_merged = df_merged[cols]
 
+    df['phenotype'] = df['ad_status'].replace({
+        'AD':"Alzheimer's disease",
+        'NCI':'Control',
+        'None':np.nan
+    })
+
     df_merged = merge_sample_with_dataset_metadata(df_merged, dataset_metadata)
 
     df_merged.to_csv("../sra_metadata/toden_metadata_preprocessed.csv", index=False)
