@@ -471,6 +471,10 @@ def preprocess_wang(dataset_metadata):
     n2 = len(df)
     print(f"Exclude other library prep protocols. N = {n1 - n2}")
 
+    # All samples from SRA are from the technology optimizations experiment,
+    # in which all samples are healthy.
+    df['phenotype'] = "Healthy"
+
     df = merge_sample_with_dataset_metadata(
         df, dataset_metadata, keep_sample_cols=["library_prep_kit",
                                                 "library_prep_kit_short",
