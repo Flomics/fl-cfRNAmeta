@@ -1,36 +1,15 @@
 import numpy as np
-import re
-
-
-# List of essential columns that will be used in the meta-analysis
-essential_columns = """
-Run
-Assay Type
-AvgSpotLen
-Organism
-Sample Name
-Replicate_number
-Age
-Disease
-Instrument
-Sex
-Biomaterial
-sample_type
-source_name
-GEO_Accession (exp)
-library_prep_kit
-library_prep_kit_short
-library_selection
-RNA extraction kit
-RNA extraction kit (short name)
-Library prep kit
-Library prep kit (short name)
-Sequencing_batch
-""".split('\n')
 
 def rename_columns_and_values(df):
-    # disease, disease_state, subject_status
+    # phenotype, disease, disease_state, subject_status
     mapping = {
+        'Multiple myeloma':'Multiple myeloma',
+        'G-CSF-treated healthy donors':'G-CSF-treated healthy donors',
+        'Chronic kidney failure EPO-treated':'Chronic kidney failure EPO-treated',
+        'Acute Myeloid Leukemia':'Acute Myeloid Leukemia',
+        'DLBCL':'Diffuse large B-cell lymphoma',
+        'control':'Control',
+        'PMBCL':'Primary mediastinal B-cell lymphoma',
         'Esophagus Cancer patient':'Esophagus cancer',
         'Lung Cancer patient':'Lung cancer',
         'Liver Cancer patient':'Liver cancer',
@@ -53,10 +32,10 @@ def rename_columns_and_values(df):
         'pancreatic cancer patient':'Pancreatic cancer',
         'normal healthy donor':'Control'
     }
-    df['disease'] = df['disease'].fillna(df['disease_state']).fillna(df['subject_status'])
-    df = df.drop(['disease_state', 'subject_status'], axis=1)
-    df['disease'] = df['disease'].replace(mapping)
-    print("df['disease'].unique():\n", df['disease'].unique())
+    df['phenotype'] = df['phenotype'].fillna(df['disease']).fillna(df['disease_state']).fillna(df['subject_status'])
+    df = df.drop(['disease', 'disease_state', 'subject_status'], axis=1)
+    df['phenotype'] = df['phenotype'].replace(mapping)
+    print("df['phenotype'].unique():\n", df['phenotype'].unique())
 
     # Instrument
     mapping = {
