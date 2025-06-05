@@ -116,13 +116,23 @@ def preprocess_roskams(dataset_metadata):
     df["dataset_short_name"] = "roskams"
     df["dataset_batch"] = np.where(df["cohort"] == "pilot", "roskams_1", "roskams_2")
 
+    # Phenotype is described in the source_name column
+    df['source_name'].unique()
+    df['phenotype'] = df['source_name'].replace({
+        'Human non-cancer donor plasma':'Control',
+        'Human multiple myeloma plasma':'Multiple myeloma',
+        'Human MGUS plasma':'Pre-cancerous condition: MGUS',
+        'Human liver cancer plasma':'Liver cancer',
+        'Human liver cirrhosis plasma':'Pre-cancerous condition: cirrhosis',
+    })
+
     # The supplementary table 2 contains sample-level information about the RNA
     # extraction and library preparation batches
     supp_table = pd.read_csv("../sra_metadata/roskams_supp_table_2.tsv", sep='\t')
     supp_table['RNA extraction batch'] = (supp_table['RNA Extraction']
-                                          .str.extract(r'batch\s*(\d+)'))
+                                        .str.extract(r'batch\s*(\d+)'))
     supp_table['Library preparation batch'] = (supp_table['Library Preparation']
-                                               .str.extract(r'batch\s*(\d+)'))
+                                            .str.extract(r'batch\s*(\d+)'))
     # Parse the GEO series matrix file, which contains the mapping between
     # the GEO/GSM ids and the sample names in the study (PP02, etc)
     with open("../sra_metadata/roskams_GSE182824_series_matrix.txt") as f:
@@ -139,11 +149,11 @@ def preprocess_roskams(dataset_metadata):
     if len(sample_names) != len(GSM_ids):
         raise RuntimeError("Parsing the series matrix file, found different number of sample ids and sample names.")
     sample_id_mapping = pd.DataFrame(np.transpose([GSM_ids, sample_names]),
-                                     columns=['GSM_id', 'Sample_id'])
+                                    columns=['GSM_id', 'Sample_id'])
     # Merge the metadata table with the supp table using the sample id mapping
     df = (df
         .merge(sample_id_mapping, left_on='geo_accession_exp',
-               right_on='GSM_id', how='outer')
+            right_on='GSM_id', how='outer')
         .merge(supp_table[['SeqID', 'Library preparation batch', 'RNA extraction batch']]
                 .rename(columns={'SeqID':'Sample_id'}), on='Sample_id', how='outer')
     )
@@ -197,6 +207,10 @@ def preprocess_ibarra(dataset_metadata):
         if m:
             return pd.Series({"phenotype":"G-CSF-treated healthy donors",
                             "collection_center":"Scripps"})
+        m = re.search(r'SDBB', s)
+        if m:
+            return pd.Series({"phenotype":"Control",
+                            "collection_center":"San Diego Blood Bank"})
         return pd.Series(dtype='object')
 
     df = df.join(df['sample_name'].apply(parse_phenotype))
@@ -228,6 +242,12 @@ def preprocess_toden(dataset_metadata):
     cols = df_merged.columns.tolist()
     cols.insert(0, cols.pop(cols.index("run")))
     df_merged = df_merged[cols]
+
+    df['phenotype'] = df['ad_status'].replace({
+        'AD':"Alzheimer's disease",
+        'NCI':'Control',
+        'None':np.nan
+    })
 
     df_merged = merge_sample_with_dataset_metadata(df_merged, dataset_metadata)
 
@@ -316,6 +336,7 @@ def preprocess_rozowsky(dataset_metadata):
 
     df["dataset_short_name"] = "rozowsky"
     df["dataset_batch"] = "rozowsky"
+    df['phenotype'] = 'Healthy'
     
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
 
