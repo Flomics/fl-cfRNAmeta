@@ -518,6 +518,9 @@ def preprocess_giraldez(dataset_metadata):
     df.loc[index, "assay_name"] = "phospho-RNA-seq"
     df.loc[index, "dataset_batch"] = "giraldez_2"
 
+    # All remaining samples are from 5 healthy donors
+    df.loc[df['sra_study'] == 'SRP183467', 'phenotype'] = "Healthy"
+
     df = merge_sample_with_dataset_metadata(
         df, dataset_metadata, keep_sample_cols=["library_prep_kit",
                                                 "library_prep_kit_short",
