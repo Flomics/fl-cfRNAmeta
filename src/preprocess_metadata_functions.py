@@ -172,6 +172,11 @@ def preprocess_ngo(dataset_metadata):
     df["dataset_short_name"] = "ngo"
     df["dataset_batch"] = "ngo"
 
+    df['phenotype'] = df['isolate'].replace({
+        "Pregnant adult female who delivered full-term":"Healthy pregnant women",
+        "Pregnant adult female who delivered spontaneously preterm":"Healthy pregnant women who delivered preterm"
+    })
+    
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
 
     df.to_csv("../sra_metadata/ngo_metadata_preprocessed.csv", index=False)
@@ -405,7 +410,7 @@ def preprocess_moufarrej(dataset_metadata):
     #df["plasma_tubes"] = "EDTA"
 
     # Cohorts is composed of preeclampsia and healthy control (normotensive)
-    df.loc[df['disease'].isnull(), 'phenotype'] = 'Control, pregnant women normotensive'
+    df.loc[df['disease'].isnull(), 'phenotype'] = 'Healthy pregnant women'
 
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
 
