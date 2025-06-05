@@ -336,6 +336,7 @@ def preprocess_rozowsky(dataset_metadata):
 
     df["dataset_short_name"] = "rozowsky"
     df["dataset_batch"] = "rozowsky"
+    df['phenotype'] = 'Healthy'
     
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
 
