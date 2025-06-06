@@ -9,7 +9,7 @@ def rename_columns_and_values(df):
         'Chronic kidney failure EPO-treated':'Chronic kidney failure EPO-treated',
         'Acute Myeloid Leukemia':'Acute Myeloid Leukemia',
         'DLBCL':'Diffuse large B-cell lymphoma',
-        'control':'Control',
+        'control':'Healthy',
         'PMBCL':'Primary mediastinal B-cell lymphoma',
         'Esophagus Cancer patient':'Esophagus cancer',
         'Lung Cancer patient':'Lung cancer',
@@ -17,23 +17,23 @@ def rename_columns_and_values(df):
         'Stomach Cancer patient':'Stomach cancer',
         'Colorectal Cancer patient':'Colorectal cancer',
         'colorectal cancer':'Colorectal cancer',
-        'Healthy donor':'Control',
+        'Healthy donor':'Healthy',
         'NASH':'Nonalcoholic steatohepatitis',
         'NAFLD':'Nonalcoholic fatty liver disease',
-        'Healthy':'Control',
-        'Control':'Control',
+        'Healthy':'Healthy',
+        'Control':'Healthy',
         'Hepatoma':'Liver cancer',
         'Cirrhosis':'Cirrhosis',
         'pre-eclampsia':'Pre-eclampsia',
         'severe pre-eclampsia':'Pre-eclampsia',
         'liver cancer patient':'Liver cancer',
-        'healthy donor':'Control',
-        'normal':'Control',
+        'healthy donor':'Healthy',
+        'normal':'Healthy',
         'HCC':'Liver cancer',
         'CHB':'Chronic hepatitis B',
         'pancreatic cancer patient':'Pancreatic cancer',
         "Pancreatic cancer":"Pancreatic cancer",
-        'normal healthy donor':'Control'
+        'normal healthy donor':'Healthy'
     }
     df['phenotype'] = df['phenotype'].fillna(df['disease']).fillna(df['disease_state']).fillna(df['subject_status'])
     df = df.drop(['disease', 'disease_state', 'subject_status'], axis=1)
