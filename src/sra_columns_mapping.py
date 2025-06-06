@@ -31,6 +31,7 @@ def rename_columns_and_values(df):
         'HCC':'Liver cancer',
         'CHB':'Chronic hepatitis B',
         'pancreatic cancer patient':'Pancreatic cancer',
+        "Pancreatic cancer":"Pancreatic cancer",
         'normal healthy donor':'Control'
     }
     df['phenotype'] = df['phenotype'].fillna(df['disease']).fillna(df['disease_state']).fillna(df['subject_status'])
