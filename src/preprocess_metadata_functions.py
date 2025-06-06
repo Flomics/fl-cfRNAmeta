@@ -119,7 +119,7 @@ def preprocess_roskams(dataset_metadata):
     # Phenotype is described in the source_name column
     df['source_name'].unique()
     df['phenotype'] = df['source_name'].replace({
-        'Human non-cancer donor plasma':'Control',
+        'Human non-cancer donor plasma':'Healthy',
         'Human multiple myeloma plasma':'Multiple myeloma',
         'Human MGUS plasma':'Pre-cancerous condition: MGUS',
         'Human liver cancer plasma':'Liver cancer',
@@ -214,7 +214,7 @@ def preprocess_ibarra(dataset_metadata):
                             "collection_center":"Scripps"})
         m = re.search(r'SDBB', s)
         if m:
-            return pd.Series({"phenotype":"Control",
+            return pd.Series({"phenotype":"Healthy",
                             "collection_center":"San Diego Blood Bank"})
         m = re.search(r'Diverticulitis', s, re.I)
         if m:
@@ -254,7 +254,7 @@ def preprocess_toden(dataset_metadata):
 
     df['phenotype'] = df['ad_status'].replace({
         'AD':"Alzheimer's disease",
-        'NCI':'Control',
+        'NCI':'Healthy',
         'None':np.nan
     })
 
