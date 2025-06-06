@@ -59,6 +59,7 @@ def preprocess_chen(dataset_metadata):
 
     df["dataset_short_name"] = "chen"
     df["dataset_batch"] = "chen"
+    df["read_length"] = "2x150"
     # Exclude the two E. coli samples and the brain tissue sample
     df = df[~(df['sample_name'].isin([
         'ET_L2',
@@ -101,6 +102,8 @@ def preprocess_zhu(dataset_metadata):
 
     df["dataset_short_name"] = "zhu"
     df["dataset_batch"] = "zhu"
+    df["read_length"] = "2x150"
+
 
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
 
@@ -114,7 +117,8 @@ def preprocess_roskams(dataset_metadata):
     df.columns = simplify_column_names(df.columns)    
 
     df["dataset_short_name"] = "roskams"
-    df["dataset_batch"] = np.where(df["cohort"] == "pilot", "roskams_1", "roskams_2")
+    df["dataset_batch"] = np.where(df["cohort"] == "pilot", "roskams_pilot", "roskams_validation")
+    df["read_length"] = np.where(df["dataset_batch"] == "roskams_pilot", "2x100", "2x150")
 
     # Phenotype is described in the source_name column
     df['source_name'].unique()
@@ -171,6 +175,8 @@ def preprocess_ngo(dataset_metadata):
 
     df["dataset_short_name"] = "ngo"
     df["dataset_batch"] = "ngo"
+    df["read_length"] = "2x75"
+
 
     df['phenotype'] = df['isolate'].replace({
         "Pregnant adult female who delivered full-term":"Healthy pregnant women",
@@ -192,6 +198,7 @@ def preprocess_ibarra(dataset_metadata):
     df["biomaterial"] = df["tissue"].str.lower()
     df["plasma_tubes"] = df["biomaterial"].apply(lambda x: "EDTA" if x == "plasma" else "BD Vacutainer clotting tubes" if x == "serum" else "")
     df["dataset_batch"] = df["biomaterial"].apply(lambda x: "ibarra_plasma" if x == "plasma" else "ibarra_serum" if x == "serum" else "ibarra_buffy_coat" if x == "buffy coat" else "")
+    df["read_length"] = "2x75"
 
     # **Guessing** the phenotype from the sample name
     # Warning: this information is *not* reliable.
@@ -238,6 +245,8 @@ def preprocess_toden(dataset_metadata):
 
     df["dataset_short_name"] = "toden"
     df["dataset_batch"] = "toden"
+    df["read_length"] = "2x75"
+
 
     df_first = df.drop_duplicates(subset="isolate", keep="first").copy()
 
@@ -271,6 +280,8 @@ def preprocess_chalasani(dataset_metadata):
 
     df["dataset_short_name"] = "chalasani"
     df["dataset_batch"] = "chalasani"
+    df["read_length"] = "2x75"
+
 
     # Create a new column with the cleaned isolate ID
     df["isolate_base"] = df["isolate"].str.replace(r"-[A-Z]\d*$", "", regex=True)
@@ -294,6 +305,8 @@ def preprocess_chalasani(dataset_metadata):
     df_merged = df_merged[cols]
     df_merged = df_merged.drop(columns="isolate_base")
 
+    df_merged = merge_sample_with_dataset_metadata(df_merged, dataset_metadata)
+
     df_merged.to_csv("../sra_metadata/chalasani_metadata_preprocessed.csv", index=False)
     return df_merged
 
@@ -307,8 +320,10 @@ def preprocess_block(dataset_metadata):
     df["dataset_short_name"] = "block"
     df["dataset_batch"] = np.where(
         abs(df["avgspotlen"] - 150) < abs(df["avgspotlen"] - 300),
-        "block_1", "block_2"
+        "block_150bp", "block_300bp"
     )
+    df["read_length"] = np.where(df["dataset_batch"] == "block_150bp", "2x75", "2x150")
+
     # Exclude non-plasma samples: Tissue, and Plasma-derived vesicles.
     df = df.rename(columns={'tissue':'biomaterial'})
     n1 = len(df)
@@ -346,7 +361,8 @@ def preprocess_rozowsky(dataset_metadata):
     df["dataset_short_name"] = "rozowsky"
     df["dataset_batch"] = "rozowsky"
     df['phenotype'] = 'Healthy'
-    
+    df["read_length"] = "2x100"    
+
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
 
     df.to_csv("../sra_metadata/rozowsky_metadata_preprocessed.csv", index=False)
@@ -361,6 +377,8 @@ def preprocess_tao(dataset_metadata):
 
     df["dataset_short_name"] = "tao"
     df["dataset_batch"] = "tao"
+    df["read_length"] = "2x150"    
+
     # Select only the cfRNA-seq samples, filter out tissue and PBMC, and other assays like MeDIP-Seq, miRNA-Seq
     n1 = len(df)
     df = df[(df['source_name'] == 'plasma') &
@@ -415,6 +433,8 @@ def preprocess_wei(dataset_metadata):
 
     df["dataset_short_name"] = "wei"
     df["dataset_batch"] = "wei"
+    df["read_length"] = "2x150"    
+
     # Select only the plasma samples, remove the tissue "tissue" ones
     n1 = len(df)
     df = df[(df['tissue'] == 'plasma')]
@@ -438,6 +458,8 @@ def preprocess_moufarrej(dataset_metadata):
 
     df["dataset_short_name"] = "moufarrej"
     df["dataset_batch"] = "moufarrej"
+    df["read_length"] = "2x75"    
+
 
     # Dataset_metadata table says EDTA/Streck ?
     #df["plasma_tubes"] = "EDTA"
@@ -459,6 +481,8 @@ def preprocess_wang(dataset_metadata):
 
     df["dataset_short_name"] = "wang"
     df["dataset_batch"] = "wang"
+    df["read_length"] = "2x150"    
+
 
     # There are 3 samples that were processed with a different library prep kit.
     # Discard them.
@@ -551,14 +575,16 @@ def preprocess_giraldez(dataset_metadata):
     df.loc[index, "library_prep_kit"] = "Illumina TruSeq small RNA"
     df.loc[index, "library_prep_kit_short"] = "Illumina TruSeq small RNA"
     df.loc[index, "assay_name"] = "RNA-seq"
-    df.loc[index, "dataset_batch"] = "giraldez_1"
+    df.loc[index, "dataset_batch"] = "giraldez_standard"
 
     # phospho-RNA-seq library prep
     index = df[df['treatment'].isin(['T4PNK', 'PNK'])].index
     df.loc[index, "library_prep_kit"] = "polynucleotide kinase (PNK) treated, Illumina TruSeq small RNA"
     df.loc[index, "library_prep_kit_short"] = "PNK-treated Illumina TruSeq small RNA"
     df.loc[index, "assay_name"] = "phospho-RNA-seq"
-    df.loc[index, "dataset_batch"] = "giraldez_2"
+    df.loc[index, "dataset_batch"] = "giraldez_phospho-rna-seq"
+
+    df["read_length"] = np.where(df["dataset_batch"] == "giraldez_standard", "1x50", "1x75")
 
     # All remaining samples are from 5 healthy donors
     df.loc[df['sra_study'] == 'SRP183467', 'phenotype'] = "Healthy"
@@ -581,6 +607,7 @@ def preprocess_sun(dataset_metadata):
     df["dataset_short_name"] = "sun"
     df["biomaterial"] = df["tissue"].apply(lambda x: "blood plasma" if x == "plasma" else "blood serum" if x == "serum" else "")
     df["dataset_batch"] = np.where(df["biomaterial"] == "blood plasma", "sun_1", "sun_2")
+    df["read_length"] = "2x150"
 
     # Exclude cfDNA samples
     n1 = len(df)
@@ -702,6 +729,7 @@ def preprocess_decruyenaere(dataset_metadata):
 
     df["dataset_short_name"] = "decruyenaere"
     df["dataset_batch"] = "decruyenaere"
+    df["read_length"] = "2x100"
 
     # Exclude FFPE samples
     n1 = len(df)
@@ -728,6 +756,8 @@ def preprocess_reggiardo(dataset_metadata):
 
     df["dataset_short_name"] = "reggiardo"
     df["dataset_batch"] = "reggiardo"
+    df["read_length"] = "2x150"
+
 
     # Select only Illumina samples and exclude ONT samples
     n1 = len(df)
