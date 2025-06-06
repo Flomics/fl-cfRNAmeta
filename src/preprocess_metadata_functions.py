@@ -14,8 +14,6 @@ def simplify_column_names(cols):
             .str.lower()
             .str.replace(r'\s', r'_', regex=True)
             .str.replace(r'[()]', r'', regex=True)
-            # Improve compatibility with snakeDA (reserved var: ['sequencing_batch'])
-            .str.replace('sequencing_batch', 'sequencing_batch_other')
            ).to_list()
     return cols
 
@@ -307,7 +305,7 @@ def preprocess_chalasani(dataset_metadata):
         'X9760'
     ]
     df_merged = df_merged[~df_merged['run'].isin(chalasani_ids_to_exclude)]
-    
+
     df_merged.to_csv("../sra_metadata/chalasani_metadata_preprocessed.csv", index=False)
     return df_merged
 
@@ -424,6 +422,8 @@ def preprocess_moufarrej(dataset_metadata):
     csv_path = "../sra_metadata/moufarrej_metadata.csv"
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
+    # Improve compatibility with snakeDA (reserved var: ['sequencing_batch'])
+    df = df.rename(columns={'sequencing_batch':'sequencing_batch_other'})
 
     df["sequencing_batch"] = "moufarrej" 
     df["dataset_short_name"] = "moufarrej"
@@ -580,8 +580,9 @@ def preprocess_sun(dataset_metadata):
 
     # Assign sequencing batches based on the sequencing platform instrument
     # These also correspond to two separate datasets on GEO
-    df.loc[df['instrument'] == 'HiSeq X Ten', 'sequencing_batch'] = 's1'
-    df.loc[df['instrument'] == 'Illumina NovaSeq 6000', 'sequencing_batch'] = 's2'
+    # => 'sequencing_batch_other': Improve compatibility with snakeDA (reserved var: ['sequencing_batch'])
+    df.loc[df['instrument'] == 'HiSeq X Ten', 'sequencing_batch_other'] = 's1'
+    df.loc[df['instrument'] == 'Illumina NovaSeq 6000', 'sequencing_batch_other'] = 's2'
 
     # Parse the GEO series matrix file, which contains the mapping between
     # the GEO/GSM ids and the sample names in the study
