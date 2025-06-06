@@ -368,6 +368,39 @@ def preprocess_tao(dataset_metadata):
     n2 = len(df)
     print(f"Exclude tissue and PBMC, and other assays like MeDIP-Seq, miRNA-Seq. N = {n1 - n2}")
 
+    # Parse the GEO series matrix file, which contains the mapping between
+    # the GEO/GSM ids and the sample names in the study
+    GSM_ids = []
+    sample_titles = []
+    for matrix_file in ["../sra_metadata/tao_GSE186607_series_matrix.txt"]:
+        with open(matrix_file) as f:
+            GEO_matrix = f.readlines()
+
+        line = [line for line in GEO_matrix if re.search(r'!Sample_geo_accession', line)][0]
+        s = re.search(r'^!Sample_geo_accession\t"(.+)"\s*', line).group(1)
+        GSM_ids_1 = s.split()
+        GSM_ids_1 = [e.strip('" ') for e in GSM_ids_1]
+        GSM_ids += GSM_ids_1
+        
+        line = [line for line in GEO_matrix if re.search(r'!Sample_title', line)][0]
+        s = re.search(r'^!Sample_title\t"(.+)"\s*', line).group(1).strip()
+        sample_titles_1 = s.split('"\t"')
+        sample_titles += sample_titles_1
+
+    if len(sample_titles) != len(GSM_ids):
+        raise RuntimeError("Parsing the series matrix file, found different number of sample ids and sample titles.")
+    matrix_metadata = pd.DataFrame(np.transpose([GSM_ids, sample_titles]),
+                                columns=['GSM_id', 'sample_title'])
+
+    df = (df.merge(matrix_metadata, left_on='sample_name',
+                right_on='GSM_id', how='left'))
+    df['phenotype'] = (df['sample_title'].str.extract(r'^(.+)-PKU.*$')
+                    .replace({
+                        'CRC':'Colorectal cancer',
+                        'NC':'Healthy',
+                        'STAD':'Stomach cancer'
+                    }))
+
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
 
     df.to_csv("../sra_metadata/tao_metadata_preprocessed.csv", index=False)
