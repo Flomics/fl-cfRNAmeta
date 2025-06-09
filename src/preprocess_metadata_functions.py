@@ -691,7 +691,7 @@ def preprocess_flomics_2(dataset_metadata):
 
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
 
-    df.to_csv("../sra_metadata/flomics_1_metadata_preprocessed.csv", index=False)
+    df.to_csv("../sra_metadata/flomics_2_metadata_preprocessed.csv", index=False)
 
     return df
 
