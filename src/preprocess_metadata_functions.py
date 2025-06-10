@@ -664,7 +664,7 @@ def preprocess_reggiardo(dataset_metadata):
 
 def preprocess_flomics_1(dataset_metadata):
     print("### Dataset: flomics_1")
-    csv_path = "../sra_metadata/flomics_v1_metadata.tsv"
+    csv_path = "../sra_metadata/flomics_1_metadata.tsv"
     df = pd.read_csv(csv_path, sep='\t')
     df.columns = simplify_column_names(df.columns)
 
@@ -682,7 +682,7 @@ def preprocess_flomics_1(dataset_metadata):
 
 def preprocess_flomics_2(dataset_metadata):
     print("### Dataset: flomics_2")
-    csv_path = "../sra_metadata/flomics_v2_metadata.tsv"
+    csv_path = "../sra_metadata/flomics_2_metadata.tsv"
     df = pd.read_csv(csv_path, sep='\t')
     df.columns = simplify_column_names(df.columns)
 
