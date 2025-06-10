@@ -127,16 +127,21 @@ def rename_columns_and_values(df):
         columns={'sample_name':'sample_name_other', 'sample_id':'sample_id_other'}
     )
     df['sample_name'] = df['run']
+
     # add 'status' column
+    # TODO We need a specific mapping between the precise phenotype and the coarse-grain status, e.g.
+    # 'Multiple myeloma': 'cancer
+    # 'Cirrhosis': 'non-cancer disease
+    # ...
     def map_status(x):
-        if x == 'Control':
+        if x == 'Healthy':
             return 'healthy'
-        elif ('cancer' in x):
+        elif ('Cancer' in x):
             return 'cancer'
         else:
             return 'non-cancer disease'
-    df['status'] =  df['disease'].apply(lambda x: map_status(str(x)))
-    
+    df['status'] =  df['phenotype'].apply(lambda x: map_status(str(x)))
+
     # Drop empty columns
     df = df.dropna(how='all', axis=1)
 
