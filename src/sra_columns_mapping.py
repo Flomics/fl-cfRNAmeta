@@ -122,6 +122,21 @@ def rename_columns_and_values(df):
     df = df.drop(cols[1:], axis=1)
     print(f"df['{main_col}'].unique():\n", df[main_col].unique())
 
+    # Improve compatibility with snakeDA (reserved vars: ['sample_id', 'sample_name'])
+    df = df.rename(
+        columns={'sample_name':'sample_name_other', 'sample_id':'sample_id_other'}
+    )
+    df['sample_name'] = df['run']
+    # add 'status' column
+    def map_status(x):
+        if x == 'Control':
+            return 'healthy'
+        elif ('cancer' in x):
+            return 'cancer'
+        else:
+            return 'non-cancer disease'
+    df['status'] =  df['disease'].apply(lambda x: map_status(str(x)))
+    
     # Drop empty columns
     df = df.dropna(how='all', axis=1)
 
