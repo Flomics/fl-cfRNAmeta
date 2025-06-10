@@ -120,13 +120,23 @@ def preprocess_roskams(dataset_metadata):
     df["dataset_batch"] = np.where(df["cohort"] == "pilot", "roskams_pilot", "roskams_validation")
     df["read_length"] = np.where(df["dataset_batch"] == "roskams_pilot", "2x100", "2x150")
 
+    # Phenotype is described in the source_name column
+    df['source_name'].unique()
+    df['phenotype'] = df['source_name'].replace({
+        'Human non-cancer donor plasma':'Healthy',
+        'Human multiple myeloma plasma':'Multiple myeloma',
+        'Human MGUS plasma':'Pre-cancerous condition: MGUS',
+        'Human liver cancer plasma':'Liver cancer',
+        'Human liver cirrhosis plasma':'Pre-cancerous condition: cirrhosis',
+    })
+
     # The supplementary table 2 contains sample-level information about the RNA
     # extraction and library preparation batches
     supp_table = pd.read_csv("../sra_metadata/roskams_supp_table_2.tsv", sep='\t')
     supp_table['RNA extraction batch'] = (supp_table['RNA Extraction']
-                                          .str.extract(r'batch\s*(\d+)'))
+                                        .str.extract(r'batch\s*(\d+)'))
     supp_table['Library preparation batch'] = (supp_table['Library Preparation']
-                                               .str.extract(r'batch\s*(\d+)'))
+                                            .str.extract(r'batch\s*(\d+)'))
     # Parse the GEO series matrix file, which contains the mapping between
     # the GEO/GSM ids and the sample names in the study (PP02, etc)
     with open("../sra_metadata/roskams_GSE182824_series_matrix.txt") as f:
@@ -143,11 +153,11 @@ def preprocess_roskams(dataset_metadata):
     if len(sample_names) != len(GSM_ids):
         raise RuntimeError("Parsing the series matrix file, found different number of sample ids and sample names.")
     sample_id_mapping = pd.DataFrame(np.transpose([GSM_ids, sample_names]),
-                                     columns=['GSM_id', 'Sample_id'])
+                                    columns=['GSM_id', 'Sample_id'])
     # Merge the metadata table with the supp table using the sample id mapping
     df = (df
         .merge(sample_id_mapping, left_on='geo_accession_exp',
-               right_on='GSM_id', how='outer')
+            right_on='GSM_id', how='outer')
         .merge(supp_table[['SeqID', 'Library preparation batch', 'RNA extraction batch']]
                 .rename(columns={'SeqID':'Sample_id'}), on='Sample_id', how='outer')
     )
@@ -168,6 +178,11 @@ def preprocess_ngo(dataset_metadata):
     df["read_length"] = "2x75"
 
 
+    df['phenotype'] = df['isolate'].replace({
+        "Pregnant adult female who delivered full-term":"Healthy pregnant women",
+        "Pregnant adult female who delivered spontaneously preterm":"Healthy pregnant women who delivered preterm"
+    })
+    
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
 
     df.to_csv("../sra_metadata/ngo_metadata_preprocessed.csv", index=False)
@@ -204,6 +219,14 @@ def preprocess_ibarra(dataset_metadata):
         if m:
             return pd.Series({"phenotype":"G-CSF-treated healthy donors",
                             "collection_center":"Scripps"})
+        m = re.search(r'SDBB', s)
+        if m:
+            return pd.Series({"phenotype":"Healthy",
+                            "collection_center":"San Diego Blood Bank"})
+        m = re.search(r'Diverticulitis', s, re.I)
+        if m:
+            return pd.Series({"phenotype":"Diverticulitis",
+                            "collection_center":np.nan})
         return pd.Series(dtype='object')
 
     df = df.join(df['sample_name'].apply(parse_phenotype))
@@ -237,6 +260,12 @@ def preprocess_toden(dataset_metadata):
     cols = df_merged.columns.tolist()
     cols.insert(0, cols.pop(cols.index("run")))
     df_merged = df_merged[cols]
+
+    df['phenotype'] = df['ad_status'].replace({
+        'AD':"Alzheimer's disease",
+        'NCI':'Healthy',
+        'None':np.nan
+    })
 
     df_merged = merge_sample_with_dataset_metadata(df_merged, dataset_metadata)
 
@@ -331,6 +360,7 @@ def preprocess_rozowsky(dataset_metadata):
 
     df["dataset_short_name"] = "rozowsky"
     df["dataset_batch"] = "rozowsky"
+    df['phenotype'] = 'Healthy'
     df["read_length"] = "2x100"    
 
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
@@ -355,14 +385,40 @@ def preprocess_tao(dataset_metadata):
             (df['assay_type'] == 'RNA-Seq')]
     n2 = len(df)
     print(f"Exclude tissue and PBMC, and other assays like MeDIP-Seq, miRNA-Seq. N = {n1 - n2}")
-    
-    # **Guessing** the phenotype from the GEO sample names
-    # Warning: this information is *not* reliable.
-    pheno_data_file = "../sra_metadata/tao_phenotype_geo_mapping.tsv"
-    pheno_data = pd.read_csv(pheno_data_file, sep = "\t")
-    pheno_data["phenotype"] = pheno_data['geo_string'].str.split('-').str[0]
-    
-    df = df.merge(pheno_data, on='sample_name', how='left')
+
+    # Parse the GEO series matrix file, which contains the mapping between
+    # the GEO/GSM ids and the sample names in the study
+    GSM_ids = []
+    sample_titles = []
+    for matrix_file in ["../sra_metadata/tao_GSE186607_series_matrix.txt"]:
+        with open(matrix_file) as f:
+            GEO_matrix = f.readlines()
+
+        line = [line for line in GEO_matrix if re.search(r'!Sample_geo_accession', line)][0]
+        s = re.search(r'^!Sample_geo_accession\t"(.+)"\s*', line).group(1)
+        GSM_ids_1 = s.split()
+        GSM_ids_1 = [e.strip('" ') for e in GSM_ids_1]
+        GSM_ids += GSM_ids_1
+        
+        line = [line for line in GEO_matrix if re.search(r'!Sample_title', line)][0]
+        s = re.search(r'^!Sample_title\t"(.+)"\s*', line).group(1).strip()
+        sample_titles_1 = s.split('"\t"')
+        sample_titles += sample_titles_1
+
+    if len(sample_titles) != len(GSM_ids):
+        raise RuntimeError("Parsing the series matrix file, found different number of sample ids and sample titles.")
+    matrix_metadata = pd.DataFrame(np.transpose([GSM_ids, sample_titles]),
+                                columns=['GSM_id', 'sample_title'])
+
+    df = (df.merge(matrix_metadata, left_on='sample_name',
+                right_on='GSM_id', how='left'))
+    df['phenotype'] = (df['sample_title'].str.extract(r'^(.+)-PKU.*$')
+                    .replace({
+                        'CRC':'Colorectal cancer',
+                        'NC':'Healthy',
+                        'STAD':'Stomach cancer'
+                    }))
+
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
 
     df.to_csv("../sra_metadata/tao_metadata_preprocessed.csv", index=False)
@@ -385,6 +441,8 @@ def preprocess_wei(dataset_metadata):
     n2 = len(df)
     print(f"Exclude tissue samples. N = {n1 - n2}")
 
+    df['phenotype'] = "Pancreatic cancer"
+
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
 
     df.to_csv("../sra_metadata/wei_metadata_preprocessed.csv", index=False)
@@ -405,6 +463,9 @@ def preprocess_moufarrej(dataset_metadata):
 
     # Dataset_metadata table says EDTA/Streck ?
     #df["plasma_tubes"] = "EDTA"
+
+    # Cohorts is composed of preeclampsia and healthy control (normotensive)
+    df.loc[df['disease'].isnull(), 'phenotype'] = 'Healthy pregnant women'
 
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
 
@@ -476,6 +537,10 @@ def preprocess_wang(dataset_metadata):
     n2 = len(df)
     print(f"Exclude other library prep protocols. N = {n1 - n2}")
 
+    # All samples from SRA are from the technology optimizations experiment,
+    # in which all samples are healthy.
+    df['phenotype'] = "Healthy"
+
     df = merge_sample_with_dataset_metadata(
         df, dataset_metadata, keep_sample_cols=["library_prep_kit",
                                                 "library_prep_kit_short",
@@ -520,6 +585,9 @@ def preprocess_giraldez(dataset_metadata):
     df.loc[index, "dataset_batch"] = "giraldez_phospho-rna-seq"
 
     df["read_length"] = np.where(df["dataset_batch"] == "giraldez_standard", "1x50", "1x75")
+
+    # All remaining samples are from 5 healthy donors
+    df.loc[df['sra_study'] == 'SRP183467', 'phenotype'] = "Healthy"
 
     df = merge_sample_with_dataset_metadata(
         df, dataset_metadata, keep_sample_cols=["library_prep_kit",
@@ -669,7 +737,12 @@ def preprocess_decruyenaere(dataset_metadata):
     n2 = len(df)
     print(f"Exclude FFPE samples. N = {n1 - n2}")
 
-    df = merge_sample_with_dataset_metadata(df, dataset_metadata)
+    # All remaining samples are blood plasma, as described in the column "organism_part"
+    df['biomaterial'] = df['organism_part'].replace({'blood plasma homo sapiens':'plasma'})
+    df = df.drop(columns=['organism_part'])
+
+    df = merge_sample_with_dataset_metadata(df, dataset_metadata,
+                                            keep_sample_cols=["biomaterial"])
 
     df.to_csv("../sra_metadata/decruyenaere_metadata_preprocessed.csv", index=False)
 
