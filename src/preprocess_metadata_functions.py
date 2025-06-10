@@ -772,6 +772,44 @@ def preprocess_reggiardo(dataset_metadata):
     return df
 
 
+def preprocess_flomics_1(dataset_metadata):
+    print("### Dataset: flomics_1")
+    csv_path = "../sra_metadata/flomics_1_metadata.tsv"
+    df = pd.read_csv(csv_path, sep='\t')
+    df.columns = simplify_column_names(df.columns)
+
+    df["dataset_short_name"] = "flomics_1"
+    df["dataset_batch"] = "flomics_1"
+    
+    df["run"] = df["sample_name"]
+
+    df = merge_sample_with_dataset_metadata(df, dataset_metadata)
+
+    df.to_csv("../sra_metadata/flomics_1_metadata_preprocessed.csv", index=False)
+
+    return df
+
+
+def preprocess_flomics_2(dataset_metadata):
+    print("### Dataset: flomics_2")
+    csv_path = "../sra_metadata/flomics_2_metadata.tsv"
+    df = pd.read_csv(csv_path, sep='\t')
+    df.columns = simplify_column_names(df.columns)
+
+    df["dataset_short_name"] = "flomics_2"
+    df["dataset_batch"] = "flomics_2"
+
+    df["run"] = df["sample_name"]
+
+    df = df.rename(columns={"status_subtype":"phenotype"})
+
+    df = merge_sample_with_dataset_metadata(df, dataset_metadata)
+
+    df.to_csv("../sra_metadata/flomics_2_metadata_preprocessed.csv", index=False)
+
+    return df
+
+
 def summarize_metadata_batch_level(sample_metadata):
     sample_metadata2 = sample_metadata.dropna(axis=1, how='all').copy()
     # Count how many unique values each column contains
@@ -837,8 +875,10 @@ def main():
     sun = preprocess_sun(dataset_metadata)
     decruyenaere = preprocess_decruyenaere(dataset_metadata)
     reggiardo = preprocess_reggiardo(dataset_metadata)
+    flomics_1 = preprocess_flomics_1(dataset_metadata)
+    flomics_2 = preprocess_flomics_2(dataset_metadata)
 
-    dfs = [chen, zhu, roskams, ngo, ibarra, toden, chalasani, block, rozowsky, tao, wei, moufarrej, wang, giraldez, sun, decruyenaere, reggiardo]
+    dfs = [chen, zhu, roskams, ngo, ibarra, toden, chalasani, block, rozowsky, tao, wei, moufarrej, wang, giraldez, sun, decruyenaere, reggiardo, flomics_1, flomics_2]
 
     sample_metadata = pd.concat(dfs, axis=0, join="outer", ignore_index=True)
 
