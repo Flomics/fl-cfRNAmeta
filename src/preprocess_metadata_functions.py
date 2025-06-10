@@ -670,6 +670,8 @@ def preprocess_flomics_1(dataset_metadata):
 
     df["dataset_short_name"] = "flomics_1"
     df["dataset_batch"] = "flomics_1"
+    
+    df["run"] = df["sample_name"]
 
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
 
@@ -686,6 +688,8 @@ def preprocess_flomics_2(dataset_metadata):
 
     df["dataset_short_name"] = "flomics_2"
     df["dataset_batch"] = "flomics_2"
+
+    df["run"] = df["sample_name"]
 
     df = df.rename(columns={"status_subtype":"phenotype"})
 
