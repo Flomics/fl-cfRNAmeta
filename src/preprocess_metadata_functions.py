@@ -676,7 +676,7 @@ def preprocess_decruyenaere(dataset_metadata):
         # 'ENA-CHECKLIST',
         'organism_part',
         # 'region',
-        'file_name_1' # needed to extract the 'sample_name'
+        #'file_name_1' # needed to extract the 'sample_name'
     ]
 
     csv_path = "../sra_metadata/decruyenaere_metadata.csv"
@@ -686,11 +686,12 @@ def preprocess_decruyenaere(dataset_metadata):
 
     # Rename columns from the EGA-archive to the corresponding SRA metadata columns
     df = df.rename(columns={
-        #"sample_alias":"run",
+        "sample_alias":"run",
         "instrument_model":"instrument",
         "biosample_id":"biosample",
         })
-    df["run"] = df["file_name_1"].apply(lambda x: '_'.join(x.split('_')[:2]))
+
+    #df["run"] = df["file_name_1"].apply(lambda x: '_'.join(x.split('_')[:2]))
     # remove 'file_name_1' col
     #df = df.drop('file_name_1', axis=1)
 
