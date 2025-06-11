@@ -267,7 +267,7 @@ def preprocess_toden(dataset_metadata):
     cols.insert(0, cols.pop(cols.index("run")))
     df_merged = df_merged[cols]
 
-    df['phenotype'] = df['ad_status'].replace({
+    df_merged['phenotype'] = df_merged['ad_status'].replace({
         'AD':"Alzheimer's disease",
         'NCI':'Healthy',
         'None':np.nan
