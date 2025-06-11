@@ -829,6 +829,9 @@ def preprocess_flomics_1(dataset_metadata):
     
     df["run"] = df["sample_name"]
 
+    samples_to_remove = ["Flomics_1_1", "Flomics_1_2"]
+    df = df.drop(df[df["run"].isin(samples_to_remove)].index, errors='ignore')
+
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
 
     df.to_csv("../sra_metadata/flomics_1_metadata_preprocessed.csv", index=False)
