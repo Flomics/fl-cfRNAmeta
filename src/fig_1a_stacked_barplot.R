@@ -8,10 +8,12 @@ setwd("~/fl-cfRNAmeta/")
 data <- read.table("tables/cfRNA-meta_per_sample_metadata.tsv", header = TRUE, sep = "\t", fill = TRUE)
 
 #Assign healthy phenotype to Flomics_1 and flomics_2
-data$phenotype[data$dataset_batch %in% c("flomics_1", "flomics_2")] <- "healthy"
+data$phenotype[data$dataset_batch %in% c("flomics_1", "flomics_2", "giraldez_standard", "giraldez_phospho-rna-seq")] <- "healthy"
 
 data_barplot <- data
 data_barplot$simple_phenotype <- NA
+
+
 
 data_barplot$simple_phenotype[data_barplot$phenotype == "healthy"] <- "healthy"
 data_barplot$simple_phenotype[is.na(data_barplot$phenotype)] <- "missing"
@@ -141,3 +143,48 @@ ggplot(cancer_detail_plot_data, aes(x = dataset_batch_clean, y = count, fill = p
   )
 
 ggsave("figures/fig_1a_cancer_subtypes_per_dataset.png", width = 15, height = 8, dpi = 600, units = "in", bg = "white")
+
+# Build third phenotype column: merge simple + detailed
+data_barplot$phenotype_merged <- data_barplot$simple_phenotype
+data_barplot$phenotype_merged[data_barplot$simple_phenotype == "cancer"] <- 
+  data_barplot$phenotype[data_barplot$simple_phenotype == "cancer"]
+data_barplot$phenotype_merged[data_barplot$phenotype_merged == "missing"] <- "Unspecified"
+phenotype_merged_plot_data <- data_barplot %>%
+  filter(!is.na(phenotype_merged)) %>%
+  group_by(dataset_batch_clean, phenotype_merged) %>%
+  summarise(count = n(), .groups = "drop")
+
+merged_order <- c("healthy", "non-cancer disease", "Unspecified", sort(unique(data_barplot$phenotype[data_barplot$simple_phenotype == "cancer"])))
+phenotype_merged_plot_data$phenotype_merged <- factor(phenotype_merged_plot_data$phenotype_merged, levels = merged_order)
+
+n_cancer <- length(unique(data_barplot$phenotype[data_barplot$simple_phenotype == "cancer"]))
+cancer_colors <- colorRampPalette(brewer.pal(10, "Set3"))(n_cancer)
+names(cancer_colors) <- sort(unique(data_barplot$phenotype[data_barplot$simple_phenotype == "cancer"]))
+
+merged_colors <- c(
+  "healthy" = "#1f78b4",
+  "non-cancer disease" = "#33a02c",
+  "Unspecified" = "grey60",
+  cancer_colors
+)
+
+# Plot
+ggplot(phenotype_merged_plot_data, aes(x = dataset_batch_clean, y = count, fill = phenotype_merged)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = merged_colors, name = "Phenotype / Cancer subtype") +
+  labs(x = "Dataset", y = "Number of samples") +
+  theme_minimal(base_size = 20) +
+  theme(
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1, face = "bold", size = 18, color = "black"),
+    axis.title.x = element_text(size = 20, face = "bold"), 
+    axis.title.y = element_text(size = 20, face = "bold"),  
+    legend.title = element_text(size = 18, face = "bold"),  
+    legend.text = element_text(size = 14),  
+    panel.grid.major = element_line(size = 0.8),
+    panel.grid.minor = element_blank(),
+    plot.margin = margin(20, 20, 20, 20),
+    plot.background = element_rect(fill = "white", colour = "white")
+  )
+
+ggsave("figures/fig_1a_combined_simplified_and_cancer_detail.png",
+       width = 15, height = 8, dpi = 600, units = "in", bg = "white")
