@@ -140,4 +140,4 @@ ggplot(cancer_detail_plot_data, aes(x = dataset_batch_clean, y = count, fill = p
     plot.background = element_rect(fill = "white", colour = "white")
   )
 
-ggsave("figures/fig_1b_cancer_subtypes_per_dataset.png", width = 15, height = 8, dpi = 600, units = "in", bg = "white")
+ggsave("figures/fig_1a_cancer_subtypes_per_dataset.png", width = 15, height = 8, dpi = 600, units = "in", bg = "white")
