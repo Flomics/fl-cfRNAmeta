@@ -6,12 +6,17 @@ library(RColorBrewer)
 library(ComplexHeatmap)
 library(purrr)
 
-data_heatmap <- read.table("../tables/cfRNA-meta_per_batch_metadata.tsv", header = TRUE, sep = "\t", na.strings = c("", "NA"))
+data_heatmap <- read.table("tables/cfRNA-meta_per_batch_metadata.tsv", header = TRUE, sep = "\t", na.strings = c("", "NA"))
 
-# Drop n_samples column
-data_heatmap <- subset(data_heatmap, select = -c(n_samples))
+# Drop n_samples column and the GC1 and GC5, and other unnecessary columns
+data_heatmap <- subset(data_heatmap, select = -c(n_samples, libraryselection, genes_contributing_to_1._of_reads, genes_contributing_to_5._of_reads))
 
-# Pivot + replace NA with "NA" string before anything else
+giraldez_batches <- c("giraldez_standard", "giraldez_phospho-rna-seq")
+
+data_heatmap$library_prep_kit_short_name[data_heatmap$dataset_batch %in% giraldez_batches] <- 
+  data_heatmap$library_prep_kit_short[data_heatmap$dataset_batch %in% giraldez_batches]
+
+
 metadata_long <- data_heatmap %>%
   pivot_longer(-dataset_batch, names_to = "variable", values_to = "value") %>%
   mutate(value = ifelse(is.na(value), "NA", value))  # Replace NA with string
@@ -22,7 +27,6 @@ metadata_matrix <- metadata_long %>%
   pivot_wider(names_from = dataset_batch, values_from = value) %>%
   column_to_rownames("variable")
 
-# Recalculate number of levels per variable (including "NA")
 n_values <- apply(metadata_matrix, 1, function(x) length(unique(x)))
 
 
@@ -30,15 +34,17 @@ get_palette_with_na <- function(varname, base) {
   values <- unique(as.character(metadata_matrix[varname, ]))
   if (varname == "read_length") {
     desired_order <- c("1x50", "1x75", "2x75", "2x100", "2x150", "NA")
-    values <- intersect(desired_order, c(values, "NA"))  # preserve actual values only, in desired order
+    values <- intersect(desired_order, unique(as.character(metadata_matrix[varname, ])))
+    real_values <- values[values != "NA"]
   } else {
-    values <- sort(values)
+    values <- sort(unique(as.character(metadata_matrix[varname, ])))
+    real_values <- values[values != "NA"]
   }
+  
   
   real_values <- values[values != "NA"]
   n_real <- length(real_values)
   
-  # Defensive: Check palette availability
   if (!(base %in% rownames(brewer.pal.info))) {
     stop(paste("Invalid RColorBrewer palette:", base))
   }
@@ -57,29 +63,6 @@ get_palette_with_na <- function(varname, base) {
   return(color_map)
 }
 
-
-palette_list <- list(
-  biomaterial = get_palette_with_na("biomaterial", "Set1"),
-  nucleic_acid_type = get_palette_with_na("nucleic_acid_type", "PiYG"),
-  libraryselection = get_palette_with_na("libraryselection", "Paired"),
-  rna_extraction_kit_short_name = get_palette_with_na("rna_extraction_kit_short_name", "Set2"),
-  library_prep_kit_short_name = get_palette_with_na("library_prep_kit_short_name", "Dark2"),
-  dnase = get_palette_with_na("dnase", "Accent"),
-  cdna_library_type  = get_palette_with_na("cdna_library_type", "Set3"),
-  read_length = get_palette_with_na("read_length", "Greens")
-)
-
-
-clean_names <- c(
-  biomaterial = "Biomaterial",
-  nucleic_acid_type = "Nucleic acid type",
-  libraryselection = "Library selection",
-  rna_extraction_kit_short_name = "RNA extraction kit",
-  library_prep_kit_short_name = "Library prep kit",
-  dnase = "DNAse treatment",
-  cdna_library_type = "cDNA library type",
-  read_length = "Read length"
-)
 
 clean_dataset_names <- c(
   chen = "Chen",
@@ -103,10 +86,47 @@ clean_dataset_names <- c(
   "giraldez_phospho-rna-seq" = "Giráldez (phospho-RNA-seq)",
   sun_2 = "Sun",
   decruyenaere = "Decruyenaere",
-  reggiardo = "Reggiardo"
+  reggiardo = "Reggiardo",
+  flomics_1 = "Flomics 1",
+  flomics_2 = "Flomics 2"
+)
+# Rename columns to clean display names
+colnames(metadata_matrix) <- clean_dataset_names[colnames(metadata_matrix)]
+
+core_order <- setdiff(names(clean_dataset_names), c("rozowsky", "wei"))
+ordered_datasets <- c(sort(clean_dataset_names[core_order]), clean_dataset_names[c("rozowsky", "wei")])
+
+metadata_matrix <- metadata_matrix[, ordered_datasets]
+
+
+metadata_matrix <- apply(metadata_matrix, c(1, 2), function(x) {
+  x <- trimws(x)
+  if (tolower(x) == "unspecified") "Unspecified" else x
+}) %>% as.data.frame(check.names = FALSE)
+
+palette_list <- list(
+  biomaterial = get_palette_with_na("biomaterial", "Set1"),
+  nucleic_acid_type = get_palette_with_na("nucleic_acid_type", "PiYG"),
+  library_selection = get_palette_with_na("library_selection", "Paired"),
+  rna_extraction_kit_short_name = get_palette_with_na("rna_extraction_kit_short_name", "Set3"),
+  library_prep_kit_short_name = get_palette_with_na("library_prep_kit_short_name", "Paired"),
+  dnase = get_palette_with_na("dnase", "Accent"),
+  cdna_library_type  = get_palette_with_na("cdna_library_type", "Set3"),
+  read_length = get_palette_with_na("read_length", "Greens")
 )
 
-colnames(metadata_matrix) <- clean_dataset_names[colnames(metadata_matrix)]
+
+clean_names <- c(
+  biomaterial = "Biomaterial",
+  nucleic_acid_type = "Nucleic acid type",
+  library_selection = "Library selection",
+  rna_extraction_kit_short_name = "RNA extraction kit",
+  library_prep_kit_short_name = "Library prep kit",
+  dnase = "DNAse treatment",
+  cdna_library_type = "cDNA library type",
+  read_length = "Read length"
+)
+
 
 heatmap_list <- lapply(rownames(metadata_matrix), function(var) {
   if (is.null(palette_list[[var]])) {
@@ -119,11 +139,14 @@ heatmap_list <- lapply(rownames(metadata_matrix), function(var) {
   # Replace actual NA with "NA" string
   values[is.na(values)] <- "NA"
   
-  # Build color palette including grey for "NA"
+  if (var == "read_length") {
+    values <- factor(values, levels = c("1x50", "1x75", "2x75", "2x100", "2x150", "NA"))
+    values <- as.character(values)
+  }
+  
   unique_vals <- unique(values)
   palette <- palette_list[[var]]
   
-  # Expand the palette with grey for "NA"
   color_map <- palette[unique_vals]
   names(color_map) <- unique_vals
   
@@ -131,13 +154,15 @@ heatmap_list <- lapply(rownames(metadata_matrix), function(var) {
     color_map["NA"] <- "grey80"
   }
   
+  if (var == "read_length") {
+    legend_order <- c("1x50", "1x75", "2x75", "2x100", "2x150", "NA")
+    color_map <- color_map[intersect(legend_order, names(color_map))]
+  }
+  
   var_pretty <- clean_names[[var]]
   
-  # Build matrix
   mat <- matrix(values, nrow = 1, dimnames = list(var_pretty, colnames(metadata_matrix)))
   
-  
-  # Create heatmap
   Heatmap(
     mat,
     name = var_pretty,
@@ -163,5 +188,8 @@ heatmap_list <- lapply(rownames(metadata_matrix), function(var) {
 
 ht_list <- Reduce(`%v%`, heatmap_list)
 
+
+png("figures/fig_1b_metadata_heatmap.png", width = 18, height = 10, res = 600, units = "in", bg = "white")
 draw(ht_list, heatmap_legend_side = "right")
+dev.off()
 
