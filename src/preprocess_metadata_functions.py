@@ -268,7 +268,7 @@ def preprocess_toden(dataset_metadata):
     df_merged = df_merged[cols]
 
     df_merged['phenotype'] = df_merged['ad_status'].replace({
-        'AD':"Alzheimer's disease",
+        'AD':"Alzheimers disease",
         'NCI':'Healthy',
         'None':np.nan
     })
@@ -826,6 +826,7 @@ def preprocess_flomics_1(dataset_metadata):
 
     df["dataset_short_name"] = "flomics_1"
     df["dataset_batch"] = "flomics_1"
+    df["read_length"] = "2x150"
     
     df["run"] = df["sample_name"]
 
@@ -847,6 +848,7 @@ def preprocess_flomics_2(dataset_metadata):
 
     df["dataset_short_name"] = "flomics_2"
     df["dataset_batch"] = "flomics_2"
+    df["read_length"] = "2x150"
 
     df["run"] = df["sample_name"]
 
