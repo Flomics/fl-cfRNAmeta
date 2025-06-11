@@ -1,98 +1,143 @@
-setwd("~/cfRNA-meta/")
+library(ggplot2)
+library(dplyr)
+library(RColorBrewer)
+library(forcats)  
 
-data <- read.table("../tables/cfRNA-meta_per_sample_metadata.tsv", header = TRUE, sep = "\t")
-data_2nd_gen <- read.table("~/cfRNA-meta/sampleinfo_snakeDA_flomics_1.tsv", header = TRUE, sep = "\t")
-data_2nd_gen$status <- "healthy"
-data_liquidx <- read.table("~/cfRNA-meta/sampleinfo_snakeDA_liquidx_2025_05_08.tsv", header = TRUE, sep = "\t", fileEncoding = "UTF-8")
+setwd("~/fl-cfRNAmeta/")
 
-# Remove inserm CRC
-data_liquidx <- data_liquidx[data_liquidx$collection_subcenter_health_care_unit != "INSERM-CRC23",]
-#Remove "old" plasma sample age samples
-data_liquidx <- data_liquidx[data_liquidx$plasma_sample_age < 4600,]
-# Remove sevilla
-data_liquidx <- data_liquidx[data_liquidx$collection_subcenter != "Sevilla",]
-write.table(data_liquidx, "liquidx_filter_plasma_sample_age_no_sevilla.tsv", sep = "\t")
-# Filter using selected 50 healthy samples
-healthy_samples <- read.table("~/fl-cfRNAmeta/tables/healthy_matched.txt")
-data_liquidx <- data_liquidx[data_liquidx$sample_name %in% healthy_samples[[1]], ]
-#Remove non-healthy samples (for meta-analysis only)
-#data_liquidx <- data_liquidx[data_liquidx$status == "healthy"]
-# Remove samples not passing QC
-#data_liquidx <- data_liquidx[data_liquidx$percentage_of_spliced_reads > 20,]
+data <- read.table("tables/cfRNA-meta_per_sample_metadata.tsv", header = TRUE, sep = "\t", fill = TRUE)
 
-### Merge the two dataframes
-merged_df_1 <- merge(data, data_2nd_gen, all = TRUE)
-merged_df <- merge(merged_df_1, data_liquidx, all = TRUE)
+#Assign healthy phenotype to Flomics_1 and flomics_2
+data$phenotype[data$dataset_batch %in% c("flomics_1", "flomics_2")] <- "healthy"
 
+data_barplot <- data
+data_barplot$simple_phenotype <- NA
 
-### Merge the two dataframes
-data_barplot <- merged_df
-data_barplot$sequencing_batch[grepl("^FL", data_barplot$sequencing_batch)] <- "Flomics_2"
-
-data_barplot$phenotype[grep("Acute Myeloid Leukemia",data_barplot$phenotype)] <- "cancer"
-data_barplot$phenotype[grep("Chronic hepatitis B",data_barplot$phenotype)] <- "non-cancer disease"
-data_barplot$phenotype[grep("Chronic kidney failure EPO-treated",data_barplot$phenotype)] <- "non-cancer disease"
-data_barplot$phenotype[grep("Cirrhosis",data_barplot$phenotype)] <- "non-cancer disease"
-data_barplot$phenotype[grep("colorectal cancer",data_barplot$phenotype)] <- "cancer"
-data_barplot$phenotype[grep("Control",data_barplot$phenotype)] <- "healthy"
-data_barplot$phenotype[grep("Diffuse large B-cell lymphoma",data_barplot$phenotype)] <- "cancer"
-data_barplot$phenotype[grep("Esophagus cancer",data_barplot$phenotype)] <- "cancer"
-data_barplot$phenotype[grep("G-CSF-treated healthy donors",data_barplot$phenotype)] <- "healthy"
-data_barplot$phenotype[grep("Liver cancer",data_barplot$phenotype)] <- "cancer"
-data_barplot$phenotype[grep("Lung cancer",data_barplot$phenotype)] <- "cancer"
-data_barplot$phenotype[grep("Multiple myeloma",data_barplot$phenotype)] <- "cancer"
-data_barplot$phenotype[grep("Nonalcoholic fatty liver disease",data_barplot$phenotype)] <- "non-cancer disease"
-data_barplot$phenotype[grep("Nonalcoholic steatohepatitis",data_barplot$phenotype)] <- "non-cancer disease"
-data_barplot$phenotype[grep("Pancreatic cancer",data_barplot$phenotype)] <- "cancer"
-data_barplot$phenotype[grep("Pre-eclampsia",data_barplot$phenotype)] <- "non-cancer disease"
-data_barplot$phenotype[grep("Primary mediastinal B-cell lymphoma",data_barplot$phenotype)] <- "cancer"
-data_barplot$phenotype[grep("Stomach cancer",data_barplot$phenotype)] <- "cancer"
-#data_barplot$status[is.na(data_barplot$status)] <- "missing"
-#data_barplot$phenotype[is.na(data_barplot$phenotype)] <- "missing"
-
-# Merge phenotype with status when phenotype is NA and status is not
-data_barplot$phenotype[is.na(data_barplot$phenotype) & !is.na(data_barplot$status)] <- 
-  data_barplot$status[is.na(data_barplot$phenotype) & !is.na(data_barplot$status)]
-
-# Replace remaining NA values in phenotype with "missing"
-data_barplot$phenotype[is.na(data_barplot$phenotype)] <- "missing"
-# Replace empty strings in phenotype with "missing"
-data_barplot$phenotype[data_barplot$phenotype == ""] <- "missing"
+data_barplot$simple_phenotype[data_barplot$phenotype == "healthy"] <- "healthy"
+data_barplot$simple_phenotype[is.na(data_barplot$phenotype)] <- "missing"
+data_barplot$simple_phenotype[data_barplot$phenotype == ""] <- "missing"
+data_barplot$simple_phenotype[grep("Acute Myeloid Leukemia",data_barplot$phenotype)] <- "cancer"
+data_barplot$simple_phenotype[grep("Alzheimers disease",data_barplot$phenotype)] <- "non-cancer disease"
+data_barplot$simple_phenotype[grep("Chronic hepatitis B",data_barplot$phenotype)] <- "non-cancer disease"
+data_barplot$simple_phenotype[grep("Chronic kidney failure EPO-treated",data_barplot$phenotype)] <- "non-cancer disease"
+data_barplot$simple_phenotype[grep("Cirrhosis",data_barplot$phenotype)] <- "non-cancer disease"
+data_barplot$simple_phenotype[grep("Colorectal cancer",data_barplot$phenotype)] <- "cancer"
+data_barplot$simple_phenotype[grep("Diffuse large B-cell lymphoma",data_barplot$phenotype)] <- "cancer"
+data_barplot$simple_phenotype[grep("Diverticulitis",data_barplot$phenotype)] <- "non-cancer disease"
+data_barplot$simple_phenotype[grep("Esophagus cancer",data_barplot$phenotype)] <- "cancer"
+data_barplot$simple_phenotype[grep("G-CSF-treated healthy donors",data_barplot$phenotype)] <- "healthy"
+data_barplot$simple_phenotype[grep("Healthy",data_barplot$phenotype)] <- "healthy"
+data_barplot$simple_phenotype[grep("Healthy pregnant woman",data_barplot$phenotype)] <- "healthy"
+data_barplot$simple_phenotype[grep("Healthy pregnant woman who delivered preterm",data_barplot$phenotype)] <- "non-cancer disease"
+data_barplot$simple_phenotype[grep("Liver cancer",data_barplot$phenotype)] <- "cancer"
+data_barplot$simple_phenotype[grep("Lung cancer",data_barplot$phenotype)] <- "cancer"
+data_barplot$simple_phenotype[grep("Multiple myeloma",data_barplot$phenotype)] <- "cancer"
+data_barplot$simple_phenotype[grep("Nonalcoholic fatty liver disease",data_barplot$phenotype)] <- "non-cancer disease"
+data_barplot$simple_phenotype[grep("Nonalcoholic steatohepatitis",data_barplot$phenotype)] <- "non-cancer disease"
+data_barplot$simple_phenotype[grep("Pancreatic cancer",data_barplot$phenotype)] <- "cancer"
+data_barplot$simple_phenotype[grep("Pre-cancerous condition: cirrhosis",data_barplot$phenotype)] <- "non-cancer disease"
+data_barplot$simple_phenotype[grep("Pre-cancerous condition: MGUS",data_barplot$phenotype)] <- "non-cancer disease"
+data_barplot$simple_phenotype[grep("Pre-eclampsia",data_barplot$phenotype)] <- "non-cancer disease"
+data_barplot$simple_phenotype[grep("Primary mediastinal B-cell lymphoma",data_barplot$phenotype)] <- "cancer"
+data_barplot$simple_phenotype[grep("Stomach cancer",data_barplot$phenotype)] <- "cancer"
 
 
+table(data_barplot$simple_phenotype)
 
-table(data_barplot$phenotype)
-# Replace sequencing_batch with dataset_short_name when dataset_short_name is not NA
-data_barplot$sequencing_batch[!is.na(data_barplot$dataset_short_name)] <-
-  data_barplot$dataset_short_name[!is.na(data_barplot$dataset_short_name)]
+clean_dataset_names <- c(
+  chen = "Chen",
+  zhu = "Zhu",
+  roskams_pilot = "Roskams-Hieter (pilot)",
+  roskams_validation = "Roskams-Hieter (validation)",
+  ngo = "Ngo",
+  ibarra_serum = "Ibarra (serum)",
+  ibarra_plasma = "Ibarra (plasma)",
+  ibarra_buffy_coat = "Ibarra (buffy coat)",
+  toden = "Toden",
+  chalasani = "Chalasani",
+  block_150bp = "Block (150bp)",
+  block_300bp = "Block (300bp)",
+  rozowsky = "ENCODE\n(bulk tissue RNA-Seq)",
+  tao = "Tao",
+  wei = "Wei (cfDNA)",
+  moufarrej = "Moufarrej",
+  wang = "Wang",
+  giraldez_standard = "Giráldez (standard)",
+  "giraldez_phospho-rna-seq" = "Giráldez (phospho-RNA-seq)",
+  sun_2 = "Sun",
+  decruyenaere = "Decruyenaere",
+  reggiardo = "Reggiardo",
+  flomics_1 = "Flomics 1",
+  flomics_2 = "Flomics 2"
+)
 
+
+data_barplot$dataset_batch_clean <- recode(data_barplot$dataset_batch, !!!clean_dataset_names)
+
+# all names alphabetically except "rozowsky" and "wei" last
+core_order <- setdiff(names(clean_dataset_names), c("rozowsky", "wei"))
+ordered_names <- c(sort(clean_dataset_names[core_order]), clean_dataset_names[c("rozowsky", "wei")])
+
+data_barplot$dataset_batch_clean <- factor(data_barplot$dataset_batch_clean, levels = ordered_names)
 
 plot_data <- data_barplot %>%
-  group_by(sequencing_batch, phenotype) %>%
+  group_by(dataset_batch_clean, simple_phenotype) %>%
   summarise(count = n(), .groups = 'drop')
 
-library(RColorBrewer)
-
 custom_colors <- brewer.pal(4, "Dark2")
-print(custom_colors)
 
-
-ggplot(plot_data, aes(x = sequencing_batch, y = count, fill = phenotype)) +
+# Option 1: simplified phenotype
+ggplot(plot_data, aes(x = dataset_batch_clean, y = count, fill = simple_phenotype)) +
   geom_bar(stat = "identity") +
-  labs(title = "Sample Status per Dataset", x = "Dataset", y = "Count") +
-  scale_fill_manual(values = brewer.pal(4, "Dark2")) +
-  theme_minimal(base_size = 20) +  # Increase base text size for better readability
+  scale_fill_manual(values = brewer.pal(4, "Dark2"), name = "Simplified phenotype") +
+  labs(x = "Dataset", y = "Number of samples") +
+  theme_minimal(base_size = 20) +
   theme(
     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1, face = "bold", size = 18, color = "black"),
     axis.title.x = element_text(size = 20, face = "bold"), 
     axis.title.y = element_text(size = 20, face = "bold"),  
     legend.title = element_text(size = 18, face = "bold"),  
     legend.text = element_text(size = 16, face = "bold"),  
-    panel.grid.major = element_line(size = 0.8),  # Thicker major grid lines for clarity
-    panel.grid.minor = element_blank(),  # Remove minor grid lines
-    plot.margin = margin(20, 20, 20, 20)  # Increase plot margins for better spacing
-  ) +
-  labs(title = "",
-       x = "Dataset",
-       y = "Number of samples")
+    panel.grid.major = element_line(size = 0.8),
+    panel.grid.minor = element_blank(),
+    plot.margin = margin(20, 20, 20, 20),
+    plot.background = element_rect(
+      fill = "white",
+      colour = "white"
+    )
+  )
 
+ggsave("figures/fig_1a_sample_status_per_dataset.png", width = 15, height = 8, dpi = 600, units = "in")
+
+# Option 2: detail into cancer type
+
+# Filter original cancer cases only
+cancer_detail_plot_data <- data_barplot %>%
+  filter(simple_phenotype == "cancer") %>%
+  group_by(dataset_batch_clean, phenotype) %>%
+  summarise(count = n(), .groups = 'drop')
+
+cancer_detail_plot_data$dataset_batch_clean <- factor(cancer_detail_plot_data$dataset_batch_clean,
+                                                      levels = levels(data_barplot$dataset_batch_clean))
+
+n_cancer_types <- length(unique(cancer_detail_plot_data$phenotype))
+cancer_colors <- colorRampPalette(brewer.pal(10, "Set3"))(n_cancer_types)
+
+ggplot(cancer_detail_plot_data, aes(x = dataset_batch_clean, y = count, fill = phenotype)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = cancer_colors, name = "Cancer subtype") +
+  labs(x = "Dataset", y = "Number of samples") +
+  theme_minimal(base_size = 20) +
+  theme(
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1, face = "bold", size = 18, color = "black"),
+    axis.title.x = element_text(size = 20, face = "bold"), 
+    axis.title.y = element_text(size = 20, face = "bold"),  
+    legend.title = element_text(size = 18, face = "bold"),  
+    legend.text = element_text(size = 14),  
+    panel.grid.major = element_line(size = 0.8),
+    panel.grid.minor = element_blank(),
+    plot.margin = margin(20, 20, 20, 20),
+    plot.background = element_rect(fill = "white", colour = "white")
+  )
+
+ggsave("figures/fig_1b_cancer_subtypes_per_dataset.png", width = 15, height = 8, dpi = 600, units = "in", bg = "white")
