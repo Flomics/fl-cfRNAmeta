@@ -535,6 +535,25 @@ p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = fragment_number, fill =
   scale_fill_manual(values = datasetsPalette, labels = datasetsLabels) +
   scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels)
 
+
+p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = fragment_number, fill = dataset_batch.y)) +
+  geom_boxplot(alpha = 0.6, aes(color = dataset_batch.y), position = position_dodge(width = 0.75), outlier.shape = NA) +
+  geom_point(aes(y = fragment_number, color = dataset_batch.y), 
+             position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.8), 
+             shape = 21, size = 1.5, stroke = 0.2, alpha = 0.6) +
+  labs(title = "",
+       x = "Dataset", y = "Fragment number") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+        axis.title = element_text(size = 12, face = "bold"),
+        plot.title = element_text(size = 14, face = "bold"),
+        legend.position = "none") +
+  scale_x_discrete(labels = datasetsLabels) +
+  scale_fill_manual(values = datasetsPalette, labels = datasetsLabels) +
+  scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels) +
+  scale_y_continuous(labels = label_number(scale_cut = cut_short_scale()))
+
+
 ggsave("fragment_number.png", p, width = 9, height = 6)
 ggsave("fragment_number.pdf", p, width = 9, height = 6)
 
