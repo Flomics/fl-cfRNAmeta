@@ -60,6 +60,7 @@ get_palette_with_na <- function(varname, base) {
   
   color_map <- setNames(palette, real_values)
   color_map["NA"] <- "grey80"
+  color_map["Unspecified"] <- "grey60"
   return(color_map)
 }
 
@@ -153,7 +154,7 @@ heatmap_list <- lapply(rownames(metadata_matrix), function(var) {
   if (!"NA" %in% names(color_map)) {
     color_map["NA"] <- "grey80"
   }
-  
+  color_map["Unspecified"] <- "grey60"
   if (var == "read_length") {
     legend_order <- c("1x50", "1x75", "2x75", "2x100", "2x150", "NA")
     color_map <- color_map[intersect(legend_order, names(color_map))]
