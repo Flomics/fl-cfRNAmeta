@@ -128,8 +128,8 @@ def preprocess_roskams(dataset_metadata):
     df["dataset_short_name"] = "roskams"
     df["dataset_batch"] = np.where(df["cohort"] == "pilot", "roskams_pilot", "roskams_validation")
     df["read_length"] = np.where(df["dataset_batch"] == "roskams_pilot", "2x100", "2x150")
-    df["centrifugation_step_1"] = "1000"
-    df["centrifugation_step_2"] = "15000" 
+    df["centrifugation_step_1"] = "1000g"
+    df["centrifugation_step_2"] = "15000g" 
 
     # Phenotype is described in the source_name column
     df['source_name'].unique()
@@ -266,13 +266,13 @@ def preprocess_ibarra(dataset_metadata):
     # Assign centrifugation steps based on dataset_batch
     def assign_centrifugation_steps(batch):
         if batch == "ibarra_buffy_coat":
-            return pd.Series({"centrifugation_step_1": "1900", "centrifugation_step_2": "NA"})
+            return pd.Series({"centrifugation_step_1": "1900g", "centrifugation_step_2": "NA"})
         elif batch == "ibarra_serum":
-            return pd.Series({"centrifugation_step_1": "1900", "centrifugation_step_2": "16000"})
+            return pd.Series({"centrifugation_step_1": "1900g", "centrifugation_step_2": "16000g"})
         elif batch == "ibarra_plasma_non_cancer":
-            return pd.Series({"centrifugation_step_1": "1900", "centrifugation_step_2": "16000"})
+            return pd.Series({"centrifugation_step_1": "1900g", "centrifugation_step_2": "16000g"})
         elif batch == "ibarra_plasma_cancer":
-            return pd.Series({"centrifugation_step_1": "1900", "centrifugation_step_2": "6000"})
+            return pd.Series({"centrifugation_step_1": "1900g", "centrifugation_step_2": "6000g"})
         else:
             return pd.Series({"centrifugation_step_1": "NA", "centrifugation_step_2": "NA"})
 
@@ -295,7 +295,7 @@ def preprocess_toden(dataset_metadata):
     df["dataset_short_name"] = "toden"
     df["dataset_batch"] = "toden"
     df["read_length"] = "2x75"
-    df["centrifugation_step_1"] = "12000"
+    df["centrifugation_step_1"] = "12000g"
     df["centrifugation_step_2"] = "NA" 
 
 
@@ -333,7 +333,7 @@ def preprocess_chalasani(dataset_metadata):
     df["dataset_short_name"] = "chalasani"
     df["dataset_batch"] = "chalasani"
     df["read_length"] = "2x75"
-    df["centrifugation_step_1"] = "1900"
+    df["centrifugation_step_1"] = "1900g"
     df["centrifugation_step_2"] = "NA" 
 
 
@@ -399,7 +399,7 @@ def preprocess_block(dataset_metadata):
         "block_150bp", "block_300bp"
     )
     df["read_length"] = np.where(df["dataset_batch"] == "block_150bp", "2x75", "2x150")
-    df["centrifugation_step_1"] = "2000"
+    df["centrifugation_step_1"] = "2000g"
     df["centrifugation_step_2"] = "NA" 
 
     # Exclude non-plasma samples: Tissue, and Plasma-derived vesicles.
@@ -519,8 +519,8 @@ def preprocess_wei(dataset_metadata):
     df["dataset_short_name"] = "wei"
     df["dataset_batch"] = "wei"
     df["read_length"] = "2x150"    
-    df["centrifugation_step_1"] = "3000"
-    df["centrifugation_step_2"] = "12000" 
+    df["centrifugation_step_1"] = "3000g"
+    df["centrifugation_step_2"] = "12000g" 
 
     # Select only the plasma samples, remove the tissue "tissue" ones
     n1 = len(df)
@@ -611,9 +611,9 @@ def preprocess_moufarrej(dataset_metadata):
 
     def assign_centrifugation_steps(batch):
         if batch == "moufarrej_site_1":
-            return pd.Series({"centrifugation_step_1": "1600", "centrifugation_step_2": "13000"})
+            return pd.Series({"centrifugation_step_1": "1600g", "centrifugation_step_2": "13000g"})
         elif batch == "moufarrej_site_2":
-            return pd.Series({"centrifugation_step_1": "2500", "centrifugation_step_2": "NA"})
+            return pd.Series({"centrifugation_step_1": "2500g", "centrifugation_step_2": "NA"})
         else:
             return pd.Series({"centrifugation_step_1": "NA", "centrifugation_step_2": "NA"})
 
@@ -634,8 +634,8 @@ def preprocess_wang(dataset_metadata):
     df["dataset_short_name"] = "wang"
     df["dataset_batch"] = "wang"
     df["read_length"] = "2x150"    
-    df["centrifugation_step_1"] = "1600"
-    df["centrifugation_step_2"] = "16000" 
+    df["centrifugation_step_1"] = "1600g"
+    df["centrifugation_step_2"] = "16000g" 
 
 
     # There are 3 samples that were processed with a different library prep kit.
@@ -731,8 +731,8 @@ def preprocess_giraldez(dataset_metadata):
     df.loc[index, "library_prep_kit_short"] = "Illumina TruSeq small RNA"
     df.loc[index, "assay_name"] = "RNA-seq"
     df.loc[index, "dataset_batch"] = "giraldez_standard"
-    df.loc[index, "centrifugation_step_1"] = "3400"
-    df.loc[index, "centrifugation_step_2"] = "1940" 
+    df.loc[index, "centrifugation_step_1"] = "3400g"
+    df.loc[index, "centrifugation_step_2"] = "1940g" 
 
     # phospho-RNA-seq library prep
     index = df[df['treatment'].isin(['T4PNK', 'PNK'])].index
@@ -740,8 +740,8 @@ def preprocess_giraldez(dataset_metadata):
     df.loc[index, "library_prep_kit_short"] = "PNK-treated Illumina TruSeq small RNA"
     df.loc[index, "assay_name"] = "phospho-RNA-seq"
     df.loc[index, "dataset_batch"] = "giraldez_phospho-rna-seq"
-    df.loc[index, "centrifugation_step_1"] = "3400"
-    df.loc[index, "centrifugation_step_2"] = "1940" 
+    df.loc[index, "centrifugation_step_1"] = "3400g"
+    df.loc[index, "centrifugation_step_2"] = "1940g" 
 
     df["read_length"] = np.where(df["dataset_batch"] == "giraldez_standard", "1x50", "1x75")
 
@@ -768,8 +768,8 @@ def preprocess_sun(dataset_metadata):
     df["biomaterial"] = df["tissue"].apply(lambda x: "blood plasma" if x == "plasma" else "blood serum" if x == "serum" else "")
     df["dataset_batch"] = np.where(df["biomaterial"] == "blood plasma", "sun_1", "sun_2")
     df["read_length"] = "2x150"
-    df["centrifugation_step_1"] = "1500"
-    df["centrifugation_step_2"] = "3000" 
+    df["centrifugation_step_1"] = "1500g"
+    df["centrifugation_step_2"] = "3000g" 
 
     # Exclude cfDNA samples
     n1 = len(df)
@@ -899,7 +899,7 @@ def preprocess_decruyenaere(dataset_metadata):
     df["dataset_batch"]      = "decruyenaere"
     df["disease"]            = df["phenotype"]
     df["read_length"]        = "2x100"
-    df["centrifugation_step_1"] = "1900"
+    df["centrifugation_step_1"] = "1900g"
     df["centrifugation_step_2"] = "NA" 
 
     # Exclude FFPE samples
@@ -980,8 +980,8 @@ def preprocess_flomics_2(dataset_metadata):
     df["dataset_short_name"] = "flomics_2"
     df["dataset_batch"] = "flomics_2"
     df["read_length"] = "2x150"
-    df["centrifugation_step_1"] = "1500"
-    df["centrifugation_step_2"] = "2500" 
+    df["centrifugation_step_1"] = "1500g"
+    df["centrifugation_step_2"] = "2500g" 
 
     df["run"] = df["sample_name"]
 
