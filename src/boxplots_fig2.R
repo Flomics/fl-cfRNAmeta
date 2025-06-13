@@ -497,6 +497,20 @@ ggsave("shannon_entropy_boxplot.pdf", plot = p, width = 9, height = 6, dpi = 600
 
 table_filtered$Fragments_mapping_to_expected_strand_pct <- 100 - as.numeric(table_filtered$reads_mapping_sense_percentage)
 
+strandedness_info <- metadata[, c("run", "cdna_library_type")]
+table_filtered <- table_filtered %>%
+  left_join(strandedness_info, by = c("sample_id" = "run"))
+
+label_positions <- table_filtered %>%
+  group_by(dataset_batch.y, cdna_library_type) %>%
+  summarise(
+    y = max(Fragments_mapping_to_expected_strand_pct, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(y = y + 2)  
+
+
+
 p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = Fragments_mapping_to_expected_strand_pct, fill = dataset_batch.y)) +
   geom_boxplot(alpha = 0.6, aes(color = dataset_batch.y), position = position_dodge(width = 0.75), outlier.shape = NA) +
   geom_point(aes(y = Fragments_mapping_to_expected_strand_pct, color = dataset_batch.y), 
@@ -515,8 +529,25 @@ p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = Fragments_mapping_to_ex
   scale_fill_manual(values = datasetsPalette, labels = datasetsLabels) +
   scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels)
 
+label_positions <- label_positions %>%
+  mutate(cdna_library_type = recode(cdna_library_type,
+                               "Reverse" = "R",
+                               "Unstranded" = "U"))
 
-ggsave("fragments_mapped_expected_strand.png", p, width = 9, height = 6, dpi = 600)
+
+p <- p + 
+  geom_text(data = label_positions, 
+            aes(x = dataset_batch.y, y = 102, label = cdna_library_type), 
+            inherit.aes = FALSE,
+            angle = 45,            
+            vjust = 0,             
+            hjust = 0,             
+            size = 3.5,            
+            fontface = "bold")
+
+
+
+ggsave("fragments_mapped_expected_strand_with_strandedness_info.png", p, width = 9, height = 6, dpi = 600)
 ggsave("fragments_mapped_expected_strand.pdf", p, width = 9, height = 6, dpi = 600)
 
 ###################################
