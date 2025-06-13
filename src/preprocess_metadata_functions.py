@@ -927,12 +927,21 @@ def preprocess_reggiardo(dataset_metadata):
 
     df["sequencing_batch"] = "reggiardo" 
     df["dataset_short_name"] = "reggiardo"
-    df["dataset_batch"] = "reggiardo"
     df["read_length"] = "2x150"
     df["centrifugation_step_1"] = "Unspecified"
     df["centrifugation_step_2"] = "Unspecified" 
     
+    # Assign collection_center based on whether 'stage' is missing
+    df["collection_center"] = df["subject_status"].str.strip().map({
+        "normal healthy donor": "Discovery Life Sciences",
+        "pancreatic cancer patient": "BioIVT"
+    })
 
+    # Assign dataset_batch accordingly
+    df["dataset_batch"] = df["collection_center"].map({
+        "Discovery Life Sciences": "reggiardo_dls",
+        "BioIVT": "reggiardo_bioivt"
+    })
 
     # Select only Illumina samples and exclude ONT samples
     n1 = len(df)
