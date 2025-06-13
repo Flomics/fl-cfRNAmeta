@@ -137,11 +137,11 @@ row_order <- c(
   "centrifugation_step_2",
   "biomaterial",
   "nucleic_acid_type",
-  "dnase",
   "rna_extraction_kit_short_name",
-  "cdna_library_type",
-  "library_selection",
+  "dnase",
   "library_prep_kit_short_name",
+  "library_selection",
+  "cdna_library_type",
   "read_length"
 )
 
