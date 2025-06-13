@@ -15,7 +15,7 @@ library(ggnewscale)
 ################################################################################
 
 # Read column names from text file
-setwd("~/fl-cfRNAmeta/src")
+setwd("~/fl-cfRNAmeta/")
 column_names <- c("read_number",
                   "avg_input_read_length",
                   "percentage_of_uniquely_mapped_reads",
@@ -111,89 +111,14 @@ table_filtered$log_genes_80 <- log(table_filtered$genes_contributing_to_80._of_r
 
 num_datasets <- length(unique(table_filtered$dataset_batch.y))
 glasbey_colors <- pals::glasbey(num_datasets)
-table_filtered$dataset_batch.y <- factor(table_filtered$dataset_batch.y, levels = c("block_150bp",
-                                                                                    "block_300bp",
-                                                                                    "chalasani",
-                                                                                    "chen",
-                                                                                    "decruyenaere",
-                                                                                    "flomics_1",
-                                                                                    "flomics_2",
-                                                                                    "giraldez_phospho-rna-seq",
-                                                                                    "giraldez_standard",
-                                                                                    "ibarra_buffy_coat",
-                                                                                    "ibarra_plasma_cancer",
-                                                                                    "ibarra_plasma_non_cancer",
-                                                                                    "ibarra_serum",
-                                                                                    "moufarrej_site_1",
-                                                                                    "moufarrej_site_2",
-                                                                                    "ngo",
-                                                                                    "reggiardo",
-                                                                                    "roskams_pilot",
-                                                                                    "roskams_validation",
-                                                                                    "sun_2",
-                                                                                    "tao",
-                                                                                    "toden",
-                                                                                    "wang",
-                                                                                    "zhu",
-                                                                                    "rozowsky",
-                                                                                    "wei"))
 
-datasetsPalette=c( "flomics_1" = "#9AB9D6",
-                   "flomics_2" = "#144d6b", 
-                   "block_150bp" = "#b3b3b3",
-                   "block_300bp" = "#7d7a7a",
-                   "decruyenaere" =  "#009E73",
-                   "zhu" = "#ffd633",
-                   "chen" = "#997a00",
-                   "ngo" =  "#fa8072",
-                   "roskams_pilot" = "#944dff",
-                   "roskams_validation" = "#5b2e9e",
-                   "moufarrej_site_1" = "#CC79A7",
-                   "moufarrej_site_2" = "#CC79A7",
-                   "sun_2" = "#8a3d00", 
-                   "tao" ="#0072B2",
-                   "toden" = "#800099",
-                   "ibarra_buffy_coat" = "#800000",
-                   "ibarra_plasma_cancer" = "#A52A2A",
-                   "ibarra_plasma_non_cancer" = "#A52A2A",
-                   "ibarra_serum" = "#B22522",
-                   "chalasani" = "#800040",
-                   "rozowsky" = "#006600",
-                   "wei"="#B32400",
-                   "giraldez_phospho-rna-seq" = "#B1CC71",
-                   "giraldez_standard" = "#9cc43b",
-                   "reggiardo" = "#F1085C",
-                   "wang" = "#FE8F42") 
+mappings <- fromJSON("src/dataset_mappings.json")
 
+datasetsLabels <- unlist(mappings$datasetsLabels)
+core_order <- unlist(mappings$datasetVisualOrder)
+datasetsPalette <- unlist(mappings$datasetsPalette)
 
-datasetsLabels <- c(
-  chen = "Chen",
-  zhu = "Zhu",
-  roskams_pilot = "Roskams-Hieter (pilot)",
-  roskams_validation = "Roskams-Hieter (validation)",
-  ngo = "Ngo",
-  ibarra_serum = "Ibarra (serum)",
-  ibarra_plasma_cancer = "Ibarra (plasma, cancer)",
-  ibarra_plasma_non_cancer = "Ibarra (plasma, non-cancer)",
-  ibarra_buffy_coat = "Ibarra (buffy coat)",
-  toden = "Toden",
-  chalasani = "Chalasani",
-  block_150bp = "Block (2x75bp)",
-  block_300bp = "Block (2x150bp)",
-  rozowsky = "ENCODE\n(bulk tissue RNA-Seq)",
-  tao = "Tao",
-  wei = "Wei (cfDNA)",
-  moufarrej_site_1 = "Moufarrej (Site 1)",
-  moufarrej_site_2 = "Moufarrej (Site 2)",
-  wang = "Wang",
-  giraldez_standard = "Giráldez (standard)",
-  "giraldez_phospho-rna-seq" = "Giráldez (phospho-RNA-seq)",
-  sun_2 = "Sun",
-  decruyenaere = "Decruyenaere",
-  reggiardo = "Reggiardo",
-  flomics_1 = "Flomics 1",
-  flomics_2 = "Flomics 2"
-)
+table_filtered$dataset_batch.y <- factor(table_filtered$dataset_batch.y, levels = core_order)
 
 column_names <- c(column_names, "percent_of_reads_mapping_to_spike_ins", "log_genes_80")
 
@@ -583,7 +508,7 @@ table_filtered <- table_filtered %>%
   ))
 
 p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = fragment_number, fill = dataset_batch.y)) +
-  geom_boxplot(alpha = 0.6, aes(color = dataset_batch.y), position = position_dodge(width = 0.75), outlier.shape = NA) +
+  geom_boxplot(alpha = 0.3, aes(color = dataset_batch.y), position = position_dodge(width = 0.75), outlier.shape = NA) +
   geom_point(aes(y = fragment_number, color = dataset_batch.y), 
              position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.8), 
              shape = 21, size = 1.5, stroke = 0.2, alpha = 0.6) +
