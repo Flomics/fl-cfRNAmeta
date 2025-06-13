@@ -5,12 +5,17 @@ library(scales)
 library(ggside)
 
 
+###############################################################################
+# BEWARE!!!!! Code is very messy now, code fairies will fix it soon
+###############################################################################
+
+
 ################################################################################
 # Combine with Flomics liquidx for META-ANALYSIS
 ################################################################################
 
 # Read column names from text file
-setwd("~/cfRNA-meta/")
+setwd("~/fl-cfRNAmeta/")
 column_names <- c("read_number",
                   "avg_input_read_length",
                   "percentage_of_uniquely_mapped_reads",
@@ -28,49 +33,70 @@ column_names <- c("read_number",
                   "exonic_reads_minus_spike_ins",
                   "mt_rna_pct", "mt_rrna_pct", "mt_trna_pct", "misc_rna_pct", "protein_coding_pct", "lncrna_pct", "snrna_pct", "snorna_pct", "spike_in_pct", "other_rna_biotypes_pct")
 
-data <- read.table("~/cfRNA-meta/sampleinfo_snakeDA_wang_read_2_2025_05_15.tsv", header = TRUE, sep = "\t", fileEncoding = "UTF-8")
-data_2nd_gen <- read.table("~/cfRNA-meta/sampleinfo_snakeDA_flomics_1.tsv", header = TRUE, sep = "\t")
-data_liquidx <- read.table("~/cfRNA-meta/sampleinfo_snakeDA_liquidx_2025_05_08.tsv", header = TRUE, sep = "\t", fileEncoding = "UTF-8")
+data <- read.table("tables/sampleinfo_external_and_internal_datasets.tsv", header = TRUE, sep = "\t", fileEncoding = "UTF-8")
 
-# Remove inserm CRC
-data_liquidx <- data_liquidx[data_liquidx$collection_subcenter_health_care_unit != "INSERM-CRC23",]
-#Remove "old" plasma sample age samples
-data_liquidx <- data_liquidx[data_liquidx$plasma_sample_age < 4600,]
-# Remove sevilla
-data_liquidx <- data_liquidx[data_liquidx$collection_subcenter != "Sevilla",]
-write.table(data_liquidx, "liquidx_filter_plasma_sample_age_no_sevilla.tsv", sep = "\t")
-# Filter using selected 50 healthy samples
-healthy_samples <- read.table("~/fl-cfRNAmeta/tables/healthy_matched.txt")
-data_liquidx <- data_liquidx[data_liquidx$sample_name %in% healthy_samples[[1]], ]
-#Remove non-healthy samples (for meta-analysis only)
-#data_liquidx <- data_liquidx[data_liquidx$status == "healthy"]
-# Remove samples not passing QC
-#data_liquidx <- data_liquidx[data_liquidx$percentage_of_spliced_reads > 20,]
+# Load metadata
+metadata <- read.table("tables/cfRNA-meta_per_sample_metadata.tsv", header = TRUE, sep = "\t", fill = TRUE)
 
-### Merge the two dataframes
-merged_df_1 <- merge(data, data_2nd_gen, all = TRUE)
-merged_df <- merge(merged_df_1, data_liquidx, all = TRUE)
+# Strip decruyenaere samples of the "_*" in their sample_id
+data$sample_id[data$sequencing_batch == "decruyenaere"] <- 
+  sub("_.*", "", data$sample_id[data$sequencing_batch == "decruyenaere"])
+
+# MOdify flomics_2 sample ids from FL-SAMP-ID TO SAMPID
+data$sequencing_batch[grepl("^FL", data$sequencing_batch)] <- "flomics_2"
+data$sample_id[data$sequencing_batch == "flomics_2"] <- 
+  gsub("_.*", "", data$sample_id[data$sequencing_batch == "flomics_2"])
 
 
-biotype_data <- merged_df[, 66:147]
-biotype_data <- biotype_data %>% dplyr::select(-contains('_fc'))
+
+
+
+# Step 1: Filter merged_df to keep only samples that appear in metadata
+metadata_subset <- metadata[, c("run", "dataset_batch")]
+
+filtered_df <- data[data$sample_id %in% metadata$run, ]
+filtered_df <- merge(filtered_df, metadata_subset, by.x = "sample_id", by.y = "run", all.x = TRUE)
+
+
+removed_samples <- data[!(data$sample_id %in% metadata$run), ]
+print(removed_samples$sample_id)
+
+
+cat("Original merged_df rows:", nrow(data), "\n")
+cat("Filtered to samples in metadata:", nrow(filtered_df), "\n")
+
+
+library(dplyr)
+
+biotype_data <- filtered_df[, 275:356] %>%
+  select(-contains('_fc')) %>%
+  mutate(across(everything(), ~ as.numeric(as.character(.))))
+
 
 biotype_data$total <- rowSums(biotype_data)
 biotype_data$percent_of_reads_mapping_to_spike_ins <- biotype_data$spike_in / biotype_data$total
 biotype_data$percent_of_reads_mapping_to_spike_ins <- biotype_data$percent_of_reads_mapping_to_spike_ins * 100
 
-merged_df$exonic_reads_minus_spike_ins <- merged_df$exonic - merged_df$spike_in
-merged_df$exonic_reads_minus_spike_ins <- (merged_df$exonic_reads_minus_spike_ins / merged_df$mapped_fragments)  * 100
+exonic <- as.numeric(as.character(filtered_df$exonic))
+spike_in <- as.numeric(as.character(filtered_df$spike_in))
 
-#comparison <- data.frame (data$sample_id, data$sequencing_batch, data$exonic, biotype_data$total)
+filtered_df$exonic_reads_minus_spike_ins <- ifelse(
+  is.na(exonic) & is.na(spike_in), NA,
+  ifelse(is.na(exonic), 0, exonic) - ifelse(is.na(spike_in), 0, spike_in)
+)
+
+
+filtered_df$exonic_reads_minus_spike_ins <- (filtered_df$exonic_reads_minus_spike_ins / filtered_df$mapped_fragments)  * 100
+
+comparison <- data.frame (data$sample_id, data$sequencing_batch, data$exonic, biotype_data$total)
 #comparison$difference <- comparison$data.exonic - comparison$biotype_data.total
 #summary(comparison$difference)
 # write.csv(comparison, file = "exonic_minus_biotype.csv")
 
 # Keep specified columns
 selected_columns <- NULL
-selected_columns <- c( "sample_id", "sequencing_batch", "status", "spike_in_pct", "protein_coding_pct", "percentage_of_spliced_reads", column_names)
-filtered_data <- merged_df[ ,selected_columns]
+selected_columns <- c( "sample_id", "sequencing_batch", "status", "spike_in_pct", "protein_coding_pct", "percentage_of_spliced_reads", "dataset_batch.y", column_names)
+filtered_data <- filtered_df[ ,selected_columns]
 
 filtered_data$percent_of_reads_mapping_to_spike_ins <- biotype_data$percent_of_reads_mapping_to_spike_ins
 
@@ -86,79 +112,90 @@ table_filtered <- filtered_data
 
 table_filtered$log_genes_80 <- log(table_filtered$genes_contributing_to_80._of_reads)
 
-# transform all "FL-" sequencing batches to "liquidx"
-table_filtered$sequencing_batch[grepl("^FL", table_filtered$sequencing_batch)] <- "liquidx"
+# Fix dataset batch
 
-num_datasets <- length(unique(table_filtered$sequencing_batch))
+# transform all "FL-" sequencing batches to "liquidx"
+#table_filtered$sequencing_batch[grepl("^FL", table_filtered$sequencing_batch)] <- "liquidx"
+
+num_datasets <- length(unique(table_filtered$dataset_batch.y))
 glasbey_colors <- pals::glasbey(num_datasets)
-table_filtered$sequencing_batch <- factor(table_filtered$sequencing_batch, levels = c("block_1",
-                                                                                      "block_2",
+table_filtered$dataset_batch.y <- factor(table_filtered$dataset_batch.y, levels = c("block_150bp",
+                                                                                      "block_300bp",
                                                                                       "chalasani",
                                                                                       "chen",
                                                                                       "decruyenaere",
-                                                                                      "Flomics_1",
-                                                                                      "liquidx",
-                                                                                      "giraldez",
-                                                                                      "ibarra",
+                                                                                      "flomics_1",
+                                                                                      "flomics_2",
+                                                                                      "giraldez_phospho-rna-seq",
+                                                                                      "giraldez_standard",
+                                                                                      "ibarra_buffy_coat",
+                                                                                      "ibarra_plasma",
+                                                                                      "ibarra_serum",
                                                                                       "moufarrej",
                                                                                       "ngo",
                                                                                       "reggiardo",
-                                                                                      "roskams_1",
-                                                                                      "roskams_2",
-                                                                                      "sun_1",
+                                                                                      "roskams_pilot",
+                                                                                      "roskams_validation",
                                                                                       "sun_2",
                                                                                       "tao",
                                                                                       "toden",
                                                                                       "wang",
                                                                                       "zhu",
                                                                                       "rozowsky",
-                                                                                      "taowei"))
+                                                                                      "wei"))
 
-datasetsPalette=c( "Flomics_1" = "#9AB9D6",
-                   "liquidx" = "#144d6b", 
-                   "block_1" = "#b3b3b3",
-                   "block_2" = "#7d7a7a",
+datasetsPalette=c( "flomics_1" = "#9AB9D6",
+                   "flomics_2" = "#144d6b", 
+                   "block_150bp" = "#b3b3b3",
+                   "block_300bp" = "#7d7a7a",
                    "decruyenaere" =  "#009E73",
                    "zhu" = "#ffd633",
                    "chen" = "#997a00",
                    "ngo" =  "#fa8072",
-                   "roskams_1" = "#944dff",
-                   "roskams_2" = "#5b2e9e",
+                   "roskams_pilot" = "#944dff",
+                   "roskams_validation" = "#5b2e9e",
                    "moufarrej" = "#CC79A7",
-                   "sun_1" = "#D55E00",
                    "sun_2" = "#8a3d00", 
                    "tao" ="#0072B2",
                    "toden" = "#800099",
-                   "ibarra" = "#800000",
+                   "ibarra_buffy_coat" = "#800000",
+                   "ibarra_plasma" = "#A52A2A",
+                   "ibarra_serum" = "#B22522",
                    "chalasani" = "#800040",
                    "rozowsky" = "#006600",
-                   "taowei"="#B32400",
-                   "giraldez" = "#B1CC71",
+                   "wei"="#B32400",
+                   "giraldez_phospho-rna-seq" = "#B1CC71",
+                   "giraldez_standard" = "#9cc43b",
                    "reggiardo" = "#F1085C",
                    "wang" = "#FE8F42") 
 
-datasetsLabels=c("Flomics_1" = "Flomics_1",
-                 "liquidx" = "Flomics_2",
-                 "block_1" = "Block_1",
-                 "block_2" = "Block_2",
-                 "chen" = "Chen",
-                 "decruyenaere" = "Decruyenaere",
-                 "ngo" = "Ngo",
-                 "roskams_1" = "Roskams-Hieter_1",
-                 "roskams_2" = "Roskams-Hieter_2",
-                 "moufarrej" = "Moufarrej",
-                 "toden" = "Toden",
-                 "ibarra" = "Ibarra",
-                 "chalasani" = "Chalasani",
-                 "rozowsky"="ENCODE\n(bulk tissue RNA-Seq)",
-                 "sun_1" = "Sun_1",
-                 "sun_2" = "Sun_2",
-                 "tao" = "Tao",
-                 "zhu" ="Zhu",
-                 "taowei" = "Wei (cfDNA)",
-                 "giraldez" = "Giráldez",
-                 "reggiardo" = "Reggiardo",
-                 "wang" = "Wang (read 2)")
+
+datasetsLabels <- c(
+  chen = "Chen",
+  zhu = "Zhu",
+  roskams_pilot = "Roskams-Hieter (pilot)",
+  roskams_validation = "Roskams-Hieter (validation)",
+  ngo = "Ngo",
+  ibarra_serum = "Ibarra (serum)",
+  ibarra_plasma = "Ibarra (plasma)",
+  ibarra_buffy_coat = "Ibarra (buffy coat)",
+  toden = "Toden",
+  chalasani = "Chalasani",
+  block_150bp = "Block (150bp)",
+  block_300bp = "Block (300bp)",
+  rozowsky = "ENCODE\n(bulk tissue RNA-Seq)",
+  tao = "Tao",
+  wei = "Wei (cfDNA)",
+  moufarrej = "Moufarrej",
+  wang = "Wang",
+  giraldez_standard = "Giráldez (standard)",
+  "giraldez_phospho-rna-seq" = "Giráldez (phospho-RNA-seq)",
+  sun_2 = "Sun",
+  decruyenaere = "Decruyenaere",
+  reggiardo = "Reggiardo",
+  flomics_1 = "Flomics 1",
+  flomics_2 = "Flomics 2"
+)
 
 column_names <- c(column_names, "percent_of_reads_mapping_to_spike_ins", "log_genes_80")
 
@@ -172,11 +209,11 @@ datasetsOutlinePalette <- sapply(datasetsPalette, darken_color)
 
 #write.table(table_filtered, file="Qc_table_filtered.tsv", row.names = FALSE)
 ggplot_objects <- lapply(column_names, function(col_name) {
-  ggplot(table_filtered, aes(x = sequencing_batch, y = .data[[col_name]], fill = sequencing_batch)) +
-    geom_boxplot(aes(color = sequencing_batch),alpha = 0.3, position = position_dodge(width = 0.75), outlier.shape = NA ) +
-    geom_point(aes(y = .data[[col_name]], color = sequencing_batch), 
+  ggplot(table_filtered, aes(x = dataset_batch.y, y = .data[[col_name]], fill = dataset_batch.y)) +
+    geom_boxplot(aes(color = dataset_batch.y),alpha = 0.3, position = position_dodge(width = 0.75), outlier.shape = NA ) +
+    geom_point(aes(y = .data[[col_name]], color = dataset_batch.y), 
                position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.8), 
-               shape = 16, size = 2) +
+               shape = 21, size = 1.5, stroke = 0.2, alpha = 0.6) +
     labs(title = col_name,
          x = "Dataset", y = col_name) +
     theme_classic() +
@@ -196,7 +233,7 @@ ggplot_objects <- lapply(column_names, function(col_name) {
 
 
 
-setwd("~/cfRNA-meta/full_comparison_2025_05_19/")
+setwd("~/cfRNA-meta/full_comparison_2025_06_11/")
 
 for (i in 1:length(ggplot_objects)) {
   col_name <- column_names[i]
@@ -319,7 +356,7 @@ p_supergroups <- ggplot(biotype_summary_supergroups, aes(x = sequencing_batch, y
 
 ggsave("biotype_supergroup_distribution_per_dataset.png", p_supergroups, width = 12, height = 4, dpi = 600)
 ggsave("biotype_supergroup_distribution_per_dataset.pdf", p_supergroups, width = 12, height = 4, dpi = 600)
-
+########################################3
 
 ############ Protein coding pct
 
@@ -449,9 +486,9 @@ ggsave("shannon_entropy_boxplot.pdf", plot = p, width = 9, height = 6, dpi = 600
 
 table_filtered$Fragments_mapping_to_expected_strand_pct <- 100 - as.numeric(table_filtered$reads_mapping_sense_percentage)
 
-p <- ggplot(table_filtered, aes(x = sequencing_batch, y = Fragments_mapping_to_expected_strand_pct, fill = sequencing_batch)) +
-  geom_boxplot(alpha = 0.6, aes(color = sequencing_batch), position = position_dodge(width = 0.75), outlier.shape = NA) +
-  geom_point(aes(y = Fragments_mapping_to_expected_strand_pct, color = sequencing_batch), 
+p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = Fragments_mapping_to_expected_strand_pct, fill = dataset_batch.y)) +
+  geom_boxplot(alpha = 0.6, aes(color = dataset_batch.y), position = position_dodge(width = 0.75), outlier.shape = NA) +
+  geom_point(aes(y = Fragments_mapping_to_expected_strand_pct, color = dataset_batch.y), 
              position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.8), 
              shape = 21, size = 1.5, stroke = 0.2, alpha = 0.6) +
   geom_hline(yintercept=100, linetype='dashed', col = 'lightgrey')+
@@ -477,14 +514,14 @@ ggsave("fragments_mapped_expected_strand.pdf", p, width = 9, height = 6, dpi = 6
 
 table_filtered <- table_filtered %>%
   mutate(fragment_number = if_else(
-    `sequencing_batch` %in% c("giraldez", "wang"),
+    `dataset_batch.y` %in% c("giraldez_phospho-rna-seq", "giraldez_standard"),
     read_number,           # Single-end: keep as is
     read_number / 2        # Paired-end: divide by 2
   ))
 
-p <- ggplot(table_filtered, aes(x = sequencing_batch, y = fragment_number, fill = sequencing_batch)) +
-  geom_boxplot(alpha = 0.6, aes(color = sequencing_batch), position = position_dodge(width = 0.75), outlier.shape = NA) +
-  geom_point(aes(y = fragment_number, color = sequencing_batch), 
+p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = fragment_number, fill = dataset_batch.y)) +
+  geom_boxplot(alpha = 0.6, aes(color = dataset_batch.y), position = position_dodge(width = 0.75), outlier.shape = NA) +
+  geom_point(aes(y = fragment_number, color = dataset_batch.y), 
              position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.8), 
              shape = 21, size = 1.5, stroke = 0.2, alpha = 0.6) +
   labs(title = "",
@@ -497,6 +534,25 @@ p <- ggplot(table_filtered, aes(x = sequencing_batch, y = fragment_number, fill 
   scale_x_discrete(labels = datasetsLabels) +
   scale_fill_manual(values = datasetsPalette, labels = datasetsLabels) +
   scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels)
+
+
+p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = fragment_number, fill = dataset_batch.y)) +
+  geom_boxplot(alpha = 0.6, aes(color = dataset_batch.y), position = position_dodge(width = 0.75), outlier.shape = NA) +
+  geom_point(aes(y = fragment_number, color = dataset_batch.y), 
+             position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.8), 
+             shape = 21, size = 1.5, stroke = 0.2, alpha = 0.6) +
+  labs(title = "",
+       x = "Dataset", y = "Fragment number") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+        axis.title = element_text(size = 12, face = "bold"),
+        plot.title = element_text(size = 14, face = "bold"),
+        legend.position = "none") +
+  scale_x_discrete(labels = datasetsLabels) +
+  scale_fill_manual(values = datasetsPalette, labels = datasetsLabels) +
+  scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels) +
+  scale_y_continuous(labels = label_number(scale_cut = cut_short_scale()))
+
 
 ggsave("fragment_number.png", p, width = 9, height = 6)
 ggsave("fragment_number.pdf", p, width = 9, height = 6)
