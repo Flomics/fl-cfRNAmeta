@@ -1,2 +1,8 @@
 sra_metadata/*_metadata_preprocessed.csv
+sra_metadata/GSE192902*
+sra_metadata/moufarrej_geo*
 
+src/__pycache__
+
+.Rproj.user
+*.Rproj

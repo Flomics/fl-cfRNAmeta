@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import numpy as np
 import re
@@ -5,6 +6,7 @@ import pdb
 from sra_columns_mapping import rename_columns_and_values
 pd.set_option('display.max_columns', None)
 
+import GEOparse
 
 
 def simplify_column_names(cols):
@@ -545,17 +547,58 @@ def preprocess_moufarrej(dataset_metadata):
 
     df["sequencing_batch"] = "moufarrej" 
     df["dataset_short_name"] = "moufarrej"
-    df["dataset_batch"] = "moufarrej"
+    #df["dataset_batch"] = "moufarrej" # use 'cohort' column from GEO
     df["read_length"] = "2x75"    
     df["centrifugation_step_1"] = "placeholder"
     df["centrifugation_step_2"] = "placeholder" 
-
 
     # Dataset_metadata table says EDTA/Streck ?
     #df["plasma_tubes"] = "EDTA"
 
     # Cohorts is composed of preeclampsia and healthy control (normotensive)
-    df.loc[df['disease'].isnull(), 'phenotype'] = 'Healthy pregnant women'
+    #df.loc[df['disease'].isnull(), 'phenotype'] = 'Healthy pregnant women'
+
+    # Parse GEO metadata
+    geo_series_meta = "../sra_metadata/moufarrej_geo_series_metadata.csv"
+    if not os.path.exists(geo_series_meta):
+
+        # Load series matrix file
+        gse = GEOparse.get_GEO(geo="GSE192902", destdir="../", silent=True)
+
+        # loop over sample data
+        meta_dict = {}
+        for gsm_name, gsm in gse.gsms.items():
+            library_name = gsm.metadata['title'][0]
+            meta_dict[library_name] = {ss.split(": ")[0]:ss.split(": ")[1] for ss in gsm.metadata['characteristics_ch1']}
+            
+        # create DataFrame
+        geo_df = (
+            pd.DataFrame
+            .from_dict(meta_dict, orient='index')
+            .reset_index()
+            .rename(columns={'index':'library_name'})
+        )
+        geo_df.columns = simplify_column_names(geo_df.columns)
+        
+        geo_cols = ["library_name", "disease", "sampling_time_group", "cohort"]
+        # Store processed GEO metadata to file
+        geo_df = geo_df[geo_cols]
+        geo_df.to_csv(geo_series_meta, index=False)
+        
+    # Load processed GEO metadata
+    geo_df = pd.read_csv(geo_series_meta).rename(columns={'disease':'phenotype'})
+    # add GEO metadata
+    df = df.merge(geo_df, on='library_name', how='left')
+
+    # re-map 'cohort' to 'collection_center'
+    moufarrej_cohort_map = {
+        'Discovery':    'Lucile Packard Children Hospital',
+        'Validation 1': 'Lucile Packard Children Hospital',
+        'Validation 2': 'Global Alliance to Prevent Prematurity and Stillbirth (GAPPS)',
+    }
+    # add extra columns
+    df['collection_center'] = df['cohort'].apply(lambda x: moufarrej_cohort_map[x])
+    df['dataset_batch']     = df['cohort'].apply(lambda x: f'moufarrej_{x.replace(" ", "_").lower()}')
 
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
 
