@@ -24,7 +24,8 @@
     "wei": "#B32400",
     "giraldez_phospho-rna-seq": "#B1CC71",
     "giraldez_standard": "#9cc43b",
-    "reggiardo": "#F1085C",
+    "reggiardo_dls": "#F1085C",
+    "reggiardo_bioivt": "#F1085C",
     "wang": "#FE8F42"
   },
   "datasetsLabels": {
@@ -52,6 +53,9 @@
     "sun_2": "Sun",
     "decruyenaere": "Decruyenaere",
     "reggiardo": "Reggiardo",
+    "reggiardo_dls": "Reggiardo (DLS)",
+    "reggiardo_bioivt": "Reggiardo (BioIVT)",
+
     "flomics_1": "Flomics 1",
     "flomics_2": "Flomics 2"
   }
