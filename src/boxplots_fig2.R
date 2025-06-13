@@ -3,7 +3,7 @@ library(dplyr)
 library(ggpubr)
 library(scales)
 library(ggside)
-
+library(ggnewscale)
 
 ###############################################################################
 # BEWARE!!!!! Code is very messy now, code fairies will fix it soon
@@ -15,7 +15,7 @@ library(ggside)
 ################################################################################
 
 # Read column names from text file
-setwd("~/fl-cfRNAmeta/")
+setwd("~/fl-cfRNAmeta/src")
 column_names <- c("read_number",
                   "avg_input_read_length",
                   "percentage_of_uniquely_mapped_reads",
@@ -112,31 +112,31 @@ table_filtered$log_genes_80 <- log(table_filtered$genes_contributing_to_80._of_r
 num_datasets <- length(unique(table_filtered$dataset_batch.y))
 glasbey_colors <- pals::glasbey(num_datasets)
 table_filtered$dataset_batch.y <- factor(table_filtered$dataset_batch.y, levels = c("block_150bp",
-                                                                                      "block_300bp",
-                                                                                      "chalasani",
-                                                                                      "chen",
-                                                                                      "decruyenaere",
-                                                                                      "flomics_1",
-                                                                                      "flomics_2",
-                                                                                      "giraldez_phospho-rna-seq",
-                                                                                      "giraldez_standard",
-                                                                                      "ibarra_buffy_coat",
-                                                                                      "ibarra_plasma_cancer",
-                                                                                      "ibarra_plasma_non_cancer",
-                                                                                      "ibarra_serum",
-                                                                                      "moufarrej_site_1",
-                                                                                      "moufarrej_site_2",
-                                                                                      "ngo",
-                                                                                      "reggiardo",
-                                                                                      "roskams_pilot",
-                                                                                      "roskams_validation",
-                                                                                      "sun_2",
-                                                                                      "tao",
-                                                                                      "toden",
-                                                                                      "wang",
-                                                                                      "zhu",
-                                                                                      "rozowsky",
-                                                                                      "wei"))
+                                                                                    "block_300bp",
+                                                                                    "chalasani",
+                                                                                    "chen",
+                                                                                    "decruyenaere",
+                                                                                    "flomics_1",
+                                                                                    "flomics_2",
+                                                                                    "giraldez_phospho-rna-seq",
+                                                                                    "giraldez_standard",
+                                                                                    "ibarra_buffy_coat",
+                                                                                    "ibarra_plasma_cancer",
+                                                                                    "ibarra_plasma_non_cancer",
+                                                                                    "ibarra_serum",
+                                                                                    "moufarrej_site_1",
+                                                                                    "moufarrej_site_2",
+                                                                                    "ngo",
+                                                                                    "reggiardo",
+                                                                                    "roskams_pilot",
+                                                                                    "roskams_validation",
+                                                                                    "sun_2",
+                                                                                    "tao",
+                                                                                    "toden",
+                                                                                    "wang",
+                                                                                    "zhu",
+                                                                                    "rozowsky",
+                                                                                    "wei"))
 
 datasetsPalette=c( "flomics_1" = "#9AB9D6",
                    "flomics_2" = "#144d6b", 
@@ -510,14 +510,31 @@ label_positions <- table_filtered %>%
   mutate(y = y + 2)  
 
 
+strandedness_colors <- c(
+  "Reverse" = "#8DD3C7",
+  "Unstranded" = "#BEBADA"
+)
+
+annotation_df <- table_filtered %>%
+  select(dataset_batch.y, cdna_library_type) %>%
+  distinct() %>%
+  mutate(y = 105) 
+
+
+label_positions <- label_positions %>%
+  mutate(cdna_library_type = recode(cdna_library_type,
+                                    "Reverse" = "R",
+                                    "Unstranded" = "U"))
+
+
 
 p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = Fragments_mapping_to_expected_strand_pct, fill = dataset_batch.y)) +
-  geom_boxplot(alpha = 0.6, aes(color = dataset_batch.y), position = position_dodge(width = 0.75), outlier.shape = NA) +
+  geom_boxplot(alpha = 0.3, aes(color = dataset_batch.y), position = position_dodge(width = 0.75), outlier.shape = NA) +
   geom_point(aes(y = Fragments_mapping_to_expected_strand_pct, color = dataset_batch.y), 
              position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.8), 
              shape = 21, size = 1.5, stroke = 0.2, alpha = 0.6) +
-  geom_hline(yintercept=100, linetype='dashed', col = 'lightgrey')+
-  geom_hline(yintercept=50, linetype='dashed', col = 'lightgrey')+
+  geom_hline(yintercept=100, linetype='dashed', col = 'lightgrey') +
+  geom_hline(yintercept=50, linetype='dashed', col = 'lightgrey') +
   labs(title = "",
        x = "Dataset", y = "% fragments mapping to correct gene orientation") +
   theme_classic() +
@@ -526,29 +543,33 @@ p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = Fragments_mapping_to_ex
         plot.title = element_text(size = 14, face = "bold"),
         legend.position = "none") +
   scale_x_discrete(labels = datasetsLabels) +
-  scale_fill_manual(values = datasetsPalette, labels = datasetsLabels) +
-  scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels)
+  scale_fill_manual(values = datasetsPalette, labels = datasetsLabels, guide = "none") +
+  scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels, guide = "none")
 
-label_positions <- label_positions %>%
-  mutate(cdna_library_type = recode(cdna_library_type,
-                               "Reverse" = "R",
-                               "Unstranded" = "U"))
+p <- p + new_scale_fill()  # VERY IMPORTANT, native ggplot does not like having two cals of scale_fill or scale_color, so ggnewscale is needed
 
-
-p <- p + 
-  geom_text(data = label_positions, 
-            aes(x = dataset_batch.y, y = 102, label = cdna_library_type), 
-            inherit.aes = FALSE,
-            angle = 45,            
-            vjust = 0,             
-            hjust = 0,             
-            size = 3.5,            
-            fontface = "bold")
-
+p <- p +
+  geom_tile(data = annotation_df,
+            aes(x = dataset_batch.y, y = y, fill = cdna_library_type),
+            width = 0.8, height = 4,
+            inherit.aes = FALSE) +
+  scale_fill_manual(
+    name = "Strandedness",
+    values = strandedness_colors
+  ) + theme(
+    legend.position = "top",  
+    legend.title = element_text(face = "bold", size = 9),
+    legend.text = element_text(size = 9),
+    legend.key.size = unit(0.4, "cm"),
+    legend.spacing.x = unit(0.2, "cm"),
+    legend.margin = margin(0, 0, 0, 0)
+  )
 
 
 ggsave("fragments_mapped_expected_strand_with_strandedness_info.png", p, width = 9, height = 6, dpi = 600)
 ggsave("fragments_mapped_expected_strand.pdf", p, width = 9, height = 6, dpi = 600)
+
+
 
 ###################################
 ################### Fragment number
@@ -582,6 +603,57 @@ p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = fragment_number, fill =
 ggsave("fragment_number.png", p, width = 9, height = 6)
 ggsave("fragment_number.pdf", p, width = 9, height = 6)
 
+
+#######################################################
+# NG80
+#######################################################
+
+p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = log_genes_80, fill = dataset_batch.y)) +
+  geom_boxplot(alpha = 0.3, aes(color = dataset_batch.y), position = position_dodge(width = 0.75), outlier.shape = NA) +
+  geom_point(aes(y = log_genes_80, color = dataset_batch.y), 
+             position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.8), 
+             shape = 21, size = 1.5, stroke = 0.2, alpha = 0.6) +
+  labs(title = "",
+       x = "Dataset", y = "NG80") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+        axis.title = element_text(size = 12, face = "bold"),
+        plot.title = element_text(size = 14, face = "bold"),
+        legend.position = "none") +
+  scale_x_discrete(labels = datasetsLabels) +
+  scale_fill_manual(values = datasetsPalette, labels = datasetsLabels) +
+  scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels)
+
+y_breaks <- pretty(range(table_filtered$genes_contributing_to_80._of_reads, na.rm = TRUE), n = 10)
+p <- p + scale_y_continuous(
+  breaks = log(y_breaks),
+  labels = round(y_breaks)
+)
+
+y_breaks <- log(c(100, 500, 1000, 5000, 10000, 20000))
+
+y_labels <- c(100, 500, 1000, 5000, 10000, 20000)
+
+p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = log_genes_80, fill = dataset_batch.y)) +
+  geom_boxplot(alpha = 0.3, aes(color = dataset_batch.y), position = position_dodge(width = 0.75), outlier.shape = NA) +
+  geom_point(aes(y = log_genes_80, color = dataset_batch.y), 
+             position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.8), 
+             shape = 21, size = 1.5, stroke = 0.2, alpha = 0.6) +
+  labs(title = "",
+       x = "Dataset", y = "NG80") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+        axis.title = element_text(size = 12, face = "bold"),
+        plot.title = element_text(size = 14, face = "bold"),
+        legend.position = "none") +
+  scale_x_discrete(labels = datasetsLabels) +
+  scale_fill_manual(values = datasetsPalette, labels = datasetsLabels) +
+  scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels) +
+  scale_y_continuous(breaks = y_breaks, labels = y_labels)
+
+
+ggsave("ng80_non_transformed_axis.png", p, width = 9, height = 6, dpi = 600)
+ggsave("ng80_non_transformed_axis.pdf", p, width = 9, height = 6)
 
 
 ################################################################################
