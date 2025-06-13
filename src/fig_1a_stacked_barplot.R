@@ -168,7 +168,6 @@ merged_colors <- c(
   cancer_colors
 )
 
-# Plot
 ggplot(phenotype_merged_plot_data, aes(x = dataset_batch_clean, y = count, fill = phenotype_merged)) +
   geom_bar(stat = "identity") +
   scale_fill_manual(values = merged_colors, name = "Phenotype / Cancer subtype") +

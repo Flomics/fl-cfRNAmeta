@@ -919,8 +919,8 @@ def preprocess_flomics_2(dataset_metadata):
     df["dataset_short_name"] = "flomics_2"
     df["dataset_batch"] = "flomics_2"
     df["read_length"] = "2x150"
-    df["centrifugation_step_1"] = "placeholder"
-    df["centrifugation_step_2"] = "placeholder" 
+    df["centrifugation_step_1"] = "1500"
+    df["centrifugation_step_2"] = "2500" 
 
     df["run"] = df["sample_name"]
 
