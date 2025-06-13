@@ -1,7 +1,9 @@
 library(ggplot2)
 library(dplyr)
 library(RColorBrewer)
-library(forcats)  
+library(forcats)
+library(jsonlite)
+
 
 setwd("~/fl-cfRNAmeta/")
 
@@ -44,43 +46,16 @@ data_barplot$simple_phenotype[grep("Primary mediastinal B-cell lymphoma",data_ba
 data_barplot$simple_phenotype[grep("Stomach cancer",data_barplot$phenotype)] <- "cancer"
 
 
-table(data_barplot$simple_phenotype)
 
-clean_dataset_names <- c(
-  chen = "Chen",
-  zhu = "Zhu",
-  roskams_pilot = "Roskams-Hieter (pilot)",
-  roskams_validation = "Roskams-Hieter (validation)",
-  ngo = "Ngo",
-  ibarra_serum = "Ibarra (serum)",
-  ibarra_plasma_cancer = "Ibarra (plasma, cancer)",
-  ibarra_plasma_non_cancer = "Ibarra (plasma, non-cancer)",
-  ibarra_buffy_coat = "Ibarra (buffy coat)",
-  toden = "Toden",
-  chalasani = "Chalasani",
-  block_150bp = "Block (2x75bp)",
-  block_300bp = "Block (2x150bp)",
-  rozowsky = "ENCODE\n(bulk tissue RNA-Seq)",
-  tao = "Tao",
-  wei = "Wei (cfDNA)",
-  moufarrej_site_1 = "Moufarrej (Site 1)",
-  moufarrej_site_2 = "Moufarrej (Site 2)",
-  wang = "Wang",
-  giraldez_standard = "Giráldez (standard)",
-  "giraldez_phospho-rna-seq" = "Giráldez (phospho-RNA-seq)",
-  sun_2 = "Sun",
-  decruyenaere = "Decruyenaere",
-  reggiardo = "Reggiardo",
-  flomics_1 = "Flomics 1",
-  flomics_2 = "Flomics 2"
-)
+mappings <- fromJSON("src/dataset_mappings.json")
 
+clean_dataset_names <- unlist(mappings$datasetsLabels)
+core_order <- unlist(mappings$datasetVisualOrder)
 
 data_barplot$dataset_batch_clean <- recode(data_barplot$dataset_batch, !!!clean_dataset_names)
 
 # all names alphabetically except "rozowsky" and "wei" last
-core_order <- setdiff(names(clean_dataset_names), c("rozowsky", "wei"))
-ordered_names <- c(sort(clean_dataset_names[core_order]), clean_dataset_names[c("rozowsky", "wei")])
+ordered_names <- c(clean_dataset_names[core_order])
 
 data_barplot$dataset_batch_clean <- factor(data_barplot$dataset_batch_clean, levels = ordered_names)
 
