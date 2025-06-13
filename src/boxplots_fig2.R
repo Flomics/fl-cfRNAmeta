@@ -171,9 +171,9 @@ setwd("~/cfRNA-meta/full_comparison_2025_06_13/")
 for (i in 1:length(ggplot_objects)) {
   col_name <- column_names[i]
   output_file <- paste0(gsub(" ", "_", tolower(col_name)), "_external_datasets_boxplot_with_points.png")
-  ggsave(output_file, ggplot_objects[[i]], width = 9, height = 6, dpi = 600)
+  ggsave(output_file, ggplot_objects[[i]], width = 10, height = 6, dpi = 600)
   output_file <- paste0(gsub(" ", "_", tolower(col_name)), "_external_datasets_boxplot_with_points.pdf")
-  ggsave(output_file, ggplot_objects[[i]], width = 9, height = 6, dpi = 600)
+  ggsave(output_file, ggplot_objects[[i]], width = 10, height = 6, dpi = 600)
 }
 ####################################
 ############ Biotype stacked barplot (DEPRECATED)
@@ -491,8 +491,8 @@ p <- p +
   )
 
 
-ggsave("fragments_mapped_expected_strand_with_strandedness_info.png", p, width = 9, height = 6, dpi = 600)
-ggsave("fragments_mapped_expected_strand.pdf", p, width = 9, height = 6, dpi = 600)
+ggsave("fragments_mapped_expected_strand_with_strandedness_info.png", p, width = 10, height = 6, dpi = 600)
+ggsave("fragments_mapped_expected_strand.pdf", p, width = 10, height = 6, dpi = 600)
 
 
 
@@ -525,8 +525,8 @@ p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = fragment_number, fill =
   scale_y_continuous(labels = label_number(scale_cut = cut_short_scale()))
 
 
-ggsave("fragment_number.png", p, width = 9, height = 6)
-ggsave("fragment_number.pdf", p, width = 9, height = 6)
+ggsave("fragment_number.png", p, width = 10, height = 6)
+ggsave("fragment_number.pdf", p, width = 10, height = 6)
 
 
 #######################################################
@@ -577,8 +577,8 @@ p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = log_genes_80, fill = da
   scale_y_continuous(breaks = y_breaks, labels = y_labels)
 
 
-ggsave("ng80_non_transformed_axis.png", p, width = 9, height = 6, dpi = 600)
-ggsave("ng80_non_transformed_axis.pdf", p, width = 9, height = 6)
+ggsave("ng80_non_transformed_axis.png", p, width = 10, height = 6, dpi = 600)
+ggsave("ng80_non_transformed_axis.pdf", p, width = 10, height = 6)
 
 
 ################################################################################
