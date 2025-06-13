@@ -932,9 +932,10 @@ def preprocess_reggiardo(dataset_metadata):
     df["centrifugation_step_2"] = "Unspecified" 
     
     # Assign collection_center based on whether 'stage' is missing
-    df["collection_center"] = df["stage"].apply(
-        lambda x: "Discovery Life Sciences" if pd.isna(x) or str(x).strip() == "" else "BioIVT"
-    )
+    df["collection_center"] = df["subject_status"].str.strip().map({
+        "normal healthy donor": "Discovery Life Sciences",
+        "pancreatic cancer patient": "BioIVT"
+    })
 
     # Assign dataset_batch accordingly
     df["dataset_batch"] = df["collection_center"].map({
