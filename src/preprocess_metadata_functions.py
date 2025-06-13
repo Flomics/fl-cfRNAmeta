@@ -549,8 +549,6 @@ def preprocess_moufarrej(dataset_metadata):
     df["dataset_short_name"] = "moufarrej"
     #df["dataset_batch"] = "moufarrej" # use 'cohort' column from GEO
     df["read_length"] = "2x75"    
-    df["centrifugation_step_1"] = "placeholder"
-    df["centrifugation_step_2"] = "placeholder" 
 
     # Dataset_metadata table says EDTA/Streck ?
     #df["plasma_tubes"] = "EDTA"
@@ -596,12 +594,32 @@ def preprocess_moufarrej(dataset_metadata):
         'Validation 1': 'Lucile Packard Children Hospital',
         'Validation 2': 'Global Alliance to Prevent Prematurity and Stillbirth (GAPPS)',
     }
-    # add extra columns
+
+    df["collection_center"] = df["cohort"].map(moufarrej_cohort_map)
+
+    def assign_site(center):
+        if center == "Lucile Packard Children Hospital":
+            return "moufarrej_site_1"
+        elif center == "Global Alliance to Prevent Prematurity and Stillbirth (GAPPS)":
+            return "moufarrej_site_2"
+        else:
+            return "moufarrej_unknown"
+
+    df["dataset_batch"] = df["collection_center"].apply(assign_site)
     df['collection_center'] = df['cohort'].apply(lambda x: moufarrej_cohort_map[x])
-    df['dataset_batch']     = df['cohort'].apply(lambda x: f'moufarrej_{x.replace(" ", "_").lower()}')
+
+
+    def assign_centrifugation_steps(batch):
+        if batch == "moufarrej_site_1":
+            return pd.Series({"centrifugation_step_1": "1600", "centrifugation_step_2": "13000"})
+        elif batch == "moufarrej_site_2":
+            return pd.Series({"centrifugation_step_1": "2500", "centrifugation_step_2": "NA"})
+        else:
+            return pd.Series({"centrifugation_step_1": "NA", "centrifugation_step_2": "NA"})
+
+    df = df.join(df["dataset_batch"].apply(assign_centrifugation_steps))
 
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
-
     df.to_csv("../sra_metadata/moufarrej_metadata_preprocessed.csv", index=False)
 
     return df
