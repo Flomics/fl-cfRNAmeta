@@ -53,16 +53,18 @@ clean_dataset_names <- c(
   roskams_validation = "Roskams-Hieter (validation)",
   ngo = "Ngo",
   ibarra_serum = "Ibarra (serum)",
-  ibarra_plasma = "Ibarra (plasma)",
+  ibarra_plasma_cancer = "Ibarra (plasma, cancer)",
+  ibarra_plasma_non_cancer = "Ibarra (plasma, non-cancer)",
   ibarra_buffy_coat = "Ibarra (buffy coat)",
   toden = "Toden",
   chalasani = "Chalasani",
-  block_150bp = "Block (150bp)",
-  block_300bp = "Block (300bp)",
+  block_150bp = "Block (2x75bp)",
+  block_300bp = "Block (2x150bp)",
   rozowsky = "ENCODE\n(bulk tissue RNA-Seq)",
   tao = "Tao",
   wei = "Wei (cfDNA)",
-  moufarrej = "Moufarrej",
+  moufarrej_site_1 = "Moufarrej (Site 1)",
+  moufarrej_site_2 = "Moufarrej (Site 2)",
   wang = "Wang",
   giraldez_standard = "Giráldez (standard)",
   "giraldez_phospho-rna-seq" = "Giráldez (phospho-RNA-seq)",
@@ -162,11 +164,18 @@ cancer_colors <- colorRampPalette(brewer.pal(10, "Set3"))(n_cancer)
 names(cancer_colors) <- sort(unique(data_barplot$phenotype[data_barplot$simple_phenotype == "cancer"]))
 
 merged_colors <- c(
-  "healthy" = "#1f78b4",
-  "non-cancer disease" = "#33a02c",
+  "Healthy" = "#1f78b4",
+  "Non-cancer disease" = "#33a02c",
   "Unspecified" = "grey60",
   cancer_colors
 )
+
+phenotype_merged_plot_data$phenotype_merged <- fct_recode(
+  phenotype_merged_plot_data$phenotype_merged,
+  "Healthy" = "healthy",
+  "Non-cancer disease" = "non-cancer disease"
+)
+
 
 ggplot(phenotype_merged_plot_data, aes(x = dataset_batch_clean, y = count, fill = phenotype_merged)) +
   geom_bar(stat = "identity") +

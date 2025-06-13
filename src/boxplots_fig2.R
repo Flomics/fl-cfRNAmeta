@@ -62,8 +62,8 @@ removed_samples <- data[!(data$sample_id %in% metadata$run), ]
 print(removed_samples$sample_id)
 
 
-cat("Original merged_df rows:", nrow(data), "\n")
-cat("Filtered to samples in metadata:", nrow(filtered_df), "\n")
+cat("Original merged_df rows:", nrow(data), "\n") #should be 2400 
+cat("Filtered to samples in metadata:", nrow(filtered_df), "\n") # should be 2304, if it's not, make sure you have NOT removed all Flomics_1 samples due to a mismatch between the metadata names and the sampleinfo from snakeda names :)
 
 
 library(dplyr)
@@ -88,10 +88,6 @@ filtered_df$exonic_reads_minus_spike_ins <- ifelse(
 
 filtered_df$exonic_reads_minus_spike_ins <- (filtered_df$exonic_reads_minus_spike_ins / filtered_df$mapped_fragments)  * 100
 
-comparison <- data.frame (data$sample_id, data$sequencing_batch, data$exonic, biotype_data$total)
-#comparison$difference <- comparison$data.exonic - comparison$biotype_data.total
-#summary(comparison$difference)
-# write.csv(comparison, file = "exonic_minus_biotype.csv")
 
 # Keep specified columns
 selected_columns <- NULL
@@ -108,14 +104,10 @@ result <- filtered_data %>%
 print(result)
 # table_filtered <- filtered_data %>%
 #   filter(percent_of_reads_mapping_to_spike_ins <= 5)
-table_filtered <- filtered_data
+table_filtered <- filtered_data # NOT removing high spike-in samples
 
 table_filtered$log_genes_80 <- log(table_filtered$genes_contributing_to_80._of_reads)
 
-# Fix dataset batch
-
-# transform all "FL-" sequencing batches to "liquidx"
-#table_filtered$sequencing_batch[grepl("^FL", table_filtered$sequencing_batch)] <- "liquidx"
 
 num_datasets <- length(unique(table_filtered$dataset_batch.y))
 glasbey_colors <- pals::glasbey(num_datasets)
@@ -129,9 +121,11 @@ table_filtered$dataset_batch.y <- factor(table_filtered$dataset_batch.y, levels 
                                                                                       "giraldez_phospho-rna-seq",
                                                                                       "giraldez_standard",
                                                                                       "ibarra_buffy_coat",
-                                                                                      "ibarra_plasma",
+                                                                                      "ibarra_plasma_cancer",
+                                                                                      "ibarra_plasma_non_cancer",
                                                                                       "ibarra_serum",
-                                                                                      "moufarrej",
+                                                                                      "moufarrej_site_1",
+                                                                                      "moufarrej_site_2",
                                                                                       "ngo",
                                                                                       "reggiardo",
                                                                                       "roskams_pilot",
@@ -154,12 +148,14 @@ datasetsPalette=c( "flomics_1" = "#9AB9D6",
                    "ngo" =  "#fa8072",
                    "roskams_pilot" = "#944dff",
                    "roskams_validation" = "#5b2e9e",
-                   "moufarrej" = "#CC79A7",
+                   "moufarrej_site_1" = "#CC79A7",
+                   "moufarrej_site_2" = "#CC79A7",
                    "sun_2" = "#8a3d00", 
                    "tao" ="#0072B2",
                    "toden" = "#800099",
                    "ibarra_buffy_coat" = "#800000",
-                   "ibarra_plasma" = "#A52A2A",
+                   "ibarra_plasma_cancer" = "#A52A2A",
+                   "ibarra_plasma_non_cancer" = "#A52A2A",
                    "ibarra_serum" = "#B22522",
                    "chalasani" = "#800040",
                    "rozowsky" = "#006600",
@@ -177,16 +173,18 @@ datasetsLabels <- c(
   roskams_validation = "Roskams-Hieter (validation)",
   ngo = "Ngo",
   ibarra_serum = "Ibarra (serum)",
-  ibarra_plasma = "Ibarra (plasma)",
+  ibarra_plasma_cancer = "Ibarra (plasma, cancer)",
+  ibarra_plasma_non_cancer = "Ibarra (plasma, non-cancer)",
   ibarra_buffy_coat = "Ibarra (buffy coat)",
   toden = "Toden",
   chalasani = "Chalasani",
-  block_150bp = "Block (150bp)",
-  block_300bp = "Block (300bp)",
+  block_150bp = "Block (2x75bp)",
+  block_300bp = "Block (2x150bp)",
   rozowsky = "ENCODE\n(bulk tissue RNA-Seq)",
   tao = "Tao",
   wei = "Wei (cfDNA)",
-  moufarrej = "Moufarrej",
+  moufarrej_site_1 = "Moufarrej (Site 1)",
+  moufarrej_site_2 = "Moufarrej (Site 2)",
   wang = "Wang",
   giraldez_standard = "Giráldez (standard)",
   "giraldez_phospho-rna-seq" = "Giráldez (phospho-RNA-seq)",
@@ -207,6 +205,16 @@ darken_color <- function(color, factor = 1.3) {
 
 datasetsOutlinePalette <- sapply(datasetsPalette, darken_color)
 
+clean_label <- function(label) {
+  label <- gsub("^X\\.", "", label)             
+  label <- gsub("_", " ", label)                 
+  label <- gsub("\\s+", " ", label)              
+  label <- trimws(label)
+  label <- tools::toTitleCase(label)              
+  return(label)
+}
+
+
 #write.table(table_filtered, file="Qc_table_filtered.tsv", row.names = FALSE)
 ggplot_objects <- lapply(column_names, function(col_name) {
   ggplot(table_filtered, aes(x = dataset_batch.y, y = .data[[col_name]], fill = dataset_batch.y)) +
@@ -214,8 +222,8 @@ ggplot_objects <- lapply(column_names, function(col_name) {
     geom_point(aes(y = .data[[col_name]], color = dataset_batch.y), 
                position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.8), 
                shape = 21, size = 1.5, stroke = 0.2, alpha = 0.6) +
-    labs(title = col_name,
-         x = "Dataset", y = col_name) +
+    labs(title = NULL,
+         x = "Dataset", y = clean_label(col_name)) +
     theme_classic() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
           axis.title = element_text(size = 12, face = "bold"),
@@ -233,7 +241,7 @@ ggplot_objects <- lapply(column_names, function(col_name) {
 
 
 
-setwd("~/cfRNA-meta/full_comparison_2025_06_11/")
+setwd("~/cfRNA-meta/full_comparison_2025_06_13/")
 
 for (i in 1:length(ggplot_objects)) {
   col_name <- column_names[i]
@@ -242,9 +250,9 @@ for (i in 1:length(ggplot_objects)) {
   output_file <- paste0(gsub(" ", "_", tolower(col_name)), "_external_datasets_boxplot_with_points.pdf")
   ggsave(output_file, ggplot_objects[[i]], width = 9, height = 6, dpi = 600)
 }
-
-############ Biotype stacked barplot
-
+####################################
+############ Biotype stacked barplot (DEPRECATED)
+####################################
 biotype_columns <- grep("_pct$", names(table_filtered), value = TRUE)
 
 biotype_data <- merged_df[, 66:147]
@@ -356,10 +364,11 @@ p_supergroups <- ggplot(biotype_summary_supergroups, aes(x = sequencing_batch, y
 
 ggsave("biotype_supergroup_distribution_per_dataset.png", p_supergroups, width = 12, height = 4, dpi = 600)
 ggsave("biotype_supergroup_distribution_per_dataset.pdf", p_supergroups, width = 12, height = 4, dpi = 600)
-########################################3
+########################################
 
+###############################
 ############ Protein coding pct
-
+###############################
 p <- ggplot(table_filtered, aes(x = sequencing_batch, y = protein_coding_pct, fill = sequencing_batch)) +
   geom_boxplot(alpha = 0.6, aes(color = sequencing_batch), position = position_dodge(width = 0.75), outlier.shape = NA) +
   geom_point(aes(y = protein_coding_pct, color = sequencing_batch), 
@@ -390,9 +399,9 @@ ggsave("protein_coding_pct.pdf", p, width = 9, height = 6, dpi = 600)
 #   scale_color_manual(values = datasetsPalette, labels = datasetsLabels)+
 #   scale_fill_manual(values = datasetsPalette) 
 
-
+#################################
 ########### Diversity scatterplot
-
+#################################
 library(scales)
 p <- ggplot(data = table_filtered, aes(x = exonic_reads_minus_spike_ins, y = genes_contributing_to_80._of_reads, color = sequencing_batch)) +
   geom_point(size = 2, alpha = 0.7) + 
@@ -423,7 +432,9 @@ ps <- p  +  scale_y_continuous(trans=log10_trans())
 ggsave("diversity_scatterplot.png", plot = ps, width = 12, height = 8, dpi = 300)
 ggsave("diversity_scatterplot.pdf", plot = ps, width = 12, height = 8, dpi = 300)
 
+##################################
 ################## Shannon entropy
+##################################
 
 shannon <- read.table("~/cfRNA-meta/exp_mat/shannon_entropy_with_flomics_1_andliquidx.csv", header = TRUE, sep = ",")
 colnames(shannon) <- c("sequencing_batch", "sample_id", "ShannonEntropy")
@@ -480,9 +491,9 @@ p <- ggplot(table_filtered_combined, aes(x = sequencing_batch.x, y = ShannonEntr
 ggsave("shannon_entropy_boxplot.png", plot = p, width = 9, height = 6, dpi = 600)
 ggsave("shannon_entropy_boxplot.pdf", plot = p, width = 9, height = 6, dpi = 600)
 
-
+#######################################################
 ############### Fragments mapped to the expected strand
-
+#######################################################
 
 table_filtered$Fragments_mapping_to_expected_strand_pct <- 100 - as.numeric(table_filtered$reads_mapping_sense_percentage)
 
@@ -508,9 +519,9 @@ p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = Fragments_mapping_to_ex
 ggsave("fragments_mapped_expected_strand.png", p, width = 9, height = 6, dpi = 600)
 ggsave("fragments_mapped_expected_strand.pdf", p, width = 9, height = 6, dpi = 600)
 
-
+###################################
 ################### Fragment number
-
+###################################
 
 table_filtered <- table_filtered %>%
   mutate(fragment_number = if_else(
@@ -518,23 +529,6 @@ table_filtered <- table_filtered %>%
     read_number,           # Single-end: keep as is
     read_number / 2        # Paired-end: divide by 2
   ))
-
-p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = fragment_number, fill = dataset_batch.y)) +
-  geom_boxplot(alpha = 0.6, aes(color = dataset_batch.y), position = position_dodge(width = 0.75), outlier.shape = NA) +
-  geom_point(aes(y = fragment_number, color = dataset_batch.y), 
-             position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.8), 
-             shape = 21, size = 1.5, stroke = 0.2, alpha = 0.6) +
-  labs(title = "",
-       x = "Dataset", y = "Fragment number") +
-  theme_classic() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
-        axis.title = element_text(size = 12, face = "bold"),
-        plot.title = element_text(size = 14, face = "bold"),
-        legend.position = "none") +
-  scale_x_discrete(labels = datasetsLabels) +
-  scale_fill_manual(values = datasetsPalette, labels = datasetsLabels) +
-  scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels)
-
 
 p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = fragment_number, fill = dataset_batch.y)) +
   geom_boxplot(alpha = 0.6, aes(color = dataset_batch.y), position = position_dodge(width = 0.75), outlier.shape = NA) +
