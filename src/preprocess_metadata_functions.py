@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import numpy as np
 import re
@@ -5,6 +6,7 @@ import pdb
 from sra_columns_mapping import rename_columns_and_values
 pd.set_option('display.max_columns', None)
 
+import GEOparse
 
 
 def simplify_column_names(cols):
@@ -61,6 +63,9 @@ def preprocess_chen(dataset_metadata):
     df["dataset_short_name"] = "chen"
     df["dataset_batch"] = "chen"
     df["read_length"] = "2x150"
+    df["centrifugation_step_1"] = "Unspecified"
+    df["centrifugation_step_2"] = "Unspecified"
+
     # Exclude the two E. coli samples and the brain tissue sample
     df = df[~(df['sample_name'].isin([
         'ET_L2',
@@ -105,7 +110,8 @@ def preprocess_zhu(dataset_metadata):
     df["dataset_short_name"] = "zhu"
     df["dataset_batch"] = "zhu"
     df["read_length"] = "2x150"
-
+    df["centrifugation_step_1"] = "Unspecified"
+    df["centrifugation_step_2"] = "Unspecified"
 
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
 
@@ -122,6 +128,8 @@ def preprocess_roskams(dataset_metadata):
     df["dataset_short_name"] = "roskams"
     df["dataset_batch"] = np.where(df["cohort"] == "pilot", "roskams_pilot", "roskams_validation")
     df["read_length"] = np.where(df["dataset_batch"] == "roskams_pilot", "2x100", "2x150")
+    df["centrifugation_step_1"] = "1000g"
+    df["centrifugation_step_2"] = "15000g" 
 
     # Phenotype is described in the source_name column
     df['source_name'].unique()
@@ -180,6 +188,8 @@ def preprocess_ngo(dataset_metadata):
     df["dataset_short_name"] = "ngo"
     df["dataset_batch"] = "ngo"
     df["read_length"] = "2x75"
+    df["centrifugation_step_1"] = "Unspecified"
+    df["centrifugation_step_2"] = "Unspecified"
 
 
     df['phenotype'] = df['isolate'].replace({
@@ -201,46 +211,79 @@ def preprocess_ibarra(dataset_metadata):
     df["sequencing_batch"] = "ibarra" 
     df["dataset_short_name"] = "ibarra"
     df["biomaterial"] = df["tissue"].str.lower()
-    df["plasma_tubes"] = df["biomaterial"].apply(lambda x: "EDTA" if x == "plasma" else "BD Vacutainer clotting tubes" if x == "serum" else "")
-    df["dataset_batch"] = df["biomaterial"].apply(lambda x: "ibarra_plasma" if x == "plasma" else "ibarra_serum" if x == "serum" else "ibarra_buffy_coat" if x == "buffy coat" else "")
     df["read_length"] = "2x75"
 
-    # **Guessing** the phenotype from the sample name
-    # Warning: this information is *not* reliable.
+    # Guess phenotype
     def parse_phenotype(s):
         m = re.search(r'MM', s)
         if m:
-            return pd.Series({"phenotype":"Multiple myeloma",
-                            "collection_center":"Scripps Bone Marrow Transplant Center"})
+            return pd.Series({"phenotype": "Multiple myeloma",
+                            "collection_center": "Scripps Bone Marrow Transplant Center"})
         m = re.search(r'EPO', s)
         if m:
-            return pd.Series({"phenotype":"Chronic kidney failure EPO-treated",
-                            "collection_center":"Scripps Clinic Cancer Center"})
+            return pd.Series({"phenotype": "Chronic kidney failure EPO-treated",
+                            "collection_center": "Scripps Clinic Cancer Center"})
         m = re.search(r'AML', s)
         if m:
-            return pd.Series({"phenotype":"Acute Myeloid Leukemia",
-                            "collection_center":""})
+            return pd.Series({"phenotype": "Acute Myeloid Leukemia",
+                            "collection_center": ""})
         m = re.search(r'GCSF', s)
         if m:
-            return pd.Series({"phenotype":"G-CSF-treated healthy donors",
-                            "collection_center":"Scripps"})
+            return pd.Series({"phenotype": "G-CSF-treated healthy donors",
+                            "collection_center": "Scripps"})
         m = re.search(r'SDBB', s)
         if m:
-            return pd.Series({"phenotype":"Healthy",
-                            "collection_center":"San Diego Blood Bank"})
+            return pd.Series({"phenotype": "Healthy",
+                            "collection_center": "San Diego Blood Bank"})
         m = re.search(r'Diverticulitis', s, re.I)
         if m:
-            return pd.Series({"phenotype":"Diverticulitis",
-                            "collection_center":np.nan})
+            return pd.Series({"phenotype": "Diverticulitis",
+                            "collection_center": np.nan})
         return pd.Series(dtype='object')
 
     df = df.join(df['sample_name'].apply(parse_phenotype))
+
+    # Plasma tubes
+    df["plasma_tubes"] = df["biomaterial"].apply(
+        lambda x: "EDTA" if x == "plasma" else "BD Vacutainer clotting tubes" if x == "serum" else "")
+
+    # Assign dataset_batch including plasma subtype logic
+    def assign_batch(row):
+        if row["biomaterial"] == "plasma":
+            if row["phenotype"] in ["Multiple myeloma", "Acute Myeloid Leukemia"]:
+                return "ibarra_plasma_cancer"
+            else:
+                return "ibarra_plasma_non_cancer"
+        elif row["biomaterial"] == "serum":
+            return "ibarra_serum"
+        elif row["biomaterial"] == "buffy coat":
+            return "ibarra_buffy_coat"
+        else:
+            return ""
+
+    df["dataset_batch"] = df.apply(assign_batch, axis=1)
+
+    # Assign centrifugation steps based on dataset_batch
+    def assign_centrifugation_steps(batch):
+        if batch == "ibarra_buffy_coat":
+            return pd.Series({"centrifugation_step_1": "1900g", "centrifugation_step_2": "NA"})
+        elif batch == "ibarra_serum":
+            return pd.Series({"centrifugation_step_1": "1900g", "centrifugation_step_2": "16000g"})
+        elif batch == "ibarra_plasma_non_cancer":
+            return pd.Series({"centrifugation_step_1": "1900g", "centrifugation_step_2": "16000g"})
+        elif batch == "ibarra_plasma_cancer":
+            return pd.Series({"centrifugation_step_1": "1900g", "centrifugation_step_2": "6000g"})
+        else:
+            return pd.Series({"centrifugation_step_1": "NA", "centrifugation_step_2": "NA"})
+
+    df = df.join(df["dataset_batch"].apply(assign_centrifugation_steps))
 
     df = merge_sample_with_dataset_metadata(
         df, dataset_metadata, keep_sample_cols=["biomaterial", "plasma_tubes"])
 
     df.to_csv("../sra_metadata/ibarra_metadata_preprocessed.csv", index=False)
     return df
+
 
 def preprocess_toden(dataset_metadata):
     print("### Dataset: toden")
@@ -252,6 +295,8 @@ def preprocess_toden(dataset_metadata):
     df["dataset_short_name"] = "toden"
     df["dataset_batch"] = "toden"
     df["read_length"] = "2x75"
+    df["centrifugation_step_1"] = "12000g"
+    df["centrifugation_step_2"] = "NA" 
 
 
     df_first = df.drop_duplicates(subset="isolate", keep="first").copy()
@@ -288,6 +333,8 @@ def preprocess_chalasani(dataset_metadata):
     df["dataset_short_name"] = "chalasani"
     df["dataset_batch"] = "chalasani"
     df["read_length"] = "2x75"
+    df["centrifugation_step_1"] = "1900g"
+    df["centrifugation_step_2"] = "NA" 
 
 
     # Create a new column with the cleaned isolate ID
@@ -352,6 +399,8 @@ def preprocess_block(dataset_metadata):
         "block_150bp", "block_300bp"
     )
     df["read_length"] = np.where(df["dataset_batch"] == "block_150bp", "2x75", "2x150")
+    df["centrifugation_step_1"] = "2000g"
+    df["centrifugation_step_2"] = "NA" 
 
     # Exclude non-plasma samples: Tissue, and Plasma-derived vesicles.
     df = df.rename(columns={'tissue':'biomaterial'})
@@ -391,7 +440,9 @@ def preprocess_rozowsky(dataset_metadata):
     df["dataset_short_name"] = "rozowsky"
     df["dataset_batch"] = "rozowsky"
     df['phenotype'] = 'Healthy'
-    df["read_length"] = "2x100"    
+    df["read_length"] = "2x100"
+    df["centrifugation_step_1"] = "NA"
+    df["centrifugation_step_2"] = "NA" 
 
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
 
@@ -408,7 +459,9 @@ def preprocess_tao(dataset_metadata):
     df["sequencing_batch"] = "tao" 
     df["dataset_short_name"] = "tao"
     df["dataset_batch"] = "tao"
-    df["read_length"] = "2x150"    
+    df["read_length"] = "2x150"
+    df["centrifugation_step_1"] = "Unspecified"
+    df["centrifugation_step_2"] = "Unspecified"    
 
     # Select only the cfRNA-seq samples, filter out tissue and PBMC, and other assays like MeDIP-Seq, miRNA-Seq
     n1 = len(df)
@@ -466,6 +519,8 @@ def preprocess_wei(dataset_metadata):
     df["dataset_short_name"] = "wei"
     df["dataset_batch"] = "wei"
     df["read_length"] = "2x150"    
+    df["centrifugation_step_1"] = "3000g"
+    df["centrifugation_step_2"] = "12000g" 
 
     # Select only the plasma samples, remove the tissue "tissue" ones
     n1 = len(df)
@@ -492,18 +547,79 @@ def preprocess_moufarrej(dataset_metadata):
 
     df["sequencing_batch"] = "moufarrej" 
     df["dataset_short_name"] = "moufarrej"
-    df["dataset_batch"] = "moufarrej"
+    #df["dataset_batch"] = "moufarrej" # use 'cohort' column from GEO
     df["read_length"] = "2x75"    
-
 
     # Dataset_metadata table says EDTA/Streck ?
     #df["plasma_tubes"] = "EDTA"
 
     # Cohorts is composed of preeclampsia and healthy control (normotensive)
-    df.loc[df['disease'].isnull(), 'phenotype'] = 'Healthy pregnant women'
+    #df.loc[df['disease'].isnull(), 'phenotype'] = 'Healthy pregnant women'
+
+    # Parse GEO metadata
+    geo_series_meta = "../sra_metadata/moufarrej_geo_series_metadata.csv"
+    if not os.path.exists(geo_series_meta):
+
+        # Load series matrix file
+        gse = GEOparse.get_GEO(geo="GSE192902", destdir="../", silent=True)
+
+        # loop over sample data
+        meta_dict = {}
+        for gsm_name, gsm in gse.gsms.items():
+            library_name = gsm.metadata['title'][0]
+            meta_dict[library_name] = {ss.split(": ")[0]:ss.split(": ")[1] for ss in gsm.metadata['characteristics_ch1']}
+            
+        # create DataFrame
+        geo_df = (
+            pd.DataFrame
+            .from_dict(meta_dict, orient='index')
+            .reset_index()
+            .rename(columns={'index':'library_name'})
+        )
+        geo_df.columns = simplify_column_names(geo_df.columns)
+        
+        geo_cols = ["library_name", "disease", "sampling_time_group", "cohort"]
+        # Store processed GEO metadata to file
+        geo_df = geo_df[geo_cols]
+        geo_df.to_csv(geo_series_meta, index=False)
+        
+    # Load processed GEO metadata
+    geo_df = pd.read_csv(geo_series_meta).rename(columns={'disease':'phenotype'})
+    # add GEO metadata
+    df = df.merge(geo_df, on='library_name', how='left')
+
+    # re-map 'cohort' to 'collection_center'
+    moufarrej_cohort_map = {
+        'Discovery':    'Lucile Packard Children Hospital',
+        'Validation 1': 'Lucile Packard Children Hospital',
+        'Validation 2': 'Global Alliance to Prevent Prematurity and Stillbirth (GAPPS)',
+    }
+
+    df["collection_center"] = df["cohort"].map(moufarrej_cohort_map)
+
+    def assign_site(center):
+        if center == "Lucile Packard Children Hospital":
+            return "moufarrej_site_1"
+        elif center == "Global Alliance to Prevent Prematurity and Stillbirth (GAPPS)":
+            return "moufarrej_site_2"
+        else:
+            return "moufarrej_unknown"
+
+    df["dataset_batch"] = df["collection_center"].apply(assign_site)
+    df['collection_center'] = df['cohort'].apply(lambda x: moufarrej_cohort_map[x])
+
+
+    def assign_centrifugation_steps(batch):
+        if batch == "moufarrej_site_1":
+            return pd.Series({"centrifugation_step_1": "1600g", "centrifugation_step_2": "13000g"})
+        elif batch == "moufarrej_site_2":
+            return pd.Series({"centrifugation_step_1": "2500g", "centrifugation_step_2": "NA"})
+        else:
+            return pd.Series({"centrifugation_step_1": "NA", "centrifugation_step_2": "NA"})
+
+    df = df.join(df["dataset_batch"].apply(assign_centrifugation_steps))
 
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
-
     df.to_csv("../sra_metadata/moufarrej_metadata_preprocessed.csv", index=False)
 
     return df
@@ -518,6 +634,8 @@ def preprocess_wang(dataset_metadata):
     df["dataset_short_name"] = "wang"
     df["dataset_batch"] = "wang"
     df["read_length"] = "2x150"    
+    df["centrifugation_step_1"] = "1600g"
+    df["centrifugation_step_2"] = "16000g" 
 
 
     # There are 3 samples that were processed with a different library prep kit.
@@ -613,6 +731,8 @@ def preprocess_giraldez(dataset_metadata):
     df.loc[index, "library_prep_kit_short"] = "Illumina TruSeq small RNA"
     df.loc[index, "assay_name"] = "RNA-seq"
     df.loc[index, "dataset_batch"] = "giraldez_standard"
+    df.loc[index, "centrifugation_step_1"] = "3400g"
+    df.loc[index, "centrifugation_step_2"] = "1940g" 
 
     # phospho-RNA-seq library prep
     index = df[df['treatment'].isin(['T4PNK', 'PNK'])].index
@@ -620,6 +740,8 @@ def preprocess_giraldez(dataset_metadata):
     df.loc[index, "library_prep_kit_short"] = "PNK-treated Illumina TruSeq small RNA"
     df.loc[index, "assay_name"] = "phospho-RNA-seq"
     df.loc[index, "dataset_batch"] = "giraldez_phospho-rna-seq"
+    df.loc[index, "centrifugation_step_1"] = "3400g"
+    df.loc[index, "centrifugation_step_2"] = "1940g" 
 
     df["read_length"] = np.where(df["dataset_batch"] == "giraldez_standard", "1x50", "1x75")
 
@@ -646,6 +768,8 @@ def preprocess_sun(dataset_metadata):
     df["biomaterial"] = df["tissue"].apply(lambda x: "blood plasma" if x == "plasma" else "blood serum" if x == "serum" else "")
     df["dataset_batch"] = np.where(df["biomaterial"] == "blood plasma", "sun_1", "sun_2")
     df["read_length"] = "2x150"
+    df["centrifugation_step_1"] = "1500g"
+    df["centrifugation_step_2"] = "3000g" 
 
     # Exclude cfDNA samples
     n1 = len(df)
@@ -775,6 +899,8 @@ def preprocess_decruyenaere(dataset_metadata):
     df["dataset_batch"]      = "decruyenaere"
     df["disease"]            = df["phenotype"]
     df["read_length"]        = "2x100"
+    df["centrifugation_step_1"] = "1900g"
+    df["centrifugation_step_2"] = "NA" 
 
     # Exclude FFPE samples
     n1 = len(df)
@@ -803,6 +929,9 @@ def preprocess_reggiardo(dataset_metadata):
     df["dataset_short_name"] = "reggiardo"
     df["dataset_batch"] = "reggiardo"
     df["read_length"] = "2x150"
+    df["centrifugation_step_1"] = "Unspecified"
+    df["centrifugation_step_2"] = "Unspecified" 
+    
 
 
     # Select only Illumina samples and exclude ONT samples
@@ -827,6 +956,8 @@ def preprocess_flomics_1(dataset_metadata):
     df["dataset_short_name"] = "flomics_1"
     df["dataset_batch"] = "flomics_1"
     df["read_length"] = "2x150"
+    df["centrifugation_step_1"] = "placeholder"
+    df["centrifugation_step_2"] = "placeholder" 
     
     df["run"] = df["sample_name"]
 
@@ -849,6 +980,8 @@ def preprocess_flomics_2(dataset_metadata):
     df["dataset_short_name"] = "flomics_2"
     df["dataset_batch"] = "flomics_2"
     df["read_length"] = "2x150"
+    df["centrifugation_step_1"] = "1500g"
+    df["centrifugation_step_2"] = "2500g" 
 
     df["run"] = df["sample_name"]
 
