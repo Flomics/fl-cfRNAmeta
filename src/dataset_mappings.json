@@ -54,5 +54,6 @@
     "reggiardo": "Reggiardo",
     "flomics_1": "Flomics 1",
     "flomics_2": "Flomics 2"
-  }
+  },
+  "datasetVisualOrder": ["block_150bp", "block_300bp", "chalasani", "chen", "decruyenaere", "flomics_1", "flomics_2", "giraldez_phospho-rna-seq", "giraldez_standard", "ibarra_buffy_coat", "ibarra_plasma_cancer", "ibarra_plasma_non_cancer", "ibarra_serum", "moufarrej_site_1", "moufarrej_site_2", "ngo", "reggiardo", "roskams_pilot", "roskams_validation", "sun_2", "tao", "toden", "wang", "zhu", "rozowsky", "wei"]
 }
