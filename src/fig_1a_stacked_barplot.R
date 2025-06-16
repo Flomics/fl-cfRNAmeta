@@ -3,6 +3,13 @@ library(dplyr)
 library(RColorBrewer)
 library(forcats)
 library(jsonlite)
+library(grid)
+library(showtext)
+font_add("DejaVu Sans", regular = "DejaVuSans.ttf")
+showtext_opts(dpi = 600)  # MUST come before showtext_auto()
+showtext_auto()
+theme_set(theme_classic(base_family = "DejaVu Sans"))
+
 
 
 setwd("~/fl-cfRNAmeta/")
@@ -170,4 +177,7 @@ ggplot(phenotype_merged_plot_data, aes(x = dataset_batch_clean, y = count, fill 
   )
 
 ggsave("figures/fig_1a_combined_simplified_and_cancer_detail.png",
-       width = 15, height = 8, dpi = 600, units = "in", bg = "white")
+       width = 15, height = 8, dpi = 600, units = "in", bg = "white",device = ragg::agg_png)
+ggsave("figures/fig_1a_combined_simplified_and_cancer_detail.pdf",
+       width = 15, height = 8, dpi = 600, units = "in", bg = "white", device = cairo_pdf)
+
