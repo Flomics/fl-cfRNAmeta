@@ -266,7 +266,7 @@ def preprocess_ibarra(dataset_metadata):
     # Assign centrifugation steps based on dataset_batch
     def assign_centrifugation_steps(batch):
         if batch == "ibarra_buffy_coat":
-            return pd.Series({"centrifugation_step_1": "1900g", "centrifugation_step_2": "NA"})
+            return pd.Series({"centrifugation_step_1": "1900g", "centrifugation_step_2": "None"})
         elif batch == "ibarra_serum":
             return pd.Series({"centrifugation_step_1": "1900g", "centrifugation_step_2": "16000g"})
         elif batch == "ibarra_plasma_non_cancer":
@@ -274,7 +274,7 @@ def preprocess_ibarra(dataset_metadata):
         elif batch == "ibarra_plasma_cancer":
             return pd.Series({"centrifugation_step_1": "1900g", "centrifugation_step_2": "6000g"})
         else:
-            return pd.Series({"centrifugation_step_1": "NA", "centrifugation_step_2": "NA"})
+            return pd.Series({"centrifugation_step_1": "None", "centrifugation_step_2": "None"})
 
     df = df.join(df["dataset_batch"].apply(assign_centrifugation_steps))
 
@@ -296,7 +296,7 @@ def preprocess_toden(dataset_metadata):
     df["dataset_batch"] = "toden"
     df["read_length"] = "2x75"
     df["centrifugation_step_1"] = "12000g"
-    df["centrifugation_step_2"] = "NA" 
+    df["centrifugation_step_2"] = "None" 
 
 
     df_first = df.drop_duplicates(subset="isolate", keep="first").copy()
@@ -334,7 +334,7 @@ def preprocess_chalasani(dataset_metadata):
     df["dataset_batch"] = "chalasani"
     df["read_length"] = "2x75"
     df["centrifugation_step_1"] = "1900g"
-    df["centrifugation_step_2"] = "NA" 
+    df["centrifugation_step_2"] = "None" 
 
 
     # Create a new column with the cleaned isolate ID
@@ -379,7 +379,7 @@ def preprocess_block(dataset_metadata):
     )
     df["read_length"] = np.where(df["dataset_batch"] == "block_150bp", "2x75", "2x150")
     df["centrifugation_step_1"] = "2000g"
-    df["centrifugation_step_2"] = "NA" 
+    df["centrifugation_step_2"] = "None" 
 
     # Exclude non-plasma samples: Tissue, and Plasma-derived vesicles.
     df = df.rename(columns={'tissue':'biomaterial'})
@@ -420,8 +420,8 @@ def preprocess_rozowsky(dataset_metadata):
     df["dataset_batch"] = "rozowsky"
     df['phenotype'] = 'Healthy'
     df["read_length"] = "2x100"
-    df["centrifugation_step_1"] = "NA"
-    df["centrifugation_step_2"] = "NA" 
+    df["centrifugation_step_1"] = "None"
+    df["centrifugation_step_2"] = "None" 
 
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
 
@@ -592,7 +592,7 @@ def preprocess_moufarrej(dataset_metadata):
         if batch == "moufarrej_site_1":
             return pd.Series({"centrifugation_step_1": "1600g", "centrifugation_step_2": "13000g"})
         elif batch == "moufarrej_site_2":
-            return pd.Series({"centrifugation_step_1": "2500g", "centrifugation_step_2": "NA"})
+            return pd.Series({"centrifugation_step_1": "2500g", "centrifugation_step_2": "None"})
         else:
             return pd.Series({"centrifugation_step_1": "NA", "centrifugation_step_2": "NA"})
 
@@ -879,7 +879,7 @@ def preprocess_decruyenaere(dataset_metadata):
     df["disease"]            = df["phenotype"]
     df["read_length"]        = "2x100"
     df["centrifugation_step_1"] = "1900g"
-    df["centrifugation_step_2"] = "NA" 
+    df["centrifugation_step_2"] = "None" 
 
     # Exclude FFPE samples
     n1 = len(df)

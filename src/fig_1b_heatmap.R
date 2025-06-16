@@ -5,6 +5,7 @@ library(tibble)
 library(RColorBrewer)
 library(ComplexHeatmap)
 library(purrr)
+library(jsonlite)
 
 data_heatmap <- read.table("tables/cfRNA-meta_per_batch_metadata.tsv", header = TRUE, sep = "\t", na.strings = c("", "NA"))
 
@@ -43,7 +44,7 @@ get_palette_with_na <- function(varname, base) {
   if (varname %in% c("centrifugation_step_1", "centrifugation_step_2")) {
     desired_order <- c("1000g", "1500g", "1600g", "1900g", "1940g", "2000g", "2500g", "3000g", 
                        "3400g", "6000g", "12000g", "13000g", "15000g", "16000g",
-                       "Unspecified", "placeholder", "NA")
+                       "Unspecified", "placeholder", "None")
     values <- intersect(desired_order, values)
     real_values <- values[!values %in% c("NA", "Unspecified", "placeholder")]
   } else if (varname == "read_length") {
@@ -76,45 +77,25 @@ get_palette_with_na <- function(varname, base) {
   color_map["NA"] <- "grey80"
   color_map["Unspecified"] <- "grey60"
   color_map["placeholder"] <- "lavenderblush1"
+  color_map["None"] <- "grey70"
   
   return(color_map)
 }
 
 
-clean_dataset_names <- c(
-  chen = "Chen",
-  zhu = "Zhu",
-  roskams_pilot = "Roskams-Hieter (pilot)",
-  roskams_validation = "Roskams-Hieter (validation)",
-  ngo = "Ngo",
-  ibarra_serum = "Ibarra (serum)",
-  ibarra_plasma_cancer = "Ibarra (plasma, cancer)",
-  ibarra_plasma_non_cancer = "Ibarra (plasma, non-cancer)",
-  ibarra_buffy_coat = "Ibarra (buffy coat)",
-  toden = "Toden",
-  chalasani = "Chalasani",
-  block_150bp = "Block (2x7bp)",
-  block_300bp = "Block (2x150bp)",
-  rozowsky = "ENCODE\n(bulk tissue RNA-Seq)",
-  tao = "Tao",
-  wei = "Wei (cfDNA)",
-  moufarrej_site_1 = "Moufarrej (Site 1)",
-  moufarrej_site_2 = "Moufarrej (Site 2)",
-  wang = "Wang",
-  giraldez_standard = "Giráldez (standard)",
-  "giraldez_phospho-rna-seq" = "Giráldez (phospho-RNA-seq)",
-  sun_2 = "Sun",
-  decruyenaere = "Decruyenaere",
-  reggiardo = "Reggiardo",
-  flomics_1 = "Flomics 1",
-  flomics_2 = "Flomics 2"
-)
+mappings <- fromJSON("src/dataset_mappings.json")
+
+clean_dataset_names <- unlist(mappings$datasetsLabels)
+core_order <- unlist(mappings$datasetVisualOrder)
+
+
+# all names alphabetically except "rozowsky" and "wei" last
+ordered_datasets <- c(clean_dataset_names[core_order])
+
 
 # Rename columns to clean display names
 colnames(metadata_matrix) <- clean_dataset_names[colnames(metadata_matrix)]
 
-core_order <- setdiff(names(clean_dataset_names), c("rozowsky", "wei"))
-ordered_datasets <- c(sort(clean_dataset_names[core_order]), clean_dataset_names[c("rozowsky", "wei")])
 
 metadata_matrix <- metadata_matrix[, ordered_datasets]
 
@@ -151,8 +132,20 @@ clean_names <- c(
   centrifugation_step_2 = "Centrifugation, step 2"
 )
 
+row_order <- c(
+  "centrifugation_step_1",
+  "centrifugation_step_2",
+  "biomaterial",
+  "nucleic_acid_type",
+  "rna_extraction_kit_short_name",
+  "dnase",
+  "library_prep_kit_short_name",
+  "library_selection",
+  "cdna_library_type",
+  "read_length"
+)
 
-heatmap_list <- lapply(rownames(metadata_matrix), function(var) {
+heatmap_list <- lapply(row_order, function(var) {
   if (is.null(palette_list[[var]])) {
     message("Skipping ", var, ": no palette defined.")
     return(NULL)
@@ -166,7 +159,7 @@ heatmap_list <- lapply(rownames(metadata_matrix), function(var) {
   if (var %in% c("centrifugation_step_1", "centrifugation_step_2")) {
     values <- factor(values, levels  = c("1000g", "1500g", "1600g", "1900g", "1940g", "2000g", "2500g", "3000g", 
                       "3400g", "6000g", "12000g", "13000g", "15000g", "16000g",
-                      "Unspecified", "placeholder", "NA"))
+                      "Unspecified", "placeholder", "None"))
     values <- as.character(values)
   }
   
@@ -191,6 +184,7 @@ heatmap_list <- lapply(rownames(metadata_matrix), function(var) {
   }
   color_map["Unspecified"] <- "grey60"
   color_map["placeholder"] <- "lavenderblush1"
+  color_map["None"] <- "grey70"
   if (var == "read_length") {
     legend_order <- c("1x50", "1x75", "2x75", "2x100", "2x150", "NA")
     color_map <- color_map[intersect(legend_order, names(color_map))]
@@ -198,12 +192,12 @@ heatmap_list <- lapply(rownames(metadata_matrix), function(var) {
   if (var %in% c("centrifugation_step_1", "centrifugation_step_2")) {
     legend_order <- c("1000g", "1500g", "1600g", "1900g", "1940g", "2000g", "2500g", "3000g", 
                       "3400g", "6000g", "12000g", "13000g", "15000g", "16000g",
-                      "Unspecified", "placeholder", "NA")
+                      "Unspecified", "placeholder", "None")
     color_map <- color_map[intersect(legend_order, names(color_map))]
   }
   
   # Always move special values to the end of the legend
-  special_levels <- c("Unspecified", "placeholder", "NA")
+  special_levels <- c("Unspecified", "placeholder", "NA", "None")
   ordered_vals <- c(
     setdiff(names(color_map), special_levels),
     intersect(special_levels, names(color_map))
@@ -212,7 +206,10 @@ heatmap_list <- lapply(rownames(metadata_matrix), function(var) {
   
   var_pretty <- clean_names[[var]]
   
-  mat <- matrix(values, nrow = 1, dimnames = list(var_pretty, colnames(metadata_matrix)))
+  ordered_pretty_names <- clean_names[row_order]
+
+  mat <- matrix(values, nrow = 1, dimnames = list(factor(var_pretty, levels = ordered_pretty_names), colnames(metadata_matrix)))
+
   
   Heatmap(
     mat,
@@ -235,6 +232,8 @@ heatmap_list <- lapply(rownames(metadata_matrix), function(var) {
     
   )
 }) %>% discard(is.null)
+
+names(heatmap_list) <- row_order
 
 
 ht_list <- Reduce(`%v%`, heatmap_list)
