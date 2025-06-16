@@ -6,6 +6,12 @@ library(RColorBrewer)
 library(ComplexHeatmap)
 library(purrr)
 library(jsonlite)
+library(Cairo)
+library(showtext)
+font_add("DejaVu Sans", regular = "DejaVuSans.ttf")
+showtext_opts(dpi = 600)  # MUST come before showtext_auto()
+showtext_auto()
+theme_set(theme_classic(base_family = "DejaVu Sans"))
 
 data_heatmap <- read.table("tables/cfRNA-meta_per_batch_metadata.tsv", header = TRUE, sep = "\t", na.strings = c("", "NA"))
 
@@ -239,7 +245,15 @@ names(heatmap_list) <- row_order
 ht_list <- Reduce(`%v%`, heatmap_list)
 
 
-png("figures/fig_1b_metadata_heatmap.png", width = 18, height = 10, res = 600, units = "in", bg = "white")
+ragg::agg_png("figures/fig_1b_metadata_heatmap.png", width = 18, height = 10, units = "in", res = 600)
 draw(ht_list, heatmap_legend_side = "right")
 dev.off()
+
+pdf("figures/fig_1b_metadata_heatmap.pdf", width = 18, height = 10)
+showtext::showtext_begin()
+draw(ht_list, heatmap_legend_side = "right")
+showtext::showtext_end()
+dev.off()
+
+
 

@@ -233,6 +233,40 @@ for (i in 1:length(ggplot_objects)) {
   output_file <- paste0(gsub(" ", "_", tolower(col_name)), "_external_datasets_boxplot_with_points.pdf")
   ggsave(output_file, ggplot_objects[[i]], width = 11, height = 6, dpi = 600, device = cairo_pdf)
 }
+
+add_bottom_brackets <- function(p, bracket_df, factor_levels) {
+  for (i in seq_len(nrow(bracket_df))) {
+    x1 <- which(factor_levels == bracket_df$xmin[i])
+    x2 <- which(factor_levels == bracket_df$xmax[i])
+    if (length(x1) == 0 || length(x2) == 0) next
+    
+    x_start <- (x1 - 1) / length(factor_levels)
+    x_end   <- x2 / length(factor_levels)
+    
+    bracket <- linesGrob(
+      x = unit.c(unit(x_start, "npc"), unit(x_end, "npc")),
+      y = unit(c(-0.03, -0.03), "npc"),
+      gp = gpar(col = "black", lwd = 0.8)
+    )
+    
+    verticals <- gList(
+      linesGrob(
+        x = unit.c(unit(x_start, "npc"), unit(x_start, "npc")),
+        y = unit(c(-0.03, -0.045), "npc"),
+        gp = gpar(col = "black", lwd = 0.95)
+      ),
+      linesGrob(
+        x = unit.c(unit(x_end, "npc"), unit(x_end, "npc")),
+        y = unit(c(-0.03, -0.045), "npc"),
+        gp = gpar(col = "black", lwd = 0.95)
+      )
+    )
+    
+    p <- p + annotation_custom(grobTree(bracket, verticals))
+  }
+  return(p)
+}
+
 ####################################
 ############ Biotype stacked barplot (DEPRECATED)
 ####################################
@@ -500,13 +534,14 @@ p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = Fragments_mapping_to_ex
   labs(title = "",
        x = "Dataset", y = "% fragments mapping to correct gene orientation") +
   theme_classic() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust = 0.9),
         axis.title = element_text(size = 12, face = "bold"),
         plot.title = element_text(size = 14, face = "bold"),
         legend.position = "none") +
   scale_x_discrete(labels = datasetsLabels) +
   scale_fill_manual(values = datasetsPalette, labels = datasetsLabels, guide = "none") +
-  scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels, guide = "none")
+  scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels, guide = "none") +
+  coord_cartesian(clip = "off")
 
 p <- p + new_scale_fill()  # VERY IMPORTANT, native ggplot does not like having two cals of scale_fill or scale_color, so ggnewscale is needed
 
@@ -527,9 +562,10 @@ p <- p +
     legend.margin = margin(0, 0, 0, 0)
   )
 
+p <- add_bottom_brackets(p, bracket_df, levels(table_filtered$dataset_batch.y))
 
-ggsave("fragments_mapped_expected_strand_with_strandedness_info.png", p, width = 11, height = 6, dpi = 600)
-ggsave("fragments_mapped_expected_strand.pdf", p, width = 11, height = 6, dpi = 600)
+ggsave("fragments_mapped_expected_strand_with_strandedness_info.png", p, width = 11, height = 6, dpi = 600, device = ragg::agg_png)
+ggsave("fragments_mapped_expected_strand.pdf", p, width = 11, height = 6, dpi = 600, device = cairo_pdf)
 
 
 
@@ -552,18 +588,20 @@ p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = fragment_number, fill =
   labs(title = "",
        x = "Dataset", y = "Fragment number") +
   theme_classic() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust = 0.9),
         axis.title = element_text(size = 12, face = "bold"),
         plot.title = element_text(size = 14, face = "bold"),
         legend.position = "none") +
   scale_x_discrete(labels = datasetsLabels) +
   scale_fill_manual(values = datasetsPalette, labels = datasetsLabels) +
   scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels) +
-  scale_y_continuous(labels = label_number(scale_cut = cut_short_scale()))
+  scale_y_continuous(labels = label_number(scale_cut = cut_short_scale())) + 
+  coord_cartesian(clip = "off")
 
+p <- add_bottom_brackets(p, bracket_df, levels(table_filtered$dataset_batch.y))
 
-ggsave("fragment_number.png", p, width = 11, height = 6)
-ggsave("fragment_number.pdf", p, width = 11, height = 6)
+ggsave("fragment_number.png", p, width = 11, height = 6, dpi = 600, device = ragg::agg_png)
+ggsave("fragment_number.pdf", p, width = 11, height = 6, dpi = 600, device = cairo_pdf)
 
 
 #######################################################
@@ -604,18 +642,21 @@ p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = log_genes_80, fill = da
   labs(title = "",
        x = "Dataset", y = "NG80") +
   theme_classic() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust = 0.9),
         axis.title = element_text(size = 12, face = "bold"),
         plot.title = element_text(size = 14, face = "bold"),
         legend.position = "none") +
   scale_x_discrete(labels = datasetsLabels) +
   scale_fill_manual(values = datasetsPalette, labels = datasetsLabels) +
   scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels) +
-  scale_y_continuous(breaks = y_breaks, labels = y_labels)
+  scale_y_continuous(breaks = y_breaks, labels = y_labels) + 
+  coord_cartesian(clip = "off")
+
+p <- add_bottom_brackets(p, bracket_df, levels(table_filtered$dataset_batch.y))
 
 
-ggsave("ng80_non_transformed_axis.png", p, width = 11, height = 6, dpi = 600)
-ggsave("ng80_non_transformed_axis.pdf", p, width = 11, height = 6)
+ggsave("ng80_non_transformed_axis.png", p, width = 11, height = 6, dpi = 600, device = ragg::agg_png)
+ggsave("ng80_non_transformed_axis.pdf", p, width = 11, height = 6, dpi = 600, device = cairo_pdf)
 
 
 ################################################################################
