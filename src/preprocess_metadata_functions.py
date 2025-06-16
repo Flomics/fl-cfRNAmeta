@@ -361,27 +361,6 @@ def preprocess_chalasani(dataset_metadata):
 
     df_merged = merge_sample_with_dataset_metadata(df_merged, dataset_metadata)
 
-    # Hot-fix: Temporary exclude missing (n=16) Chalasani samples
-    chalasani_ids_to_exclude = [
-        'X2835',
-        'X3391',
-        'X3392',
-        'X3752',
-        'X3770',
-        'X3817',
-        'X3823',
-        'X3827',
-        'X3833',
-        'X4253',
-        'X4269',
-        'X4275',
-        'X4363',
-        'X9709',
-        'X9737',
-        'X9760'
-    ]
-    df_merged = df_merged[~df_merged['run'].isin(chalasani_ids_to_exclude)]
-
     df_merged.to_csv("../sra_metadata/chalasani_metadata_preprocessed.csv", index=False)
     return df_merged
 
