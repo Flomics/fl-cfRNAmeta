@@ -19,6 +19,12 @@ def simplify_column_names(cols):
            ).to_list()
     return cols
 
+reserved_vars_samplesheet = [
+    'sample_idx_sequencing_batch', 'sample_display_name', 
+    'fastq_1', 'fastq_2', 'out_dir',
+    'resequenced_sample'
+]
+
 
 dataset_column_list = [
     'dataset_short_name',
@@ -969,9 +975,15 @@ def preprocess_flomics_1(dataset_metadata):
     df["centrifugation_step_2"] = "placeholder" 
     
     df["run"] = df["sample_name"]
+    df["run"] = df["sample_analysis_run_id"].apply(lambda x: x.split('_')[0])
 
+    # exclude samples
     samples_to_remove = ["Flomics_1_1", "Flomics_1_2"]
-    df = df.drop(df[df["run"].isin(samples_to_remove)].index, errors='ignore')
+    df = df[~df["sample_name"].isin(samples_to_remove)]
+    
+    reserved_cols = set(df.columns).intersection(reserved_vars_samplesheet)
+    if reserved_cols:
+        df = df.drop(reserved_cols, axis=1)
 
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
 
@@ -992,7 +1004,12 @@ def preprocess_flomics_2(dataset_metadata):
     df["centrifugation_step_1"] = "1500g"
     df["centrifugation_step_2"] = "2500g" 
 
-    df["run"] = df["sample_name"]
+    #df["run"] = df["sample_name"]
+    df["run"] = df["sample_analysis_run_id"].apply(lambda x: x.split('_')[0])
+    
+    reserved_cols = set(df.columns).intersection(reserved_vars_samplesheet)
+    if reserved_cols:
+        df = df.drop(reserved_cols, axis=1)
 
     df = df.rename(columns={"status_subtype":"phenotype"})
 
