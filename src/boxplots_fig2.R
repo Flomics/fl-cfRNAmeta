@@ -71,10 +71,9 @@ print(removed_samples$sample_id)
 
 
 cat("Original merged_df rows:", nrow(data), "\n") #should be 2400 
-cat("Filtered to samples in metadata:", nrow(filtered_df), "\n") # should be 2304, if it's not, make sure you have NOT removed all Flomics_1 samples due to a mismatch between the metadata names and the sampleinfo from snakeda names :)
+cat("Filtered to samples in metadata:", nrow(filtered_df), "\n") # should be 2302, if it's not, make sure you have NOT removed all Flomics_1 samples due to a mismatch between the metadata names and the sampleinfo from snakeda names :)
 
 
-library(dplyr)
 
 biotype_data <- filtered_df[, 275:356] %>%
   select(-contains('_fc')) %>%
@@ -118,7 +117,6 @@ table_filtered$log_genes_80 <- log(table_filtered$genes_contributing_to_80._of_r
 
 
 num_datasets <- length(unique(table_filtered$dataset_batch.y))
-glasbey_colors <- pals::glasbey(num_datasets)
 
 mappings <- fromJSON("src/dataset_mappings.json")
 
