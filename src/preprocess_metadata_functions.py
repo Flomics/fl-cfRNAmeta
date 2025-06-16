@@ -944,12 +944,12 @@ def preprocess_flomics_1(dataset_metadata):
     df["dataset_short_name"] = "flomics_1"
     df["dataset_batch"] = "flomics_1"
     df["read_length"] = "2x150"
-    df["centrifugation_step_1"] = "placeholder"
-    df["centrifugation_step_2"] = "placeholder" 
+    df["centrifugation_step_1"] = "2000g"
+    df["centrifugation_step_2"] = "None" 
     
     df["run"] = df["sample_name"]
 
-    samples_to_remove = ["Flomics_1_1", "Flomics_1_2"]
+    samples_to_remove = ["Flomics_1_1", "Flomics_1_2", "Flomics_1_3", "Flomics_1_4"]
     df = df.drop(df[df["run"].isin(samples_to_remove)].index, errors='ignore')
 
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
