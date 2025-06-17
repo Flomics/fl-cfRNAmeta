@@ -280,11 +280,11 @@ names(heatmap_list) <- row_order
 ht_list <- Reduce(`%v%`, heatmap_list)
 
 
-ragg::agg_png("figures/fig_1b_metadata_heatmap.png", width = 18, height = 10, units = "in", res = 600)
+ragg::agg_png("~/figures/fig_1b_metadata_heatmap.png", width = 18, height = 10, units = "in", res = 600)
 draw(ht_list, heatmap_legend_side = "right")
 dev.off()
 
-pdf("figures/fig_1b_metadata_heatmap.pdf", width = 18, height = 10)
+pdf("~/figures/fig_1b_metadata_heatmap.pdf", width = 18, height = 10)
 showtext::showtext_begin()
 draw(ht_list, heatmap_legend_side = "right")
 showtext::showtext_end()
