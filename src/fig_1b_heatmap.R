@@ -6,11 +6,14 @@ library(RColorBrewer)
 library(ComplexHeatmap)
 library(purrr)
 library(jsonlite)
+library(wesanderson)
 library(showtext)
 font_add("DejaVu Sans", regular = "DejaVuSans.ttf")
 showtext_opts(dpi = 600)  # MUST come before showtext_auto()
 showtext_auto()
 theme_set(theme_classic(base_family = "DejaVu Sans"))
+
+setwd("~/fl-cfRNAmeta/")
 
 data_heatmap <- read.table("tables/cfRNA-meta_per_batch_metadata.tsv", header = TRUE, sep = "\t", na.strings = c("", "NA"))
 
@@ -44,41 +47,49 @@ metadata_matrix <- metadata_long %>%
 n_values <- apply(metadata_matrix, 1, function(x) length(unique(x)))
 
 
-get_palette_with_na <- function(varname, base) {
+
+get_palette_with_na <- function(varname, base, expand = TRUE) {
   values <- unique(as.character(metadata_matrix[varname, ]))
+  
   if (varname %in% c("centrifugation_step_1", "centrifugation_step_2")) {
     desired_order <- c("1000g", "1500g", "1600g", "1900g", "1940g", "2000g", "2500g", "3000g", 
                        "3400g", "6000g", "12000g", "13000g", "15000g", "16000g",
                        "Unspecified", "placeholder", "None")
     values <- intersect(desired_order, values)
-    real_values <- values[!values %in% c("NA", "Unspecified", "placeholder")]
   } else if (varname == "read_length") {
     desired_order <- c("1x50", "1x75", "2x75", "2x100", "2x150", "NA")
-    values <- intersect(desired_order, unique(as.character(metadata_matrix[varname, ])))
-    real_values <- values[values != "NA"]
+    values <- intersect(desired_order, values)
   } else {
-    values <- sort(unique(as.character(metadata_matrix[varname, ])))
-    real_values <- values[values != "NA"]
+    values <- sort(values)
   }
   
-  
-  real_values <- values[values != "NA"]
+  real_values <- values[!values %in% c("NA", "Unspecified", "placeholder", "None")]
   n_real <- length(real_values)
   
-  if (!(base %in% rownames(brewer.pal.info))) {
-    stop(paste("Invalid RColorBrewer palette:", base))
-  }
+  if (n_real == 0) return(c("NA" = "grey80"))
   
-  max_colors <- brewer.pal.info[base, "maxcolors"]
-  if (n_real == 0) {
-    return(c("NA" = "grey80"))
+  if (base %in% names(wesanderson::wes_palettes)) {
+    base_colors <- wesanderson::wes_palettes[[base]]
+    if (n_real <= length(base_colors)) {
+      palette <- wesanderson::wes_palette(base, n_real, type = "discrete")
+    } else if (expand) {
+      # Interpolate wes palette to get more colors
+      palette_fun <- colorRampPalette(base_colors)
+      palette <- palette_fun(n_real)
+    } else {
+      stop(paste("wes_palette", base, "only supports", length(base_colors), "colors, but", n_real, "requested. Set expand=TRUE to interpolate."))
+    }
+  } else {
+    if (!(base %in% rownames(RColorBrewer::brewer.pal.info))) {
+      stop(paste("Invalid palette:", base))
+    }
+    max_colors <- RColorBrewer::brewer.pal.info[base, "maxcolors"]
+    n_use <- min(n_real, max_colors)
+    palette <- colorRampPalette(RColorBrewer::brewer.pal(n_use, base))(n_real)
   }
-  
-  n_use <- min(n_real, max_colors)
-  color_fun <- colorRampPalette(brewer.pal(n_use, base))
-  palette <- color_fun(n_real)
   
   color_map <- setNames(palette, real_values)
+  
   color_map["NA"] <- "grey80"
   color_map["Unspecified"] <- "grey60"
   color_map["placeholder"] <- "lavenderblush1"
@@ -86,6 +97,9 @@ get_palette_with_na <- function(varname, base) {
   
   return(color_map)
 }
+
+
+
 
 
 mappings <- fromJSON("src/dataset_mappings.json")
@@ -114,13 +128,14 @@ palette_list <- list(
   biomaterial = get_palette_with_na("biomaterial", "Set1"),
   nucleic_acid_type = get_palette_with_na("nucleic_acid_type", "PiYG"),
   library_selection = get_palette_with_na("library_selection", "Paired"),
-  rna_extraction_kit_short_name = get_palette_with_na("rna_extraction_kit_short_name", "Set3"),
+  rna_extraction_kit_short_name = get_palette_with_na("rna_extraction_kit_short_name", "Spectral", expand = TRUE),
   library_prep_kit_short_name = get_palette_with_na("library_prep_kit_short_name", "Paired"),
   dnase = get_palette_with_na("dnase", "Accent"),
   cdna_library_type  = get_palette_with_na("cdna_library_type", "Set3"),
   read_length = get_palette_with_na("read_length", "Greens"),
   "centrifugation_step_1" = get_palette_with_na("centrifugation_step_1", "Reds") ,
-  "centrifugation_step_2" = get_palette_with_na("centrifugation_step_2", "Oranges")
+  "centrifugation_step_2" = get_palette_with_na("centrifugation_step_2", "Oranges"),
+  plasma_tubes_short_name = get_palette_with_na("plasma_tubes_short_name", "GrandBudapest2")
 )
 
 
@@ -134,10 +149,12 @@ clean_names <- c(
   cdna_library_type = "cDNA library type",
   read_length = "Read length",
   centrifugation_step_1 = "Centrifugation, step 1",
-  centrifugation_step_2 = "Centrifugation, step 2"
+  centrifugation_step_2 = "Centrifugation, step 2",
+  plasma_tubes_short_name = "Blood collection tube"
 )
 
 row_order <- c(
+  "plasma_tubes_short_name",
   "centrifugation_step_1",
   "centrifugation_step_2",
   "biomaterial",
@@ -149,6 +166,10 @@ row_order <- c(
   "cdna_library_type",
   "read_length"
 )
+
+#Hacky way to transform Reggiardo dataset into a single batch, in terms of protocol
+metadata_matrix$`Reggiardo (BioIVT)` <- NULL
+colnames(metadata_matrix)[17] <- "Reggiardo (BioIVT + DLS)"
 
 heatmap_list <- lapply(row_order, function(var) {
   if (is.null(palette_list[[var]])) {
@@ -166,7 +187,7 @@ heatmap_list <- lapply(row_order, function(var) {
                       "3400g", "6000g", "12000g", "13000g", "15000g", "16000g",
                       "Unspecified", "placeholder", "None"))
     values <- as.character(values)
-  }
+  } 
   
   
   if (var == "read_length") {
@@ -199,7 +220,22 @@ heatmap_list <- lapply(row_order, function(var) {
                       "3400g", "6000g", "12000g", "13000g", "15000g", "16000g",
                       "Unspecified", "placeholder", "None")
     color_map <- color_map[intersect(legend_order, names(color_map))]
+  } else if (var %in% c(
+    "plasma_tubes_short_name",
+    "biomaterial",
+    "nucleic_acid_type",
+    "rna_extraction_kit_short_name",
+    "dnase",
+    "library_prep_kit_short_name",
+    "library_selection",
+    "cdna_library_type"
+  )) {
+    # Alphabetical ordering of legend, keeping special levels last
+    special_levels <- c("Unspecified", "placeholder", "NA", "None")
+    main_levels <- setdiff(names(color_map), special_levels)
+    color_map <- color_map[c(sort(main_levels), intersect(special_levels, names(color_map)))]
   }
+  
   
   # Always move special values to the end of the legend
   special_levels <- c("Unspecified", "placeholder", "NA", "None")
