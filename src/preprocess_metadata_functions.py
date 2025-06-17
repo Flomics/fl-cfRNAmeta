@@ -29,6 +29,7 @@ dataset_column_list = [
     'Assay name',
     'Plasma volume',
     'Plasma tubes',
+    'Plasma tubes (short name)',
     'RNA extraction kit',
     'RNA extraction kit (short name)',
     'DNAse',
@@ -423,7 +424,10 @@ def preprocess_rozowsky(dataset_metadata):
     df["centrifugation_step_1"] = "None"
     df["centrifugation_step_2"] = "None" 
 
-    df = merge_sample_with_dataset_metadata(df, dataset_metadata)
+    df["plasma_tubes_short_name"] = "None"
+
+    df = merge_sample_with_dataset_metadata(df, dataset_metadata, keep_sample_cols=["plasma_tubes_short_name"])
+
 
     df.to_csv("../sra_metadata/rozowsky_metadata_preprocessed.csv", index=False)
 
@@ -587,7 +591,6 @@ def preprocess_moufarrej(dataset_metadata):
     df["dataset_batch"] = df["collection_center"].apply(assign_site)
     df['collection_center'] = df['cohort'].apply(lambda x: moufarrej_cohort_map[x])
 
-
     def assign_centrifugation_steps(batch):
         if batch == "moufarrej_site_1":
             return pd.Series({"centrifugation_step_1": "1600g", "centrifugation_step_2": "13000g"})
@@ -598,7 +601,13 @@ def preprocess_moufarrej(dataset_metadata):
 
     df = df.join(df["dataset_batch"].apply(assign_centrifugation_steps))
 
-    df = merge_sample_with_dataset_metadata(df, dataset_metadata)
+    df["plasma_tubes_short_name"] = df["dataset_batch"].map({
+        "moufarrej_site_1": "EDTA/Streck",
+        "moufarrej_site_2": "EDTA"
+    })
+
+    df = merge_sample_with_dataset_metadata(df, dataset_metadata, keep_sample_cols=["plasma_tubes_short_name"])
+
     df.to_csv("../sra_metadata/moufarrej_metadata_preprocessed.csv", index=False)
 
     return df
