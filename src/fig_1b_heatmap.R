@@ -23,7 +23,7 @@ data_heatmap <- data_heatmap %>%
       TRUE ~ dnase
     ),
     rna_extraction_kit_short_name = case_when(
-      rna_extraction_kit_short_name == "" ~ "NA",
+      rna_extraction_kit_short_name == "" ~ "None",
       TRUE ~ rna_extraction_kit_short_name
     )
   )
