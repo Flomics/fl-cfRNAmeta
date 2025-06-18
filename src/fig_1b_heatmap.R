@@ -4,9 +4,11 @@ library(tidyr)
 library(tibble)
 library(RColorBrewer)
 library(ComplexHeatmap)
+library(InteractiveComplexHeatmap)
 library(purrr)
 library(jsonlite)
 library(wesanderson)
+library(grid)
 library(showtext)
 font_add("DejaVu Sans", regular = "DejaVuSans.ttf")
 showtext_opts(dpi = 600)  # MUST come before showtext_auto()
@@ -81,28 +83,40 @@ get_palette_with_na <- function(varname, base, expand = TRUE) {
   
   if (n_real == 0) return(c("NA" = "grey80"))
   
-  if (base %in% names(wesanderson::wes_palettes)) {
-    base_colors <- wesanderson::wes_palettes[[base]]
-    if (n_real <= length(base_colors)) {
-      palette <- wesanderson::wes_palette(base, n_real, type = "discrete")
-    } else if (expand) {
-      # Interpolate wes palette to get more colors
-      palette_fun <- colorRampPalette(base_colors)
-      palette <- palette_fun(n_real)
+  
+  # Special handling for centrifugation palettes
+  else if (varname %in% c("centrifugation_step_1", "centrifugation_step_2")) {
+    palette <- colorRampPalette(brewer.pal(9, base)[3:9])(n_real)
+  }
+  
+  # Special handling for read lenght
+  else if (varname %in% c("read_length")) {
+    palette <- colorRampPalette(brewer.pal(9, base)[3:9])(n_real)
+  }
+  # Default behavior
+  else {
+    if (base %in% names(wesanderson::wes_palettes)) {
+      base_colors <- wesanderson::wes_palettes[[base]]
+      if (n_real <= length(base_colors)) {
+        palette <- wesanderson::wes_palette(base, n_real, type = "discrete")
+      } else if (expand) {
+        palette <- colorRampPalette(base_colors)(n_real)
+      } else {
+        stop(paste("wes_palette", base, "only supports", length(base_colors), "colors, but", n_real, "requested. Set expand=TRUE to interpolate."))
+      }
     } else {
-      stop(paste("wes_palette", base, "only supports", length(base_colors), "colors, but", n_real, "requested. Set expand=TRUE to interpolate."))
+      if (!(base %in% rownames(RColorBrewer::brewer.pal.info))) {
+        stop(paste("Invalid palette:", base))
+      }
+      max_colors <- RColorBrewer::brewer.pal.info[base, "maxcolors"]
+      n_use <- min(n_real, max_colors)
+      palette <- colorRampPalette(RColorBrewer::brewer.pal(n_use, base))(n_real)
     }
-  } else {
-    if (!(base %in% rownames(RColorBrewer::brewer.pal.info))) {
-      stop(paste("Invalid palette:", base))
-    }
-    max_colors <- RColorBrewer::brewer.pal.info[base, "maxcolors"]
-    n_use <- min(n_real, max_colors)
-    palette <- colorRampPalette(RColorBrewer::brewer.pal(n_use, base))(n_real)
   }
   
   color_map <- setNames(palette, real_values)
   
+  # Add fallback/special values
   color_map["NA"] <- "grey80"
   color_map["Unspecified"] <- "grey20"
   color_map["placeholder"] <- "lavenderblush1"
@@ -110,6 +124,7 @@ get_palette_with_na <- function(varname, base, expand = TRUE) {
   
   return(color_map)
 }
+
 
 
 
@@ -151,6 +166,11 @@ palette_list <- list(
   plasma_tubes_short_name = get_palette_with_na("plasma_tubes_short_name", "GrandBudapest2")
 )
 
+# I could not include into the function the special handling of smarter kits, changing their colours manually
+palette_list$library_prep_kit_short_name[6] <- "#FDBE85"
+palette_list$library_prep_kit_short_name[7] <- "#FD8D3C"
+palette_list$library_prep_kit_short_name[8] <- "#E6550D"
+
 
 clean_names <- c(
   biomaterial = "Biomaterial",
@@ -183,6 +203,18 @@ row_order <- c(
 #Hacky way to transform Reggiardo dataset into a single batch, in terms of protocol
 metadata_matrix$`Reggiardo (BioIVT)` <- NULL
 colnames(metadata_matrix)[17] <- "Reggiardo (BioIVT + DLS)"
+
+bracket_df <- data.frame(
+  xmin = c("Block (2x75bp)", "Giráldez (phospho-RNA-seq)", "Ibarra (buffy coat)", "Moufarrej (Site 1)", "Roskams-Hieter (pilot)"),
+  xmax = c("Block (2x150bp)", "Giráldez (standard)", "Ibarra (serum)", "Moufarrej (Site 2)", "Roskams-Hieter (validation)"),
+  label = c("Block", "Giráldez", "Ibarra", "Moufarrej", "Roskams-Hieter")
+)
+
+core_order <- colnames(metadata_matrix)  # your x-axis order
+
+# Convert dataset names to indices
+bracket_df$xmin_idx <- match(bracket_df$xmin, core_order)
+bracket_df$xmax_idx <- match(bracket_df$xmax, core_order)
 
 heatmap_list <- lapply(row_order, function(var) {
   if (is.null(palette_list[[var]])) {
@@ -265,6 +297,13 @@ heatmap_list <- lapply(row_order, function(var) {
   mat <- matrix(values, nrow = 1, dimnames = list(factor(var_pretty, levels = ordered_pretty_names), colnames(metadata_matrix)))
 
   
+  bottom_anno <- NULL
+  if (var == "read_length") {
+    bottom_anno <- HeatmapAnnotation(
+      spacer = anno_empty(border = FALSE, height = unit(0.5, "cm"))
+    )
+  }
+  
   Heatmap(
     mat,
     name = var_pretty,
@@ -274,6 +313,9 @@ heatmap_list <- lapply(row_order, function(var) {
     show_row_names = TRUE,
     show_column_names = TRUE,
     column_names_rot = 45,
+    column_names_side = "bottom",
+    column_names_gp = gpar(fontsize = 12),
+    bottom_annotation = bottom_anno,  
     row_names_side = "left",
     height = unit(1, "cm"),
     cell_fun = function(j, i, x, y, width, height, fill) {
@@ -283,8 +325,8 @@ heatmap_list <- lapply(row_order, function(var) {
         gp = gpar(fill = fill, col = "white", lwd = 0.5)
       )
     }
-    
   )
+  
 }) %>% discard(is.null)
 
 names(heatmap_list) <- row_order
@@ -293,15 +335,116 @@ names(heatmap_list) <- row_order
 ht_list <- Reduce(`%v%`, heatmap_list)
 
 
-ragg::agg_png("~/figures/fig_1b_metadata_heatmap.png", width = 18, height = 10, units = "in", res = 600)
-draw(ht_list, heatmap_legend_side = "right")
+
+
+ragg::agg_png(
+  "~/figures/fig_1b_metadata_heatmap.png",
+  width = 18, height = 10, units = "in", res = 600
+)
+
+ht_drw <- draw(ht_list, heatmap_legend_side = "right")
+
+ht_pos <- htPositionsOnDevice(ht_drw)
+
+y_top_in <- ht_pos[ht_pos$heatmap == "Read length", "y_min"] - unit(0.8, "in") #this addition or subtraction here controls the position of the brackets. I could not find a better way to do it
+y_top_np <- convertY(y_top_in, "npc", valueOnly = FALSE)
+
+y_bracket <- y_top_np + unit(0.1, "mm")          
+y_vert_hi <- y_bracket
+y_vert_lo <- y_bracket - unit(2, "mm")           
+
+x_min_in <- ht_pos[1, "x_min"]
+x_max_in <- ht_pos[1, "x_max"]
+x_min_np <- convertX(x_min_in, "npc", valueOnly = TRUE)
+x_max_np <- convertX(x_max_in, "npc", valueOnly = TRUE)
+dx_np    <- x_max_np - x_min_np
+
+seekViewport("global")
+
+n_cols <- length(core_order)
+
+for (i in seq_len(nrow(bracket_df))) {
+  x1 <- bracket_df$xmin_idx[i]
+  x2 <- bracket_df$xmax_idx[i]
+  if (is.na(x1) || is.na(x2)) next
+  
+  x_start_np <- x_min_np + (x1 - 1) / n_cols * dx_np
+  x_end_np   <- x_min_np + x2       / n_cols * dx_np
+  x_start_u  <- unit(x_start_np, "npc")
+  x_end_u    <- unit(x_end_np,   "npc")
+  
+  h_bar <- linesGrob(
+    x = unit.c(x_start_u, x_end_u),
+    y = unit.c(y_bracket, y_bracket),
+    gp = gpar(col = "black", lwd = 1)
+  )
+  
+  v_bars <- gList(
+    linesGrob(x = unit.c(x_start_u, x_start_u),
+              y = unit.c(y_vert_lo, y_vert_hi),
+              gp = gpar(col = "black", lwd = 1)),
+    linesGrob(x = unit.c(x_end_u, x_end_u),
+              y = unit.c(y_vert_lo, y_vert_hi),
+              gp = gpar(col = "black", lwd = 1))
+  )
+  
+  grid.draw(grobTree(h_bar, v_bars))
+}
+
 dev.off()
+
 
 pdf("~/figures/fig_1b_metadata_heatmap.pdf", width = 18, height = 10)
 showtext::showtext_begin()
-draw(ht_list, heatmap_legend_side = "right")
+
+ht_drw <- draw(ht_list, heatmap_legend_side = "right")
+
+ht_pos <- htPositionsOnDevice(ht_drw)
+
+y_top_in <- ht_pos[ht_pos$heatmap == "Read length", "y_min"] - unit(0.8, "in") #this addition or subtraction here controls the position of the brackets. I could not find a better way to do it
+y_top_np <- convertY(y_top_in, "npc", valueOnly = FALSE)
+
+y_bracket <- y_top_np + unit(0.1, "mm")          
+y_vert_hi <- y_bracket
+y_vert_lo <- y_bracket - unit(2, "mm")           
+
+x_min_in <- ht_pos[1, "x_min"]
+x_max_in <- ht_pos[1, "x_max"]
+x_min_np <- convertX(x_min_in, "npc", valueOnly = TRUE)
+x_max_np <- convertX(x_max_in, "npc", valueOnly = TRUE)
+dx_np    <- x_max_np - x_min_np
+
+seekViewport("global")
+
+n_cols <- length(core_order)
+
+for (i in seq_len(nrow(bracket_df))) {
+  x1 <- bracket_df$xmin_idx[i]
+  x2 <- bracket_df$xmax_idx[i]
+  if (is.na(x1) || is.na(x2)) next
+  
+  x_start_np <- x_min_np + (x1 - 1) / n_cols * dx_np
+  x_end_np   <- x_min_np + x2       / n_cols * dx_np
+  x_start_u  <- unit(x_start_np, "npc")
+  x_end_u    <- unit(x_end_np,   "npc")
+  
+  h_bar <- linesGrob(
+    x = unit.c(x_start_u, x_end_u),
+    y = unit.c(y_bracket, y_bracket),
+    gp = gpar(col = "black", lwd = 1)
+  )
+  
+  v_bars <- gList(
+    linesGrob(x = unit.c(x_start_u, x_start_u),
+              y = unit.c(y_vert_lo, y_vert_hi),
+              gp = gpar(col = "black", lwd = 1)),
+    linesGrob(x = unit.c(x_end_u, x_end_u),
+              y = unit.c(y_vert_lo, y_vert_hi),
+              gp = gpar(col = "black", lwd = 1))
+  )
+  
+  grid.draw(grobTree(h_bar, v_bars))
+}
 showtext::showtext_end()
 dev.off()
-
-
 
