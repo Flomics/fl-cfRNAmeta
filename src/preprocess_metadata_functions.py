@@ -602,7 +602,7 @@ def preprocess_moufarrej(dataset_metadata):
     df = df.join(df["dataset_batch"].apply(assign_centrifugation_steps))
 
     df["plasma_tubes_short_name"] = df["dataset_batch"].map({
-        "moufarrej_site_1": "EDTA/Streck",
+        "moufarrej_site_1": "Unspecified",
         "moufarrej_site_2": "EDTA"
     })
 
