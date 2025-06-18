@@ -202,7 +202,7 @@ row_order <- c(
 
 #Hacky way to transform Reggiardo dataset into a single batch, in terms of protocol
 metadata_matrix$`Reggiardo (BioIVT)` <- NULL
-colnames(metadata_matrix)[17] <- "Reggiardo (BioIVT + DLS)"
+colnames(metadata_matrix)[17] <- "Reggiardo"
 
 bracket_df <- data.frame(
   xmin = c("Block (2x75bp)", "Giráldez (phospho-RNA-seq)", "Ibarra (buffy coat)", "Moufarrej (Site 1)", "Roskams-Hieter (pilot)"),
