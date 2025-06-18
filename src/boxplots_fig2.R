@@ -42,7 +42,7 @@ column_names <- c("read_number",
                   "exonic_reads_minus_spike_ins",
                   "mt_rna_pct", "mt_rrna_pct", "mt_trna_pct", "misc_rna_pct", "protein_coding_pct", "lncrna_pct", "snrna_pct", "snorna_pct", "spike_in_pct", "other_rna_biotypes_pct")
 
-data <- read.table("tables/sampleinfo_external_and_internal_datasets.tsv", header = TRUE, sep = "\t", fileEncoding = "UTF-8")
+data <- read.table("tables/sampleinfo_all-batches.tsv", header = TRUE, sep = "\t", fileEncoding = "UTF-8")
 
 # Load metadata
 metadata <- read.table("tables/cfRNA-meta_per_sample_metadata.tsv", header = TRUE, sep = "\t", fill = TRUE)
@@ -71,12 +71,12 @@ removed_samples <- data[!(data$sample_id %in% metadata$run), ]
 print(removed_samples$sample_id)
 
 
-cat("Original merged_df rows:", nrow(data), "\n") #should be 2400 
-cat("Filtered to samples in metadata:", nrow(filtered_df), "\n") # should be 2302, if it's not, make sure you have NOT removed all Flomics_1 samples due to a mismatch between the metadata names and the sampleinfo from snakeda names :)
+cat("Original merged_df rows:", nrow(data), "\n") #should be 2416 
+cat("Filtered to samples in metadata:", nrow(filtered_df), "\n") # should be 2318, if it's not, make sure you have NOT removed all Flomics_1 samples due to a mismatch between the metadata names and the sampleinfo from snakeda names :)
 
 
 
-biotype_data <- filtered_df[, 275:356] %>%
+biotype_data <- filtered_df[, 191:272] %>%
   select(-contains('_fc')) %>%
   mutate(across(everything(), ~ as.numeric(as.character(.))))
 
