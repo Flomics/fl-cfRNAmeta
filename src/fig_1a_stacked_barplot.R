@@ -94,7 +94,7 @@ ggplot(plot_data, aes(x = dataset_batch_clean, y = count, fill = simple_phenotyp
     )
   )
 
-ggsave("figures/fig_1a_sample_status_per_dataset.png", width = 15, height = 8, dpi = 600, units = "in")
+#ggsave("~/figures/fig_1a_sample_status_per_dataset.png", width = 15, height = 8, dpi = 600, units = "in")
 
 # Option 2: detail into cancer type
 
@@ -127,7 +127,7 @@ ggplot(cancer_detail_plot_data, aes(x = dataset_batch_clean, y = count, fill = p
     plot.background = element_rect(fill = "white", colour = "white")
   )
 
-ggsave("figures/fig_1a_cancer_subtypes_per_dataset.png", width = 15, height = 8, dpi = 600, units = "in", bg = "white")
+#ggsave("~/figures/fig_1a_cancer_subtypes_per_dataset.png", width = 15, height = 8, dpi = 600, units = "in", bg = "white")
 
 # Build third phenotype column: merge simple + detailed
 data_barplot$phenotype_merged <- data_barplot$simple_phenotype
@@ -177,8 +177,8 @@ ggplot(phenotype_merged_plot_data, aes(x = dataset_batch_clean, y = count, fill 
     plot.background = element_rect(fill = "white", colour = "white")
   )
 
-ggsave("figures/fig_1a_combined_simplified_and_cancer_detail.png",
+ggsave("~/figures/fig_1a_combined_simplified_and_cancer_detail.png",
        width = 15, height = 8, dpi = 600, units = "in", bg = "white",device = ragg::agg_png)
-ggsave("figures/fig_1a_combined_simplified_and_cancer_detail.pdf",
+ggsave("~/figures/fig_1a_combined_simplified_and_cancer_detail.pdf",
        width = 15, height = 8, dpi = 600, units = "in", bg = "white", device = cairo_pdf)
 
