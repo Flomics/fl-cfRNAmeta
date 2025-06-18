@@ -15,7 +15,20 @@ theme_set(theme_classic(base_family = "DejaVu Sans"))
 
 setwd("~/fl-cfRNAmeta/")
 
-data_heatmap <- read.table("tables/cfRNA-meta_per_batch_metadata.tsv", header = TRUE, sep = "\t", na.strings = c("", "NA"))
+data_heatmap <- read.table("tables/cfRNA-meta_per_batch_metadata.tsv", header = TRUE, sep = "\t")
+data_heatmap <- data_heatmap %>%
+  mutate(
+    dnase = case_when(
+      dnase == "" ~ "None",
+      TRUE ~ dnase
+    ),
+    rna_extraction_kit_short_name = case_when(
+      rna_extraction_kit_short_name == "" ~ "None",
+      TRUE ~ rna_extraction_kit_short_name
+    )
+  )
+
+
 
 data_heatmap$centrifugation_step_1 <- as.character(data_heatmap$centrifugation_step_1)
 data_heatmap$centrifugation_step_2 <- as.character(data_heatmap$centrifugation_step_2)
@@ -91,7 +104,7 @@ get_palette_with_na <- function(varname, base, expand = TRUE) {
   color_map <- setNames(palette, real_values)
   
   color_map["NA"] <- "grey80"
-  color_map["Unspecified"] <- "grey60"
+  color_map["Unspecified"] <- "grey20"
   color_map["placeholder"] <- "lavenderblush1"
   color_map["None"] <- "grey70"
   
@@ -208,7 +221,7 @@ heatmap_list <- lapply(row_order, function(var) {
   if (!"NA" %in% names(color_map)) {
     color_map["NA"] <- "grey80"
   }
-  color_map["Unspecified"] <- "grey60"
+  color_map["Unspecified"] <- "grey20"
   color_map["placeholder"] <- "lavenderblush1"
   color_map["None"] <- "grey70"
   if (var == "read_length") {
