@@ -20,8 +20,11 @@ def simplify_column_names(cols):
     return cols
 
 reserved_vars_samplesheet = [
-    'sample_idx_sequencing_batch', 'sample_display_name', 
-    'fastq_1', 'fastq_2', 'out_dir',
+    'analysis_batch',
+    'sequencing_batch',
+    'sample_name', 'sample_id', 'raw_data_id',
+    'sample_analysis_run_id', 'sample_display_name', 'sample_idx_analysis_batch',
+    'fastq_1', 'fastq_2', 'out_dir', 
     'resequenced_sample'
 ]
 
