@@ -73,11 +73,14 @@ def preprocess_chen(dataset_metadata):
     df["centrifugation_step_2"] = "Unspecified"
 
     # Exclude the two E. coli samples and the brain tissue sample
+    n1 = len(df)
     df = df[~(df['sample_name'].isin([
         'ET_L2',
         'EH_L2',
         'NC_L2',
     ]))]
+    n2 = len(df)
+    print(f"Exclude the two E. coli samples and the brain tissue sample. N = {n1 - n2}")
 
     # Parse the GEO series matrix file, which contains the
     # the GEO/GSM ids and the collection center (hospital).
@@ -386,7 +389,7 @@ def preprocess_chalasani(dataset_metadata):
         'X9737',
         'X9760'
     ]
-    df_merged = df_merged[~df_merged['run'].isin(chalasani_ids_to_exclude)]
+    #df_merged = df_merged[~df_merged['run'].isin(chalasani_ids_to_exclude)]
 
     df_merged.to_csv("../sra_metadata/chalasani_metadata_preprocessed.csv", index=False)
     return df_merged
@@ -881,7 +884,7 @@ def preprocess_decruyenaere(dataset_metadata):
         # 'ENA-CHECKLIST',
         'organism_part',
         # 'region',
-        #'file_name_1' # needed to extract the 'sample_name'
+        'file_name_1' # needed to extract the 'sample_name'
     ]
 
     csv_path = "../sra_metadata/decruyenaere_metadata.csv"
@@ -891,16 +894,16 @@ def preprocess_decruyenaere(dataset_metadata):
 
     # Rename columns from the EGA-archive to the corresponding SRA metadata columns
     df = df.rename(columns={
-        "sample_alias":"run",
+        #"sample_alias":"run",
         "instrument_model":"instrument",
         "biosample_id":"biosample",
         })
 
-    #df["run"] = df["file_name_1"].apply(lambda x: '_'.join(x.split('_')[:2]))
+    df["run"] = df["file_name_1"].apply(lambda x: '_'.join(x.split('_')[:2]))
     # remove 'file_name_1' col
-    #df = df.drop('file_name_1', axis=1)
+    df = df.drop('file_name_1', axis=1)
 
-    df["sequencing_batch"]   = "decruyenaere" 
+    #df["sequencing_batch"]   = "decruyenaere" 
     df["dataset_short_name"] = "decruyenaere"
     df["dataset_batch"]      = "decruyenaere"
     df["disease"]            = df["phenotype"]
@@ -968,18 +971,26 @@ def preprocess_flomics_1(dataset_metadata):
     df = pd.read_csv(csv_path, sep='\t')
     df.columns = simplify_column_names(df.columns)
 
+    # Improve compatibility with snakeDA (reserved var: ['sequencing_batch'])
+    # => 'sequencing_batch' is defined in metadata file
+    df = df.rename(columns={'sequencing_batch':'sequencing_batch_other'})
+
     df["dataset_short_name"] = "flomics_1"
     df["dataset_batch"] = "flomics_1"
     df["read_length"] = "2x150"
     df["centrifugation_step_1"] = "placeholder"
     df["centrifugation_step_2"] = "placeholder" 
     
-    df["run"] = df["sample_name"]
-    df["run"] = df["sample_analysis_run_id"].apply(lambda x: x.split('_')[0])
+    #df["run"] = df["sample_name"]
+    df["run"] = df["sample_display_name"]
+    #df["run"] = df["sample_analysis_run_id"].apply(lambda x: x.split('_')[0])
 
     # exclude samples
-    samples_to_remove = ["Flomics_1_1", "Flomics_1_2"]
-    df = df[~df["sample_name"].isin(samples_to_remove)]
+    samples_to_remove = ["SAMP008_EXP094_FL094_C1", "SAMP009_EXP094_FL094_D1"]
+    n1 = len(df)
+    df = df[~df["run"].isin(samples_to_remove)]
+    n2 = len(df)
+    print(f"Exclude samples with different RNA isolation protocol. N = {n1 - n2}")
     
     reserved_cols = set(df.columns).intersection(reserved_vars_samplesheet)
     if reserved_cols:
@@ -998,6 +1009,10 @@ def preprocess_flomics_2(dataset_metadata):
     df = pd.read_csv(csv_path, sep='\t')
     df.columns = simplify_column_names(df.columns)
 
+    # Improve compatibility with snakeDA (reserved var: ['sequencing_batch'])
+    # => 'sequencing_batch' is defined in metadata file
+    df = df.rename(columns={'sequencing_batch':'sequencing_batch_other'})
+
     df["dataset_short_name"] = "flomics_2"
     df["dataset_batch"] = "flomics_2"
     df["read_length"] = "2x150"
@@ -1005,7 +1020,8 @@ def preprocess_flomics_2(dataset_metadata):
     df["centrifugation_step_2"] = "2500g" 
 
     #df["run"] = df["sample_name"]
-    df["run"] = df["sample_analysis_run_id"].apply(lambda x: x.split('_')[0])
+    df["run"] = df["sample_display_name"]
+    #df["run"] = df["sample_analysis_run_id"].apply(lambda x: x.split('_')[0])
     
     reserved_cols = set(df.columns).intersection(reserved_vars_samplesheet)
     if reserved_cols:
