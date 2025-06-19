@@ -280,7 +280,7 @@ def preprocess_ibarra(dataset_metadata):
     df = df.join(df["dataset_batch"].apply(assign_centrifugation_steps))
 
     df = merge_sample_with_dataset_metadata(
-        df, dataset_metadata, keep_sample_cols=["biomaterial", "plasma_tubes"])
+        df, dataset_metadata, keep_sample_cols=["biomaterial", "plasma_tubes", "plasma_tubes_short_name"])
 
     df.to_csv("../sra_metadata/ibarra_metadata_preprocessed.csv", index=False)
     return df
