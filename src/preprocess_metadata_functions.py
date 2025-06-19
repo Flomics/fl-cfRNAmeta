@@ -65,7 +65,7 @@ def preprocess_chen(dataset_metadata):
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
 
-    df["sequencing_batch"] = "chen" 
+    #df["sequencing_batch"] = "chen" 
     df["dataset_short_name"] = "chen"
     df["dataset_batch"] = "chen"
     df["read_length"] = "2x150"
@@ -112,7 +112,7 @@ def preprocess_zhu(dataset_metadata):
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
 
-    df["sequencing_batch"] = "zhu" 
+    #df["sequencing_batch"] = "zhu" 
     df["dataset_short_name"] = "zhu"
     df["dataset_batch"] = "zhu"
     df["read_length"] = "2x150"
@@ -130,7 +130,7 @@ def preprocess_roskams(dataset_metadata):
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)    
 
-    df["sequencing_batch"] = "roskams" 
+    #df["sequencing_batch"] = "roskams" 
     df["dataset_short_name"] = "roskams"
     df["dataset_batch"] = np.where(df["cohort"] == "pilot", "roskams_pilot", "roskams_validation")
     df["read_length"] = np.where(df["dataset_batch"] == "roskams_pilot", "2x100", "2x150")
@@ -190,7 +190,7 @@ def preprocess_ngo(dataset_metadata):
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
 
-    df["sequencing_batch"] = "ngo" 
+    #df["sequencing_batch"] = "ngo" 
     df["dataset_short_name"] = "ngo"
     df["dataset_batch"] = "ngo"
     df["read_length"] = "2x75"
@@ -214,7 +214,7 @@ def preprocess_ibarra(dataset_metadata):
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
 
-    df["sequencing_batch"] = "ibarra" 
+    #df["sequencing_batch"] = "ibarra" 
     df["dataset_short_name"] = "ibarra"
     df["biomaterial"] = df["tissue"].str.lower()
     df["read_length"] = "2x75"
@@ -297,7 +297,7 @@ def preprocess_toden(dataset_metadata):
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
 
-    df["sequencing_batch"] = "toden" 
+    #df["sequencing_batch"] = "toden" 
     df["dataset_short_name"] = "toden"
     df["dataset_batch"] = "toden"
     df["read_length"] = "2x75"
@@ -335,7 +335,7 @@ def preprocess_chalasani(dataset_metadata):
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
 
-    df["sequencing_batch"] = "chalasani" 
+    #df["sequencing_batch"] = "chalasani" 
     df["dataset_short_name"] = "chalasani"
     df["dataset_batch"] = "chalasani"
     df["read_length"] = "2x75"
@@ -398,7 +398,7 @@ def preprocess_block(dataset_metadata):
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
 
-    df["sequencing_batch"] = "block" 
+    #df["sequencing_batch"] = "block" 
     df["dataset_short_name"] = "block"
     df["dataset_batch"] = np.where(
         abs(df["avgspotlen"] - 150) < abs(df["avgspotlen"] - 300),
@@ -442,7 +442,7 @@ def preprocess_rozowsky(dataset_metadata):
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
 
-    df["sequencing_batch"] = "rozowsky" 
+    #df["sequencing_batch"] = "rozowsky" 
     df["dataset_short_name"] = "rozowsky"
     df["dataset_batch"] = "rozowsky"
     df['phenotype'] = 'Healthy'
@@ -462,7 +462,7 @@ def preprocess_tao(dataset_metadata):
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
 
-    df["sequencing_batch"] = "tao" 
+    #df["sequencing_batch"] = "tao" 
     df["dataset_short_name"] = "tao"
     df["dataset_batch"] = "tao"
     df["read_length"] = "2x150"
@@ -521,7 +521,7 @@ def preprocess_wei(dataset_metadata):
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
 
-    df["sequencing_batch"] = "taowei" 
+    #df["sequencing_batch"] = "taowei" 
     df["dataset_short_name"] = "wei"
     df["dataset_batch"] = "wei"
     df["read_length"] = "2x150"    
@@ -551,7 +551,7 @@ def preprocess_moufarrej(dataset_metadata):
     # Improve compatibility with snakeDA (reserved var: ['sequencing_batch'])
     df = df.rename(columns={'sequencing_batch':'sequencing_batch_other'})
 
-    df["sequencing_batch"] = "moufarrej" 
+    #df["sequencing_batch"] = "moufarrej" 
     df["dataset_short_name"] = "moufarrej"
     #df["dataset_batch"] = "moufarrej" # use 'cohort' column from GEO
     df["read_length"] = "2x75"    
@@ -636,7 +636,7 @@ def preprocess_wang(dataset_metadata):
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
 
-    df["sequencing_batch"] = "wang_read_2" 
+    #df["sequencing_batch"] = "wang_read_2" 
     df["dataset_short_name"] = "wang"
     df["dataset_batch"] = "wang"
     df["read_length"] = "2x150"    
@@ -716,7 +716,7 @@ def preprocess_giraldez(dataset_metadata):
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
 
-    df["sequencing_batch"] = "giraldez" 
+    #df["sequencing_batch"] = "giraldez" 
     df["dataset_short_name"] = "giraldez"
     
     # Filter out the 2 synthetic samples
@@ -769,7 +769,7 @@ def preprocess_sun(dataset_metadata):
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
 
-    df["sequencing_batch"] = "sun" 
+    #df["sequencing_batch"] = "sun" 
     df["dataset_short_name"] = "sun"
     df["biomaterial"] = df["tissue"].apply(lambda x: "blood plasma" if x == "plasma" else "blood serum" if x == "serum" else "")
     df["dataset_batch"] = np.where(df["biomaterial"] == "blood plasma", "sun_1", "sun_2")
@@ -931,7 +931,7 @@ def preprocess_reggiardo(dataset_metadata):
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
 
-    df["sequencing_batch"] = "reggiardo" 
+    #df["sequencing_batch"] = "reggiardo" 
     df["dataset_short_name"] = "reggiardo"
     df["read_length"] = "2x150"
     df["centrifugation_step_1"] = "Unspecified"
