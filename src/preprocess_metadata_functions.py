@@ -977,13 +977,23 @@ def preprocess_flomics_1(dataset_metadata):
     #df["run"] = df["sample_analysis_run_id"].apply(lambda x: x.split('_')[0])
 
     # exclude samples
-    #samples_to_remove = ["Flomics_1_1", "Flomics_1_2", "Flomics_1_3", "Flomics_1_4"]
-    samples_to_remove = ["SAMP008_EXP094_FL094_C1", "SAMP009_EXP094_FL094_D1"]
+    samples_to_remove_rna_extraction = [
+        # Different RNA extraction protocols
+        "SAMP016_EXP089_FL089minusA1", "SAMP017_EXP089_FL089minusB1",
+    ]
     n1 = len(df)
-    df = df[~df["run"].isin(samples_to_remove)]
+    df = df[~df["run"].isin(samples_to_remove_rna_extraction)]
     n2 = len(df)
     print(f"Exclude samples with different RNA isolation protocol. N = {n1 - n2}")
-    
+    samples_to_remove_centrifugation = [
+        # Different centrifugation protocols
+        "SAMP008_EXP094_FL094_C1", "SAMP009_EXP094_FL094_D1",
+    ]
+    n1 = len(df)
+    df = df[~df["run"].isin(samples_to_remove_centrifugation)]
+    n2 = len(df)
+    print(f"Exclude samples with different centrifugation protocols. N = {n1 - n2}")
+
     reserved_cols = set(df.columns).intersection(reserved_vars_samplesheet)
     if reserved_cols:
         df = df.drop(reserved_cols, axis=1)
