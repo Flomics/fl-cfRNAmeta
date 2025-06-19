@@ -1,7 +1,17 @@
 library(ggplot2)
 library(dplyr)
 library(RColorBrewer)
-library(forcats)  
+library(forcats)
+library(jsonlite)
+library(grid)
+library(scales)
+library(showtext)
+font_add("DejaVu Sans", regular = "DejaVuSans.ttf")
+showtext_opts(dpi = 600)  # MUST come before showtext_auto()
+showtext_auto()
+theme_set(theme_classic(base_family = "DejaVu Sans"))
+
+
 
 setwd("~/fl-cfRNAmeta/")
 
@@ -44,43 +54,16 @@ data_barplot$simple_phenotype[grep("Primary mediastinal B-cell lymphoma",data_ba
 data_barplot$simple_phenotype[grep("Stomach cancer",data_barplot$phenotype)] <- "cancer"
 
 
-table(data_barplot$simple_phenotype)
 
-clean_dataset_names <- c(
-  chen = "Chen",
-  zhu = "Zhu",
-  roskams_pilot = "Roskams-Hieter (pilot)",
-  roskams_validation = "Roskams-Hieter (validation)",
-  ngo = "Ngo",
-  ibarra_serum = "Ibarra (serum)",
-  ibarra_plasma_cancer = "Ibarra (plasma, cancer)",
-  ibarra_plasma_non_cancer = "Ibarra (plasma, non-cancer)",
-  ibarra_buffy_coat = "Ibarra (buffy coat)",
-  toden = "Toden",
-  chalasani = "Chalasani",
-  block_150bp = "Block (2x75bp)",
-  block_300bp = "Block (2x150bp)",
-  rozowsky = "ENCODE\n(bulk tissue RNA-Seq)",
-  tao = "Tao",
-  wei = "Wei (cfDNA)",
-  moufarrej_site_1 = "Moufarrej (Site 1)",
-  moufarrej_site_2 = "Moufarrej (Site 2)",
-  wang = "Wang",
-  giraldez_standard = "Giráldez (standard)",
-  "giraldez_phospho-rna-seq" = "Giráldez (phospho-RNA-seq)",
-  sun_2 = "Sun",
-  decruyenaere = "Decruyenaere",
-  reggiardo = "Reggiardo",
-  flomics_1 = "Flomics 1",
-  flomics_2 = "Flomics 2"
-)
+mappings <- fromJSON("src/dataset_mappings.json")
 
+clean_dataset_names <- unlist(mappings$datasetsLabels)
+core_order <- unlist(mappings$datasetVisualOrder)
 
 data_barplot$dataset_batch_clean <- recode(data_barplot$dataset_batch, !!!clean_dataset_names)
 
 # all names alphabetically except "rozowsky" and "wei" last
-core_order <- setdiff(names(clean_dataset_names), c("rozowsky", "wei"))
-ordered_names <- c(sort(clean_dataset_names[core_order]), clean_dataset_names[c("rozowsky", "wei")])
+ordered_names <- c(clean_dataset_names[core_order])
 
 data_barplot$dataset_batch_clean <- factor(data_barplot$dataset_batch_clean, levels = ordered_names)
 
@@ -111,7 +94,7 @@ ggplot(plot_data, aes(x = dataset_batch_clean, y = count, fill = simple_phenotyp
     )
   )
 
-ggsave("figures/fig_1a_sample_status_per_dataset.png", width = 15, height = 8, dpi = 600, units = "in")
+#ggsave("~/figures/fig_1a_sample_status_per_dataset.png", width = 15, height = 8, dpi = 600, units = "in")
 
 # Option 2: detail into cancer type
 
@@ -144,7 +127,7 @@ ggplot(cancer_detail_plot_data, aes(x = dataset_batch_clean, y = count, fill = p
     plot.background = element_rect(fill = "white", colour = "white")
   )
 
-ggsave("figures/fig_1a_cancer_subtypes_per_dataset.png", width = 15, height = 8, dpi = 600, units = "in", bg = "white")
+#ggsave("~/figures/fig_1a_cancer_subtypes_per_dataset.png", width = 15, height = 8, dpi = 600, units = "in", bg = "white")
 
 # Build third phenotype column: merge simple + detailed
 data_barplot$phenotype_merged <- data_barplot$simple_phenotype
@@ -169,6 +152,12 @@ merged_colors <- c(
   "Unspecified" = "grey60",
   cancer_colors
 )
+bracket_df <- data.frame(
+  xmin = c("Block (2x75bp)", "Giráldez (phospho-RNA-seq)", "Ibarra (buffy coat)","Reggiardo (BioIVT)" , "Moufarrej (Site 1)", "Roskams-Hieter (pilot)"),
+  xmax = c("Block (2x150bp)", "Giráldez (standard)", "Ibarra (serum)","Reggiardo (DLS)" , "Moufarrej (Site 2)", "Roskams-Hieter (validation)"),
+  label = c("Block", "Giráldez", "Ibarra","Reggiardo" , "Moufarrej", "Roskams-Hieter")
+)
+
 
 phenotype_merged_plot_data$phenotype_merged <- fct_recode(
   phenotype_merged_plot_data$phenotype_merged,
@@ -176,14 +165,61 @@ phenotype_merged_plot_data$phenotype_merged <- fct_recode(
   "Non-cancer disease" = "non-cancer disease"
 )
 
+legend_order <- c(
+  "Healthy", "Non-cancer disease", "Liver cancer", "Colorectal cancer", "Esophagus cancer",
+  "Lung cancer", "Stomach cancer", "Diffuse large B-cell lymphoma", "Primary mediastinal B-cell lymphoma",
+  "Multiple myeloma","Acute Myeloid Leukemia" , "Pancreatic cancer", "Unspecified"
+)
 
-ggplot(phenotype_merged_plot_data, aes(x = dataset_batch_clean, y = count, fill = phenotype_merged)) +
+phenotype_merged_plot_data$phenotype_merged <- factor(phenotype_merged_plot_data$phenotype_merged, levels = legend_order)
+
+merged_colors <- merged_colors[legend_order]
+
+add_bottom_brackets <- function(p, bracket_df, factor_levels) {
+  for (i in seq_len(nrow(bracket_df))) {
+    x1 <- which(factor_levels == bracket_df$xmin[i])
+    x2 <- which(factor_levels == bracket_df$xmax[i])
+    if (length(x1) == 0 || length(x2) == 0) next
+    
+    x_start <- (x1 - 1) / length(factor_levels)
+    x_end   <- x2 / length(factor_levels)
+    
+    bracket <- linesGrob(
+      x = unit.c(unit(x_start, "npc"), unit(x_end, "npc")),
+      y = unit(c(-0.03, -0.03), "npc"),
+      gp = gpar(col = "black", lwd = 0.8)
+    )
+    
+    verticals <- gList(
+      linesGrob(
+        x = unit.c(unit(x_start, "npc"), unit(x_start, "npc")),
+        y = unit(c(-0.03, -0.045), "npc"),
+        gp = gpar(col = "black", lwd = 0.95)
+      ),
+      linesGrob(
+        x = unit.c(unit(x_end, "npc"), unit(x_end, "npc")),
+        y = unit(c(-0.03, -0.045), "npc"),
+        gp = gpar(col = "black", lwd = 0.95)
+      )
+    )
+    
+    p <- p + annotation_custom(grobTree(bracket, verticals))
+  }
+  return(p)
+}
+
+
+
+
+
+
+p <- ggplot(phenotype_merged_plot_data, aes(x = dataset_batch_clean, y = count, fill = phenotype_merged)) +
   geom_bar(stat = "identity") +
   scale_fill_manual(values = merged_colors, name = "Phenotype / Cancer subtype") +
   labs(x = "Dataset", y = "Number of samples") +
   theme_minimal(base_size = 20) +
   theme(
-    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1, face = "bold", size = 18, color = "black"),
+    axis.text.x = element_text(angle = 45, vjust = 0.9, hjust = 1, face = "bold", size = 12, color = "black"),
     axis.title.x = element_text(size = 20, face = "bold"), 
     axis.title.y = element_text(size = 20, face = "bold"),  
     legend.title = element_text(size = 18, face = "bold"),  
@@ -191,8 +227,13 @@ ggplot(phenotype_merged_plot_data, aes(x = dataset_batch_clean, y = count, fill 
     panel.grid.major = element_line(size = 0.8),
     panel.grid.minor = element_blank(),
     plot.margin = margin(20, 20, 20, 20),
-    plot.background = element_rect(fill = "white", colour = "white")
-  )
+    plot.background = element_rect(fill = "white", colour = "white") 
+  ) + coord_cartesian(clip = "off")
 
-ggsave("figures/fig_1a_combined_simplified_and_cancer_detail.png",
-       width = 15, height = 8, dpi = 600, units = "in", bg = "white")
+p <- add_bottom_brackets(p, bracket_df, levels(phenotype_merged_plot_data$dataset_batch_clean))
+
+ggsave("~/figures/fig_1a_combined_simplified_and_cancer_detail.png",
+       width = 17, height = 8, dpi = 600, units = "in", bg = "white",device = ragg::agg_png)
+ggsave("~/figures/fig_1a_combined_simplified_and_cancer_detail.pdf",
+       width = 17, height = 8, dpi = 600, units = "in", bg = "white", device = cairo_pdf)
+

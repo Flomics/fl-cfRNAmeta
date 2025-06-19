@@ -6,3 +6,5 @@ src/__pycache__
 
 .Rproj.user
 *.Rproj
+
+tables/.~lock*

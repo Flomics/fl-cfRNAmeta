@@ -4,6 +4,15 @@ library(ggpubr)
 library(scales)
 library(ggside)
 library(ggnewscale)
+library(grid)
+library(jsonlite)
+library(showtext)
+font_add("DejaVu Sans", regular = "DejaVuSans.ttf")
+showtext_opts(dpi = 600)  # MUST come before showtext_auto()
+showtext_auto()
+theme_set(theme_classic(base_family = "DejaVu Sans"))
+
+
 
 ###############################################################################
 # BEWARE!!!!! Code is very messy now, code fairies will fix it soon
@@ -15,7 +24,7 @@ library(ggnewscale)
 ################################################################################
 
 # Read column names from text file
-setwd("~/fl-cfRNAmeta/src")
+setwd("~/fl-cfRNAmeta/")
 column_names <- c("read_number",
                   "avg_input_read_length",
                   "percentage_of_uniquely_mapped_reads",
@@ -33,7 +42,7 @@ column_names <- c("read_number",
                   "exonic_reads_minus_spike_ins",
                   "mt_rna_pct", "mt_rrna_pct", "mt_trna_pct", "misc_rna_pct", "protein_coding_pct", "lncrna_pct", "snrna_pct", "snorna_pct", "spike_in_pct", "other_rna_biotypes_pct")
 
-data <- read.table("tables/sampleinfo_external_and_internal_datasets.tsv", header = TRUE, sep = "\t", fileEncoding = "UTF-8")
+data <- read.table("tables/sampleinfo_all-batches.tsv", header = TRUE, sep = "\t", fileEncoding = "UTF-8")
 
 # Load metadata
 metadata <- read.table("tables/cfRNA-meta_per_sample_metadata.tsv", header = TRUE, sep = "\t", fill = TRUE)
@@ -62,13 +71,12 @@ removed_samples <- data[!(data$sample_id %in% metadata$run), ]
 print(removed_samples$sample_id)
 
 
-cat("Original merged_df rows:", nrow(data), "\n") #should be 2400 
-cat("Filtered to samples in metadata:", nrow(filtered_df), "\n") # should be 2304, if it's not, make sure you have NOT removed all Flomics_1 samples due to a mismatch between the metadata names and the sampleinfo from snakeda names :)
+cat("Original merged_df rows:", nrow(data), "\n") #should be 2416 
+cat("Filtered to samples in metadata:", nrow(filtered_df), "\n") # should be 2318, if it's not, make sure you have NOT removed all Flomics_1 samples due to a mismatch between the metadata names and the sampleinfo from snakeda names :)
 
 
-library(dplyr)
 
-biotype_data <- filtered_df[, 275:356] %>%
+biotype_data <- filtered_df[, 191:272] %>%
   select(-contains('_fc')) %>%
   mutate(across(everything(), ~ as.numeric(as.character(.))))
 
@@ -110,90 +118,14 @@ table_filtered$log_genes_80 <- log(table_filtered$genes_contributing_to_80._of_r
 
 
 num_datasets <- length(unique(table_filtered$dataset_batch.y))
-glasbey_colors <- pals::glasbey(num_datasets)
-table_filtered$dataset_batch.y <- factor(table_filtered$dataset_batch.y, levels = c("block_150bp",
-                                                                                    "block_300bp",
-                                                                                    "chalasani",
-                                                                                    "chen",
-                                                                                    "decruyenaere",
-                                                                                    "flomics_1",
-                                                                                    "flomics_2",
-                                                                                    "giraldez_phospho-rna-seq",
-                                                                                    "giraldez_standard",
-                                                                                    "ibarra_buffy_coat",
-                                                                                    "ibarra_plasma_cancer",
-                                                                                    "ibarra_plasma_non_cancer",
-                                                                                    "ibarra_serum",
-                                                                                    "moufarrej_site_1",
-                                                                                    "moufarrej_site_2",
-                                                                                    "ngo",
-                                                                                    "reggiardo",
-                                                                                    "roskams_pilot",
-                                                                                    "roskams_validation",
-                                                                                    "sun_2",
-                                                                                    "tao",
-                                                                                    "toden",
-                                                                                    "wang",
-                                                                                    "zhu",
-                                                                                    "rozowsky",
-                                                                                    "wei"))
 
-datasetsPalette=c( "flomics_1" = "#9AB9D6",
-                   "flomics_2" = "#144d6b", 
-                   "block_150bp" = "#b3b3b3",
-                   "block_300bp" = "#7d7a7a",
-                   "decruyenaere" =  "#009E73",
-                   "zhu" = "#ffd633",
-                   "chen" = "#997a00",
-                   "ngo" =  "#fa8072",
-                   "roskams_pilot" = "#944dff",
-                   "roskams_validation" = "#5b2e9e",
-                   "moufarrej_site_1" = "#CC79A7",
-                   "moufarrej_site_2" = "#CC79A7",
-                   "sun_2" = "#8a3d00", 
-                   "tao" ="#0072B2",
-                   "toden" = "#800099",
-                   "ibarra_buffy_coat" = "#800000",
-                   "ibarra_plasma_cancer" = "#A52A2A",
-                   "ibarra_plasma_non_cancer" = "#A52A2A",
-                   "ibarra_serum" = "#B22522",
-                   "chalasani" = "#800040",
-                   "rozowsky" = "#006600",
-                   "wei"="#B32400",
-                   "giraldez_phospho-rna-seq" = "#B1CC71",
-                   "giraldez_standard" = "#9cc43b",
-                   "reggiardo" = "#F1085C",
-                   "wang" = "#FE8F42") 
+mappings <- fromJSON("src/dataset_mappings.json")
 
+datasetsLabels <- unlist(mappings$datasetsLabels)
+core_order <- unlist(mappings$datasetVisualOrder)
+datasetsPalette <- unlist(mappings$datasetsPalette)
 
-datasetsLabels <- c(
-  chen = "Chen",
-  zhu = "Zhu",
-  roskams_pilot = "Roskams-Hieter (pilot)",
-  roskams_validation = "Roskams-Hieter (validation)",
-  ngo = "Ngo",
-  ibarra_serum = "Ibarra (serum)",
-  ibarra_plasma_cancer = "Ibarra (plasma, cancer)",
-  ibarra_plasma_non_cancer = "Ibarra (plasma, non-cancer)",
-  ibarra_buffy_coat = "Ibarra (buffy coat)",
-  toden = "Toden",
-  chalasani = "Chalasani",
-  block_150bp = "Block (2x75bp)",
-  block_300bp = "Block (2x150bp)",
-  rozowsky = "ENCODE\n(bulk tissue RNA-Seq)",
-  tao = "Tao",
-  wei = "Wei (cfDNA)",
-  moufarrej_site_1 = "Moufarrej (Site 1)",
-  moufarrej_site_2 = "Moufarrej (Site 2)",
-  wang = "Wang",
-  giraldez_standard = "Giráldez (standard)",
-  "giraldez_phospho-rna-seq" = "Giráldez (phospho-RNA-seq)",
-  sun_2 = "Sun",
-  decruyenaere = "Decruyenaere",
-  reggiardo = "Reggiardo",
-  flomics_1 = "Flomics 1",
-  flomics_2 = "Flomics 2"
-)
+table_filtered$dataset_batch.y <- factor(table_filtered$dataset_batch.y, levels = core_order)
 
 column_names <- c(column_names, "percent_of_reads_mapping_to_spike_ins", "log_genes_80")
 
@@ -215,41 +147,125 @@ clean_label <- function(label) {
 }
 
 
+bracket_df <- data.frame(
+  xmin = c("block_150bp", "giraldez_phospho-rna-seq", "ibarra_buffy_coat", "reggiardo_bioivt", "moufarrej_site_1", "roskams_pilot"),
+  xmax = c("block_300bp", "giraldez_standard", "ibarra_serum", "reggiardo_dls", "moufarrej_site_2", "roskams_validation"),
+  label = c("Block", "Giráldez", "Ibarra", "Reggiardo", "Moufarrej", "Roskams-Hieter")
+)
+
+
+
 #write.table(table_filtered, file="Qc_table_filtered.tsv", row.names = FALSE)
+
 ggplot_objects <- lapply(column_names, function(col_name) {
-  ggplot(table_filtered, aes(x = dataset_batch.y, y = .data[[col_name]], fill = dataset_batch.y)) +
-    geom_boxplot(aes(color = dataset_batch.y),alpha = 0.3, position = position_dodge(width = 0.75), outlier.shape = NA ) +
+  yvals <- table_filtered[[col_name]]
+  yvals <- yvals[!is.na(yvals) & is.finite(yvals)]
+  if (length(yvals) == 0) return(NULL)
+  
+  y_max <- max(yvals)
+  y_range <- diff(range(yvals))
+  bracket_y <- y_max + 0.05 * y_range
+  
+  bracket_df_top <- bracket_df %>%
+    mutate(
+      y.position = bracket_y,
+      y.position = ifelse(label == "Roskams-Hieter", bracket_y + 0.03 * y_range, y.position)
+    )
+  
+  p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = .data[[col_name]], fill = dataset_batch.y)) +
+    geom_boxplot(aes(color = dataset_batch.y), alpha = 0.3, position = position_dodge(width = 0.75), outlier.shape = NA) +
     geom_point(aes(y = .data[[col_name]], color = dataset_batch.y), 
                position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.8), 
                shape = 21, size = 1.5, stroke = 0.2, alpha = 0.6) +
-    labs(title = NULL,
-         x = "Dataset", y = clean_label(col_name)) +
+    labs(title = NULL, x = "Dataset", y = clean_label(col_name)) +
     theme_classic() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+    coord_cartesian(clip = "off") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust=0.9),
           axis.title = element_text(size = 12, face = "bold"),
           plot.title = element_blank(),
-          legend.position = "none", 
-          legend.title = element_blank(),
-          legend.key.size = unit(0.5, "cm"),
-          legend.spacing.y = unit(0.2, 'cm')) +
+          legend.position = "none") +
     scale_x_discrete(labels = datasetsLabels) +
     scale_fill_manual(values = datasetsPalette, labels = datasetsLabels) +
-    scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels) 
-  #guides(fill = guide_legend(override.aes = list(color = "black"), ncol = 1))
+    scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels)
   
+  for (i in seq_len(nrow(bracket_df))) {
+    x1 <- which(levels(table_filtered$dataset_batch.y) == bracket_df$xmin[i])
+    x2 <- which(levels(table_filtered$dataset_batch.y) == bracket_df$xmax[i])
+    if (length(x1) == 0 || length(x2) == 0) next
+    
+    x_start <- (x1 - 1) / length(core_order)  # LEFT tick
+    x_end   <- x2 / length(core_order)        # RIGHT tick
+    
+    bracket <- linesGrob(
+      x = unit.c(unit(x_start, "npc"), unit(x_end, "npc")),
+      y = unit(c(-0.03, -0.03), "npc"),
+      gp = gpar(col = "black", lwd = 0.8)
+    )
+    
+    verticals <- gList(
+      linesGrob(
+        x = unit.c(unit(x_start, "npc"), unit(x_start, "npc")),
+        y = unit(c(-0.03, -0.045), "npc"),
+        gp = gpar(col = "black", lwd = 0.95)
+      ),
+      linesGrob(
+        x = unit.c(unit(x_end, "npc"), unit(x_end, "npc")),
+        y = unit(c(-0.03, -0.045), "npc"),
+        gp = gpar(col = "black", lwd = 0.95)
+      )
+    )
+    
+    p <- p + annotation_custom(grobTree(bracket, verticals))
+  }
+  
+  
+  return(p)
 })
 
 
-
-setwd("~/cfRNA-meta/full_comparison_2025_06_13/")
+setwd("~/cfRNA-meta/full_comparison_2025_06_16/")
 
 for (i in 1:length(ggplot_objects)) {
   col_name <- column_names[i]
   output_file <- paste0(gsub(" ", "_", tolower(col_name)), "_external_datasets_boxplot_with_points.png")
-  ggsave(output_file, ggplot_objects[[i]], width = 9, height = 6, dpi = 600)
+  ggsave(output_file, ggplot_objects[[i]], width = 11, height = 6, dpi = 600, device = ragg::agg_png)
   output_file <- paste0(gsub(" ", "_", tolower(col_name)), "_external_datasets_boxplot_with_points.pdf")
-  ggsave(output_file, ggplot_objects[[i]], width = 9, height = 6, dpi = 600)
+  ggsave(output_file, ggplot_objects[[i]], width = 11, height = 6, dpi = 600, device = cairo_pdf)
 }
+
+add_bottom_brackets <- function(p, bracket_df, factor_levels) {
+  for (i in seq_len(nrow(bracket_df))) {
+    x1 <- which(factor_levels == bracket_df$xmin[i])
+    x2 <- which(factor_levels == bracket_df$xmax[i])
+    if (length(x1) == 0 || length(x2) == 0) next
+    
+    x_start <- (x1 - 1) / length(factor_levels)
+    x_end   <- x2 / length(factor_levels)
+    
+    bracket <- linesGrob(
+      x = unit.c(unit(x_start, "npc"), unit(x_end, "npc")),
+      y = unit(c(-0.03, -0.03), "npc"),
+      gp = gpar(col = "black", lwd = 0.8)
+    )
+    
+    verticals <- gList(
+      linesGrob(
+        x = unit.c(unit(x_start, "npc"), unit(x_start, "npc")),
+        y = unit(c(-0.03, -0.045), "npc"),
+        gp = gpar(col = "black", lwd = 0.95)
+      ),
+      linesGrob(
+        x = unit.c(unit(x_end, "npc"), unit(x_end, "npc")),
+        y = unit(c(-0.03, -0.045), "npc"),
+        gp = gpar(col = "black", lwd = 0.95)
+      )
+    )
+    
+    p <- p + annotation_custom(grobTree(bracket, verticals))
+  }
+  return(p)
+}
+
 ####################################
 ############ Biotype stacked barplot (DEPRECATED)
 ####################################
@@ -312,28 +328,7 @@ biotype_summary_supergroups$sequencing_batch <- factor(biotype_summary_supergrou
                                                        labels = datasetsLabels)
 
 biotype_summary_supergroups$sequencing_batch <- factor(biotype_summary_supergroups$sequencing_batch,
-                                                       levels = c("Block_1",
-                                                                  "Block_2",
-                                                                  "Chalasani",
-                                                                  "Chen",
-                                                                  "Decruyenaere",
-                                                                  "Flomics_1",
-                                                                  "Flomics_2",
-                                                                  "Giráldez",
-                                                                  "Ibarra",
-                                                                  "Moufarrej",
-                                                                  "Ngo",
-                                                                  "Reggiardo",
-                                                                  "Roskams-Hieter_1",
-                                                                  "Roskams-Hieter_2",
-                                                                  "Sun_1",
-                                                                  "Sun_2",
-                                                                  "Tao",
-                                                                  "Toden",
-                                                                  "Wang (read 2)",
-                                                                  "Zhu",
-                                                                  "ENCODE\n(bulk tissue RNA-Seq)",
-                                                                  "Wei (cfDNA)"))
+                                                       levels = core_order)
 
 
 # Distinct palette for supergroups
@@ -367,7 +362,7 @@ ggsave("biotype_supergroup_distribution_per_dataset.pdf", p_supergroups, width =
 ########################################
 
 ###############################
-############ Protein coding pct
+############ Protein coding pct DEPRECATED
 ###############################
 p <- ggplot(table_filtered, aes(x = sequencing_batch, y = protein_coding_pct, fill = sequencing_batch)) +
   geom_boxplot(alpha = 0.6, aes(color = sequencing_batch), position = position_dodge(width = 0.75), outlier.shape = NA) +
@@ -433,7 +428,7 @@ ggsave("diversity_scatterplot.png", plot = ps, width = 12, height = 8, dpi = 300
 ggsave("diversity_scatterplot.pdf", plot = ps, width = 12, height = 8, dpi = 300)
 
 ##################################
-################## Shannon entropy
+################## Shannon entropy DEPRECATED
 ##################################
 
 shannon <- read.table("~/cfRNA-meta/exp_mat/shannon_entropy_with_flomics_1_andliquidx.csv", header = TRUE, sep = ",")
@@ -538,13 +533,14 @@ p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = Fragments_mapping_to_ex
   labs(title = "",
        x = "Dataset", y = "% fragments mapping to correct gene orientation") +
   theme_classic() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust = 0.9),
         axis.title = element_text(size = 12, face = "bold"),
         plot.title = element_text(size = 14, face = "bold"),
         legend.position = "none") +
   scale_x_discrete(labels = datasetsLabels) +
   scale_fill_manual(values = datasetsPalette, labels = datasetsLabels, guide = "none") +
-  scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels, guide = "none")
+  scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels, guide = "none") +
+  coord_cartesian(clip = "off")
 
 p <- p + new_scale_fill()  # VERY IMPORTANT, native ggplot does not like having two cals of scale_fill or scale_color, so ggnewscale is needed
 
@@ -565,9 +561,10 @@ p <- p +
     legend.margin = margin(0, 0, 0, 0)
   )
 
+p <- add_bottom_brackets(p, bracket_df, levels(table_filtered$dataset_batch.y))
 
-ggsave("fragments_mapped_expected_strand_with_strandedness_info.png", p, width = 9, height = 6, dpi = 600)
-ggsave("fragments_mapped_expected_strand.pdf", p, width = 9, height = 6, dpi = 600)
+ggsave("fragments_mapped_expected_strand_with_strandedness_info.png", p, width = 11, height = 6, dpi = 600, device = ragg::agg_png)
+ggsave("fragments_mapped_expected_strand.pdf", p, width = 11, height = 6, dpi = 600, device = cairo_pdf)
 
 
 
@@ -583,25 +580,27 @@ table_filtered <- table_filtered %>%
   ))
 
 p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = fragment_number, fill = dataset_batch.y)) +
-  geom_boxplot(alpha = 0.6, aes(color = dataset_batch.y), position = position_dodge(width = 0.75), outlier.shape = NA) +
+  geom_boxplot(alpha = 0.3, aes(color = dataset_batch.y), position = position_dodge(width = 0.75), outlier.shape = NA) +
   geom_point(aes(y = fragment_number, color = dataset_batch.y), 
              position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.8), 
              shape = 21, size = 1.5, stroke = 0.2, alpha = 0.6) +
   labs(title = "",
        x = "Dataset", y = "Fragment number") +
   theme_classic() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust = 0.9),
         axis.title = element_text(size = 12, face = "bold"),
         plot.title = element_text(size = 14, face = "bold"),
         legend.position = "none") +
   scale_x_discrete(labels = datasetsLabels) +
   scale_fill_manual(values = datasetsPalette, labels = datasetsLabels) +
   scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels) +
-  scale_y_continuous(labels = label_number(scale_cut = cut_short_scale()))
+  scale_y_continuous(labels = label_number(scale_cut = cut_short_scale())) + 
+  coord_cartesian(clip = "off")
 
+p <- add_bottom_brackets(p, bracket_df, levels(table_filtered$dataset_batch.y))
 
-ggsave("fragment_number.png", p, width = 9, height = 6)
-ggsave("fragment_number.pdf", p, width = 9, height = 6)
+ggsave("fragment_number.png", p, width = 11, height = 6, dpi = 600, device = ragg::agg_png)
+ggsave("fragment_number.pdf", p, width = 11, height = 6, dpi = 600, device = cairo_pdf)
 
 
 #######################################################
@@ -642,18 +641,21 @@ p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = log_genes_80, fill = da
   labs(title = "",
        x = "Dataset", y = "NG80") +
   theme_classic() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust = 0.9),
         axis.title = element_text(size = 12, face = "bold"),
         plot.title = element_text(size = 14, face = "bold"),
         legend.position = "none") +
   scale_x_discrete(labels = datasetsLabels) +
   scale_fill_manual(values = datasetsPalette, labels = datasetsLabels) +
   scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels) +
-  scale_y_continuous(breaks = y_breaks, labels = y_labels)
+  scale_y_continuous(breaks = y_breaks, labels = y_labels) + 
+  coord_cartesian(clip = "off")
+
+p <- add_bottom_brackets(p, bracket_df, levels(table_filtered$dataset_batch.y))
 
 
-ggsave("ng80_non_transformed_axis.png", p, width = 9, height = 6, dpi = 600)
-ggsave("ng80_non_transformed_axis.pdf", p, width = 9, height = 6)
+ggsave("ng80_non_transformed_axis.png", p, width = 11, height = 6, dpi = 600, device = ragg::agg_png)
+ggsave("ng80_non_transformed_axis.pdf", p, width = 11, height = 6, dpi = 600, device = cairo_pdf)
 
 
 ################################################################################
