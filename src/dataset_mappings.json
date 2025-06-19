@@ -24,8 +24,8 @@
     "wei": "#B32400",
     "giraldez_phospho-rna-seq": "#B1CC71",
     "giraldez_standard": "#9cc43b",
-    "reggiardo_dls": "#F1085C",
     "reggiardo_bioivt": "#F1085C",
+    "reggiardo_dls": "#F1085C",
     "wang": "#FE8F42"
   },
   "datasetsLabels": {
@@ -52,10 +52,10 @@
     "giraldez_phospho-rna-seq": "Giráldez (phospho-RNA-seq)",
     "sun_2": "Sun",
     "decruyenaere": "Decruyenaere",
-    "reggiardo_dls": "Reggiardo (DLS)",
     "reggiardo_bioivt": "Reggiardo (BioIVT)",
-
+    "reggiardo_dls": "Reggiardo (DLS)",
     "flomics_1": "Flomics 1",
     "flomics_2": "Flomics 2"
-  }
+  },
+  "datasetVisualOrder": ["block_150bp", "block_300bp", "chalasani", "chen", "decruyenaere", "flomics_1", "flomics_2", "giraldez_phospho-rna-seq", "giraldez_standard", "ibarra_buffy_coat", "ibarra_plasma_cancer", "ibarra_plasma_non_cancer", "ibarra_serum", "moufarrej_site_1", "moufarrej_site_2", "ngo", "reggiardo_bioivt", "reggiardo_dls", "roskams_pilot", "roskams_validation", "sun_2", "tao", "toden", "wang", "zhu", "rozowsky", "wei"]
 }

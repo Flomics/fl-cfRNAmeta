@@ -38,6 +38,7 @@ dataset_column_list = [
     'Assay name',
     'Plasma volume',
     'Plasma tubes',
+    'Plasma tubes (short name)',
     'RNA extraction kit',
     'RNA extraction kit (short name)',
     'DNAse',
@@ -278,7 +279,7 @@ def preprocess_ibarra(dataset_metadata):
     # Assign centrifugation steps based on dataset_batch
     def assign_centrifugation_steps(batch):
         if batch == "ibarra_buffy_coat":
-            return pd.Series({"centrifugation_step_1": "1900g", "centrifugation_step_2": "NA"})
+            return pd.Series({"centrifugation_step_1": "1900g", "centrifugation_step_2": "None"})
         elif batch == "ibarra_serum":
             return pd.Series({"centrifugation_step_1": "1900g", "centrifugation_step_2": "16000g"})
         elif batch == "ibarra_plasma_non_cancer":
@@ -286,7 +287,7 @@ def preprocess_ibarra(dataset_metadata):
         elif batch == "ibarra_plasma_cancer":
             return pd.Series({"centrifugation_step_1": "1900g", "centrifugation_step_2": "6000g"})
         else:
-            return pd.Series({"centrifugation_step_1": "NA", "centrifugation_step_2": "NA"})
+            return pd.Series({"centrifugation_step_1": "None", "centrifugation_step_2": "None"})
 
     df = df.join(df["dataset_batch"].apply(assign_centrifugation_steps))
 
@@ -308,7 +309,7 @@ def preprocess_toden(dataset_metadata):
     df["dataset_batch"] = "toden"
     df["read_length"] = "2x75"
     df["centrifugation_step_1"] = "12000g"
-    df["centrifugation_step_2"] = "NA" 
+    df["centrifugation_step_2"] = "None" 
 
 
     df_first = df.drop_duplicates(subset="isolate", keep="first").copy()
@@ -346,7 +347,7 @@ def preprocess_chalasani(dataset_metadata):
     df["dataset_batch"] = "chalasani"
     df["read_length"] = "2x75"
     df["centrifugation_step_1"] = "1900g"
-    df["centrifugation_step_2"] = "NA" 
+    df["centrifugation_step_2"] = "None" 
 
 
     # Create a new column with the cleaned isolate ID
@@ -373,27 +374,6 @@ def preprocess_chalasani(dataset_metadata):
 
     df_merged = merge_sample_with_dataset_metadata(df_merged, dataset_metadata)
 
-    # Hot-fix: Temporary exclude missing (n=16) Chalasani samples
-    chalasani_ids_to_exclude = [
-        'X2835',
-        'X3391',
-        'X3392',
-        'X3752',
-        'X3770',
-        'X3817',
-        'X3823',
-        'X3827',
-        'X3833',
-        'X4253',
-        'X4269',
-        'X4275',
-        'X4363',
-        'X9709',
-        'X9737',
-        'X9760'
-    ]
-    #df_merged = df_merged[~df_merged['run'].isin(chalasani_ids_to_exclude)]
-
     df_merged.to_csv("../sra_metadata/chalasani_metadata_preprocessed.csv", index=False)
     return df_merged
 
@@ -412,7 +392,7 @@ def preprocess_block(dataset_metadata):
     )
     df["read_length"] = np.where(df["dataset_batch"] == "block_150bp", "2x75", "2x150")
     df["centrifugation_step_1"] = "2000g"
-    df["centrifugation_step_2"] = "NA" 
+    df["centrifugation_step_2"] = "None" 
 
     # Exclude non-plasma samples: Tissue, and Plasma-derived vesicles.
     df = df.rename(columns={'tissue':'biomaterial'})
@@ -453,10 +433,13 @@ def preprocess_rozowsky(dataset_metadata):
     df["dataset_batch"] = "rozowsky"
     df['phenotype'] = 'Healthy'
     df["read_length"] = "2x100"
-    df["centrifugation_step_1"] = "NA"
-    df["centrifugation_step_2"] = "NA" 
+    df["centrifugation_step_1"] = "None"
+    df["centrifugation_step_2"] = "None" 
 
-    df = merge_sample_with_dataset_metadata(df, dataset_metadata)
+    df["plasma_tubes_short_name"] = "None"
+
+    df = merge_sample_with_dataset_metadata(df, dataset_metadata, keep_sample_cols=["plasma_tubes_short_name"])
+
 
     df.to_csv("../sra_metadata/rozowsky_metadata_preprocessed.csv", index=False)
 
@@ -620,18 +603,23 @@ def preprocess_moufarrej(dataset_metadata):
     df["dataset_batch"] = df["collection_center"].apply(assign_site)
     df['collection_center'] = df['cohort'].apply(lambda x: moufarrej_cohort_map[x])
 
-
     def assign_centrifugation_steps(batch):
         if batch == "moufarrej_site_1":
             return pd.Series({"centrifugation_step_1": "1600g", "centrifugation_step_2": "13000g"})
         elif batch == "moufarrej_site_2":
-            return pd.Series({"centrifugation_step_1": "2500g", "centrifugation_step_2": "NA"})
+            return pd.Series({"centrifugation_step_1": "2500g", "centrifugation_step_2": "None"})
         else:
             return pd.Series({"centrifugation_step_1": "NA", "centrifugation_step_2": "NA"})
 
     df = df.join(df["dataset_batch"].apply(assign_centrifugation_steps))
 
-    df = merge_sample_with_dataset_metadata(df, dataset_metadata)
+    df["plasma_tubes_short_name"] = df["dataset_batch"].map({
+        "moufarrej_site_1": "Unspecified",
+        "moufarrej_site_2": "EDTA"
+    })
+
+    df = merge_sample_with_dataset_metadata(df, dataset_metadata, keep_sample_cols=["plasma_tubes_short_name"])
+
     df.to_csv("../sra_metadata/moufarrej_metadata_preprocessed.csv", index=False)
 
     return df
@@ -912,7 +900,7 @@ def preprocess_decruyenaere(dataset_metadata):
     df["disease"]            = df["phenotype"]
     df["read_length"]        = "2x100"
     df["centrifugation_step_1"] = "1900g"
-    df["centrifugation_step_2"] = "NA" 
+    df["centrifugation_step_2"] = "None" 
 
     # Exclude FFPE samples
     n1 = len(df)
@@ -981,14 +969,15 @@ def preprocess_flomics_1(dataset_metadata):
     df["dataset_short_name"] = "flomics_1"
     df["dataset_batch"] = "flomics_1"
     df["read_length"] = "2x150"
-    df["centrifugation_step_1"] = "placeholder"
-    df["centrifugation_step_2"] = "placeholder" 
+    df["centrifugation_step_1"] = "2000g"
+    df["centrifugation_step_2"] = "None" 
     
     #df["run"] = df["sample_name"]
     df["run"] = df["sample_display_name"]
     #df["run"] = df["sample_analysis_run_id"].apply(lambda x: x.split('_')[0])
 
     # exclude samples
+    #samples_to_remove = ["Flomics_1_1", "Flomics_1_2", "Flomics_1_3", "Flomics_1_4"]
     samples_to_remove = ["SAMP008_EXP094_FL094_C1", "SAMP009_EXP094_FL094_D1"]
     n1 = len(df)
     df = df[~df["run"].isin(samples_to_remove)]
