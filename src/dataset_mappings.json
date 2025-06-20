@@ -47,7 +47,7 @@
     "ibarra_buffy_coat": "P",
     "ibarra_plasma_cancer": "^",
     "ibarra_plasma_non_cancer": "D",
-    "ibarra_serum": "X",
+    "ibarra_serum": "*",
     "chalasani": "o",
     "rozowsky": "s",
     "wei": "s",
