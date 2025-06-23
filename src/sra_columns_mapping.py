@@ -126,7 +126,8 @@ def rename_columns_and_values(df):
     df = df.rename(
         columns={'sample_name':'sample_name_other', 'sample_id':'sample_id_other'}
     )
-    df['sample_name'] = df['run']
+    df['sample_name']    = df['run']
+    df['analysis_batch'] = df['dataset_short_name']
 
     # add 'status' column
     # TODO We need a specific mapping between the precise phenotype and the coarse-grain status, e.g.

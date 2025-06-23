@@ -19,6 +19,15 @@ def simplify_column_names(cols):
            ).to_list()
     return cols
 
+reserved_vars_samplesheet = [
+    'analysis_batch',
+    'sequencing_batch',
+    'sample_name', 'sample_id', 'raw_data_id',
+    'sample_analysis_run_id', 'sample_display_name', 'sample_idx_analysis_batch',
+    'fastq_1', 'fastq_2', 'out_dir', 
+    'resequenced_sample'
+]
+
 
 dataset_column_list = [
     'dataset_short_name',
@@ -60,7 +69,7 @@ def preprocess_chen(dataset_metadata):
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
 
-    df["sequencing_batch"] = "chen" 
+    #df["sequencing_batch"] = "chen" 
     df["dataset_short_name"] = "chen"
     df["dataset_batch"] = "chen"
     df["read_length"] = "2x150"
@@ -68,11 +77,14 @@ def preprocess_chen(dataset_metadata):
     df["centrifugation_step_2"] = "Unspecified"
 
     # Exclude the two E. coli samples and the brain tissue sample
+    n1 = len(df)
     df = df[~(df['sample_name'].isin([
         'ET_L2',
         'EH_L2',
         'NC_L2',
     ]))]
+    n2 = len(df)
+    print(f"Exclude the two E. coli samples and the brain tissue sample. N = {n1 - n2}")
 
     # Parse the GEO series matrix file, which contains the
     # the GEO/GSM ids and the collection center (hospital).
@@ -107,7 +119,7 @@ def preprocess_zhu(dataset_metadata):
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
 
-    df["sequencing_batch"] = "zhu" 
+    #df["sequencing_batch"] = "zhu" 
     df["dataset_short_name"] = "zhu"
     df["dataset_batch"] = "zhu"
     df["read_length"] = "2x150"
@@ -125,7 +137,7 @@ def preprocess_roskams(dataset_metadata):
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)    
 
-    df["sequencing_batch"] = "roskams" 
+    #df["sequencing_batch"] = "roskams" 
     df["dataset_short_name"] = "roskams"
     df["dataset_batch"] = np.where(df["cohort"] == "pilot", "roskams_pilot", "roskams_validation")
     df["read_length"] = np.where(df["dataset_batch"] == "roskams_pilot", "2x100", "2x150")
@@ -185,7 +197,7 @@ def preprocess_ngo(dataset_metadata):
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
 
-    df["sequencing_batch"] = "ngo" 
+    #df["sequencing_batch"] = "ngo" 
     df["dataset_short_name"] = "ngo"
     df["dataset_batch"] = "ngo"
     df["read_length"] = "2x75"
@@ -209,7 +221,7 @@ def preprocess_ibarra(dataset_metadata):
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
 
-    df["sequencing_batch"] = "ibarra" 
+    #df["sequencing_batch"] = "ibarra" 
     df["dataset_short_name"] = "ibarra"
     df["biomaterial"] = df["tissue"].str.lower()
     df["read_length"] = "2x75"
@@ -299,7 +311,7 @@ def preprocess_toden(dataset_metadata):
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
 
-    df["sequencing_batch"] = "toden" 
+    #df["sequencing_batch"] = "toden" 
     df["dataset_short_name"] = "toden"
     df["dataset_batch"] = "toden"
     df["read_length"] = "2x75"
@@ -337,7 +349,7 @@ def preprocess_chalasani(dataset_metadata):
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
 
-    df["sequencing_batch"] = "chalasani" 
+    #df["sequencing_batch"] = "chalasani" 
     df["dataset_short_name"] = "chalasani"
     df["dataset_batch"] = "chalasani"
     df["read_length"] = "2x75"
@@ -379,7 +391,7 @@ def preprocess_block(dataset_metadata):
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
 
-    df["sequencing_batch"] = "block" 
+    #df["sequencing_batch"] = "block" 
     df["dataset_short_name"] = "block"
     df["dataset_batch"] = np.where(
         abs(df["avgspotlen"] - 150) < abs(df["avgspotlen"] - 300),
@@ -423,7 +435,7 @@ def preprocess_rozowsky(dataset_metadata):
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
 
-    df["sequencing_batch"] = "rozowsky" 
+    #df["sequencing_batch"] = "rozowsky" 
     df["dataset_short_name"] = "rozowsky"
     df["dataset_batch"] = "rozowsky"
     df['phenotype'] = 'Healthy'
@@ -446,7 +458,7 @@ def preprocess_tao(dataset_metadata):
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
 
-    df["sequencing_batch"] = "tao" 
+    #df["sequencing_batch"] = "tao" 
     df["dataset_short_name"] = "tao"
     df["dataset_batch"] = "tao"
     df["read_length"] = "2x150"
@@ -505,7 +517,7 @@ def preprocess_wei(dataset_metadata):
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
 
-    df["sequencing_batch"] = "taowei" 
+    #df["sequencing_batch"] = "taowei" 
     df["dataset_short_name"] = "wei"
     df["dataset_batch"] = "wei"
     df["read_length"] = "2x150"    
@@ -535,7 +547,7 @@ def preprocess_moufarrej(dataset_metadata):
     # Improve compatibility with snakeDA (reserved var: ['sequencing_batch'])
     df = df.rename(columns={'sequencing_batch':'sequencing_batch_other'})
 
-    df["sequencing_batch"] = "moufarrej" 
+    #df["sequencing_batch"] = "moufarrej" 
     df["dataset_short_name"] = "moufarrej"
     #df["dataset_batch"] = "moufarrej" # use 'cohort' column from GEO
     df["read_length"] = "2x75"    
@@ -625,7 +637,7 @@ def preprocess_wang(dataset_metadata):
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
 
-    df["sequencing_batch"] = "wang_read_2" 
+    #df["sequencing_batch"] = "wang_read_2" 
     df["dataset_short_name"] = "wang"
     df["dataset_batch"] = "wang"
     df["read_length"] = "2x150"    
@@ -705,7 +717,7 @@ def preprocess_giraldez(dataset_metadata):
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
 
-    df["sequencing_batch"] = "giraldez" 
+    #df["sequencing_batch"] = "giraldez" 
     df["dataset_short_name"] = "giraldez"
     
     # Filter out the 2 synthetic samples
@@ -758,7 +770,7 @@ def preprocess_sun(dataset_metadata):
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
 
-    df["sequencing_batch"] = "sun" 
+    #df["sequencing_batch"] = "sun" 
     df["dataset_short_name"] = "sun"
     df["biomaterial"] = df["tissue"].apply(lambda x: "blood plasma" if x == "plasma" else "blood serum" if x == "serum" else "")
     df["dataset_batch"] = np.where(df["biomaterial"] == "blood plasma", "sun_1", "sun_2")
@@ -870,7 +882,7 @@ def preprocess_decruyenaere(dataset_metadata):
         # 'ENA-CHECKLIST',
         'organism_part',
         # 'region',
-        #'file_name_1' # needed to extract the 'sample_name'
+        'file_name_1' # needed to extract the 'sample_name'
     ]
 
     csv_path = "../sra_metadata/decruyenaere_metadata.csv"
@@ -880,16 +892,16 @@ def preprocess_decruyenaere(dataset_metadata):
 
     # Rename columns from the EGA-archive to the corresponding SRA metadata columns
     df = df.rename(columns={
-        "sample_alias":"run",
+        #"sample_alias":"run",
         "instrument_model":"instrument",
         "biosample_id":"biosample",
         })
 
-    #df["run"] = df["file_name_1"].apply(lambda x: '_'.join(x.split('_')[:2]))
+    df["run"] = df["file_name_1"].apply(lambda x: '_'.join(x.split('_')[:2]))
     # remove 'file_name_1' col
-    #df = df.drop('file_name_1', axis=1)
+    df = df.drop('file_name_1', axis=1)
 
-    df["sequencing_batch"]   = "decruyenaere" 
+    #df["sequencing_batch"]   = "decruyenaere" 
     df["dataset_short_name"] = "decruyenaere"
     df["dataset_batch"]      = "decruyenaere"
     df["disease"]            = df["phenotype"]
@@ -920,7 +932,7 @@ def preprocess_reggiardo(dataset_metadata):
     df = pd.read_csv(csv_path)
     df.columns = simplify_column_names(df.columns)
 
-    df["sequencing_batch"] = "reggiardo" 
+    #df["sequencing_batch"] = "reggiardo" 
     df["dataset_short_name"] = "reggiardo"
     df["read_length"] = "2x150"
     df["centrifugation_step_1"] = "Unspecified"
@@ -957,16 +969,41 @@ def preprocess_flomics_1(dataset_metadata):
     df = pd.read_csv(csv_path, sep='\t')
     df.columns = simplify_column_names(df.columns)
 
+    # Improve compatibility with snakeDA (reserved var: ['sequencing_batch'])
+    # => 'sequencing_batch' is defined in metadata file
+    df = df.rename(columns={'sequencing_batch':'sequencing_batch_other'})
+
     df["dataset_short_name"] = "flomics_1"
     df["dataset_batch"] = "flomics_1"
     df["read_length"] = "2x150"
     df["centrifugation_step_1"] = "2000g"
     df["centrifugation_step_2"] = "None" 
     
-    df["run"] = df["sample_name"]
+    #df["run"] = df["sample_name"]
+    df["run"] = df["sample_display_name"]
+    #df["run"] = df["sample_analysis_run_id"].apply(lambda x: x.split('_')[0])
 
-    samples_to_remove = ["Flomics_1_1", "Flomics_1_2", "Flomics_1_3", "Flomics_1_4"]
-    df = df.drop(df[df["run"].isin(samples_to_remove)].index, errors='ignore')
+    # exclude samples
+    samples_to_remove_rna_extraction = [
+        # Different RNA extraction protocols
+        "SAMP016_EXP089_FL089minusA1", "SAMP017_EXP089_FL089minusB1",
+    ]
+    n1 = len(df)
+    df = df[~df["run"].isin(samples_to_remove_rna_extraction)]
+    n2 = len(df)
+    print(f"Exclude samples with different RNA isolation protocol. N = {n1 - n2}")
+    samples_to_remove_centrifugation = [
+        # Different centrifugation protocols
+        "SAMP008_EXP094_FL094_C1", "SAMP009_EXP094_FL094_D1",
+    ]
+    n1 = len(df)
+    df = df[~df["run"].isin(samples_to_remove_centrifugation)]
+    n2 = len(df)
+    print(f"Exclude samples with different centrifugation protocols. N = {n1 - n2}")
+
+    reserved_cols = set(df.columns).intersection(reserved_vars_samplesheet)
+    if reserved_cols:
+        df = df.drop(reserved_cols, axis=1)
 
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
 
@@ -981,13 +1018,23 @@ def preprocess_flomics_2(dataset_metadata):
     df = pd.read_csv(csv_path, sep='\t')
     df.columns = simplify_column_names(df.columns)
 
+    # Improve compatibility with snakeDA (reserved var: ['sequencing_batch'])
+    # => 'sequencing_batch' is defined in metadata file
+    df = df.rename(columns={'sequencing_batch':'sequencing_batch_other'})
+
     df["dataset_short_name"] = "flomics_2"
     df["dataset_batch"] = "flomics_2"
     df["read_length"] = "2x150"
     df["centrifugation_step_1"] = "1500g"
     df["centrifugation_step_2"] = "2500g" 
 
-    df["run"] = df["sample_name"]
+    #df["run"] = df["sample_name"]
+    df["run"] = df["sample_display_name"]
+    #df["run"] = df["sample_analysis_run_id"].apply(lambda x: x.split('_')[0])
+    
+    reserved_cols = set(df.columns).intersection(reserved_vars_samplesheet)
+    if reserved_cols:
+        df = df.drop(reserved_cols, axis=1)
 
     df = df.rename(columns={"status_subtype":"phenotype"})
 
