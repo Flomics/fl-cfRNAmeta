@@ -1,0 +1,4 @@
+with_umi: true
+umitools_extract_method: 'regex'
+umitools_bc_pattern2: '^(?P<umi_1>.{8})(?P<discard_1>.{6}).*'
+salmon_quant_libtype: 'ISR'
