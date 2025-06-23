@@ -1,0 +1,5 @@
+gencode: true
+featurecounts_group_type: 'gene_type'
+fasta: '/references/Genomes/Homo_sapiens/GENCODE/GRCh38/release-105/Homo_sapiens.GRCh38.dna_sm_v105_SIRV-set3.fa'
+gtf: '/references/Genomes/Homo_sapiens/GENCODE/GRCh38/release-105/gencode.v39.annotation_tRNA_SIRV-set3.sorted.gtf'
+star_index: '/references/Genomes/Homo_sapiens/GENCODE/GRCh38/release-105/STARindex_v2.7.10a/'

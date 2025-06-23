@@ -149,7 +149,7 @@ names(cancer_colors) <- sort(unique(data_barplot$phenotype[data_barplot$simple_p
 merged_colors <- c(
   "Healthy" = "#1f78b4",
   "Non-cancer disease" = "#33a02c",
-  "Unspecified" = "grey60",
+  "Unspecified" = "grey20",
   cancer_colors
 )
 bracket_df <- data.frame(
