@@ -448,3 +448,30 @@ for (i in seq_len(nrow(bracket_df))) {
 showtext::showtext_end()
 dev.off()
 
+# variables to compare, comment out lines to play with combinations
+preanalytical_vars <- c(
+  "plasma_tubes_short_name",
+  #"read_length",
+  "centrifugation_step_1",
+  "centrifugation_step_2",
+  #"biomaterial",
+  #"nucleic_acid_type",
+  "rna_extraction_kit_short_name",
+  "dnase",
+  "library_prep_kit_short_name"#,
+  #"library_selection",
+  #"cdna_library_type"
+)
+
+protocol_combinations <- data_heatmap %>%
+  select(dataset_batch, all_of(preanalytical_vars)) %>%
+  mutate(across(everything(), ~ifelse(is.na(.), "NA", as.character(.)))) %>%
+  distinct()  
+
+shared_protocols <- protocol_combinations %>%
+  group_by(across(all_of(preanalytical_vars))) %>%
+  summarise(datasets = list(dataset_batch), n = n(), .groups = "drop") %>%
+  arrange(desc(n))
+
+print(shared_protocols)
+shared_protocols$datasets
