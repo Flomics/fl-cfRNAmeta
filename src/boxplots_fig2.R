@@ -42,10 +42,10 @@ column_names <- c("read_number",
                   "exonic_reads_minus_spike_ins",
                   "mt_rna_pct", "mt_rrna_pct", "mt_trna_pct", "misc_rna_pct", "protein_coding_pct", "lncrna_pct", "snrna_pct", "snorna_pct", "spike_in_pct", "other_rna_biotypes_pct")
 
-data <- read.table("tables/sampleinfo_all-batches.tsv", header = TRUE, sep = "\t", fileEncoding = "UTF-8")
+data <- read.delim("~/cfRNA-meta/sampleinfo_new.tsv", header = TRUE, sep = "\t", fileEncoding = "UTF-8")
 
 # Load metadata
-metadata <- read.table("tables/cfRNA-meta_per_sample_metadata.tsv", header = TRUE, sep = "\t", fill = TRUE)
+metadata <- read.delim("tables/cfRNA-meta_per_sample_metadata.tsv", header = TRUE, sep = "\t", fill = TRUE)
 
 # Strip decruyenaere samples of the "_*" in their sample_id
 data$sample_id[data$sequencing_batch == "decruyenaere"] <- 
@@ -172,12 +172,21 @@ ggplot_objects <- lapply(column_names, function(col_name) {
       y.position = ifelse(label == "Roskams-Hieter", bracket_y + 0.03 * y_range, y.position)
     )
   
+  label_block <- if (col_name == "mapped_percentage") {
+    labs(title = NULL, x = "Dataset", y = "% reads mapped to reference human genome")
+  } else if (col_name == "exonic_reads_minus_spike_ins") {
+    labs(title = NULL, x = "Dataset", y =  "% reads mapping to exons")
+  } else {
+    labs(title = NULL, x = "Dataset", y = clean_label(col_name))
+  }
+  
+  
   p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = .data[[col_name]], fill = dataset_batch.y)) +
     geom_boxplot(aes(color = dataset_batch.y), alpha = 0.3, position = position_dodge(width = 0.75), outlier.shape = NA) +
     geom_point(aes(y = .data[[col_name]], color = dataset_batch.y), 
                position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.8), 
                shape = 21, size = 1.5, stroke = 0.2, alpha = 0.6) +
-    labs(title = NULL, x = "Dataset", y = clean_label(col_name)) +
+    label_block +
     theme_classic() +
     coord_cartesian(clip = "off") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust=0.9),
@@ -398,12 +407,12 @@ ggsave("protein_coding_pct.pdf", p, width = 9, height = 6, dpi = 600)
 ########### Diversity scatterplot
 #################################
 library(scales)
-p <- ggplot(data = table_filtered, aes(x = exonic_reads_minus_spike_ins, y = genes_contributing_to_80._of_reads, color = sequencing_batch)) +
+p <- ggplot(data = table_filtered, aes(x = percentage_of_spliced_reads, y = genes_contributing_to_80._of_reads, color = sequencing_batch)) +
   geom_point(size = 2, alpha = 0.7) + 
   geom_density_2d(aes(color = sequencing_batch), alpha = 0.5, size = 0.8) +
   labs(title = "",
-       x = "Exonic percentage minus spike-ins",
-       y = "# of Genes Contributing to 80% of Reads",
+       x = "Percentage of spliced reads",
+       y = "NG80",
        color = "")+
   theme_minimal(base_size = 14) + 
   theme(
@@ -413,6 +422,8 @@ p <- ggplot(data = table_filtered, aes(x = exonic_reads_minus_spike_ins, y = gen
     legend.title = element_text(size = 12, face = "bold"),
     legend.text = element_text(size = 10), 
     legend.position = "right", 
+    legend.key.height = unit(0.5, "lines"),  
+    legend.box = "vertical",
     panel.grid.major = element_line(color = "gray80"), 
     panel.grid.minor = element_blank(),
     plot.background = element_rect(
@@ -422,10 +433,12 @@ p <- ggplot(data = table_filtered, aes(x = exonic_reads_minus_spike_ins, y = gen
   ) +
   scale_color_manual(values = datasetsPalette, labels= datasetsLabels) 
 
-ps <- p  +  scale_y_continuous(trans=log10_trans()) 
+ps <- p  +  scale_y_continuous(trans=log10_trans()) +
+  guides(color = guide_legend(ncol = 1))
 
-ggsave("diversity_scatterplot.png", plot = ps, width = 12, height = 8, dpi = 300)
-ggsave("diversity_scatterplot.pdf", plot = ps, width = 12, height = 8, dpi = 300)
+
+ggsave("~/figures/diversity_scatterplot.png", plot = ps, width = 12, height = 8, dpi = 600, device = ragg::agg_png)
+ggsave("~/figures/diversity_scatterplot.pdf", plot = ps, width = 12, height = 8,  dpi = 600, device = cairo_pdf)
 
 ##################################
 ################## Shannon entropy DEPRECATED

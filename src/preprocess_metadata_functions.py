@@ -256,10 +256,6 @@ def preprocess_ibarra(dataset_metadata):
 
     df = df.join(df['sample_name'].apply(parse_phenotype))
 
-    # Plasma tubes
-    df["plasma_tubes"] = df["biomaterial"].apply(
-        lambda x: "EDTA" if x == "plasma" else "BD Vacutainer clotting tubes" if x == "serum" else "")
-
     # Assign dataset_batch including plasma subtype logic
     def assign_batch(row):
         if row["biomaterial"] == "plasma":
@@ -275,6 +271,17 @@ def preprocess_ibarra(dataset_metadata):
             return ""
 
     df["dataset_batch"] = df.apply(assign_batch, axis=1)
+
+    # Plasma tubes short name
+    def assign_tube(row):
+        if row["dataset_batch"] in ["ibarra_plasma_cancer", "ibarra_plasma_non_cancer", "ibarra_buffy_coat"]:
+            return "EDTA"
+        elif row["dataset_batch"] == "ibarra_serum":
+            return "Vacutainer"
+        else:
+            return ""
+    
+    df["plasma_tubes_short_name"] = df.apply(assign_tube, axis=1)
 
     # Assign centrifugation steps based on dataset_batch
     def assign_centrifugation_steps(batch):
@@ -292,7 +299,7 @@ def preprocess_ibarra(dataset_metadata):
     df = df.join(df["dataset_batch"].apply(assign_centrifugation_steps))
 
     df = merge_sample_with_dataset_metadata(
-        df, dataset_metadata, keep_sample_cols=["biomaterial", "plasma_tubes"])
+        df, dataset_metadata, keep_sample_cols=["biomaterial", "plasma_tubes", "plasma_tubes_short_name"])
 
     df.to_csv("../sra_metadata/ibarra_metadata_preprocessed.csv", index=False)
     return df

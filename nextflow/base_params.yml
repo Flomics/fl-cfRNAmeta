@@ -1,0 +1,4 @@
+aligner: 'star_salmon'
+skip_preseq: true
+skip_bigwig: true
+skip_stringtie: true
