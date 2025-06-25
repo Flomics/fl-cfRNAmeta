@@ -6,6 +6,7 @@ library(ggside)
 library(ggnewscale)
 library(grid)
 library(jsonlite)
+library(colorspace)
 library(showtext)
 font_add("DejaVu Sans", regular = "DejaVuSans.ttf")
 showtext_opts(dpi = 600)  # MUST come before showtext_auto()
@@ -40,9 +41,12 @@ column_names <- c("read_number",
                   "genes_contributing_to_80._of_reads",
                   "reads_mapping_sense_percentage",
                   "exonic_reads_minus_spike_ins",
+                  "number_of_multimapped_reads",
+                  "total_reads",
+                  "number_of_uniquely_mapped_reads",
                   "mt_rna_pct", "mt_rrna_pct", "mt_trna_pct", "misc_rna_pct", "protein_coding_pct", "lncrna_pct", "snrna_pct", "snorna_pct", "spike_in_pct", "other_rna_biotypes_pct")
 
-data <- read.delim("~/cfRNA-meta/sampleinfo_new.tsv", header = TRUE, sep = "\t", fileEncoding = "UTF-8")
+data <- read.delim("tables/sampleinfo_all-batches.tsv", header = TRUE, sep = "\t", fileEncoding = "UTF-8")
 
 # Load metadata
 metadata <- read.delim("tables/cfRNA-meta_per_sample_metadata.tsv", header = TRUE, sep = "\t", fill = TRUE)
@@ -71,8 +75,8 @@ removed_samples <- data[!(data$sample_id %in% metadata$run), ]
 print(removed_samples$sample_id)
 
 
-cat("Original merged_df rows:", nrow(data), "\n") #should be 2416 
-cat("Filtered to samples in metadata:", nrow(filtered_df), "\n") # should be 2318, if it's not, make sure you have NOT removed all Flomics_1 samples due to a mismatch between the metadata names and the sampleinfo from snakeda names :)
+cat("Original merged_df rows:", nrow(data), "\n") #should be 2458 
+cat("Filtered to samples in metadata:", nrow(filtered_df), "\n") # should be 2360, if it's not, make sure you have NOT removed all Flomics_1 samples due to a mismatch between the metadata names and the sampleinfo from snakeda names :)
 
 
 
@@ -153,7 +157,11 @@ bracket_df <- data.frame(
   label = c("Block", "Giráldez", "Ibarra", "Reggiardo", "Moufarrej", "Roskams-Hieter")
 )
 
+table_filtered$percent_of_multimapped_reads <- (table_filtered$number_of_multimapped_reads /table_filtered$total_reads)*100
+column_names <- c(column_names, "percent_of_multimapped_reads")
 
+table_filtered$percent_of_multimapped_reads_total_reads_mapped <- (table_filtered$number_of_multimapped_reads / (table_filtered$number_of_uniquely_mapped_reads + table_filtered$number_of_multimapped_reads ))*100
+column_names <- c(column_names, "percent_of_multimapped_reads_total_reads_mapped")
 
 #write.table(table_filtered, file="Qc_table_filtered.tsv", row.names = FALSE)
 
@@ -176,6 +184,8 @@ ggplot_objects <- lapply(column_names, function(col_name) {
     labs(title = NULL, x = "Dataset", y = "% reads mapped to reference human genome")
   } else if (col_name == "exonic_reads_minus_spike_ins") {
     labs(title = NULL, x = "Dataset", y =  "% reads mapping to exons")
+  } else if (col_name == "avg_mapped_read_length") {
+    labs(title = NULL, x = "Dataset", y =  "Effective fragment length\n(average mapped length)")
   } else {
     labs(title = NULL, x = "Dataset", y = clean_label(col_name))
   }
@@ -406,10 +416,9 @@ ggsave("protein_coding_pct.pdf", p, width = 9, height = 6, dpi = 600)
 #################################
 ########### Diversity scatterplot
 #################################
-library(scales)
-p <- ggplot(data = table_filtered, aes(x = percentage_of_spliced_reads, y = genes_contributing_to_80._of_reads, color = sequencing_batch)) +
+p <- ggplot(data = table_filtered, aes(x = percentage_of_spliced_reads, y = genes_contributing_to_80._of_reads, color = dataset_batch.y)) +
   geom_point(size = 2, alpha = 0.7) + 
-  geom_density_2d(aes(color = sequencing_batch), alpha = 0.5, size = 0.8) +
+  geom_density_2d(aes(color = dataset_batch.y), alpha = 0.5, size = 0.8) +
   labs(title = "",
        x = "Percentage of spliced reads",
        y = "NG80",
@@ -439,6 +448,129 @@ ps <- p  +  scale_y_continuous(trans=log10_trans()) +
 
 ggsave("~/figures/diversity_scatterplot.png", plot = ps, width = 12, height = 8, dpi = 600, device = ragg::agg_png)
 ggsave("~/figures/diversity_scatterplot.pdf", plot = ps, width = 12, height = 8,  dpi = 600, device = cairo_pdf)
+
+
+##################################
+# Per dataset diversity scatterplot
+##################################
+adjusted_palette <- datasetsPalette
+
+table_filtered$dataset_batch.y <- factor(table_filtered$dataset_batch.y, levels = core_order)
+adjusted_palette <- adjusted_palette[core_order]
+
+
+
+# Set proper order and labels
+table_filtered$dataset_batch.y <- factor(
+  table_filtered$dataset_batch.y,
+  levels = core_order,
+  labels = datasetsLabels[core_order]
+)
+
+adjusted_palette <- adjusted_palette[core_order]
+names(adjusted_palette) <- datasetsLabels[core_order]  # to match new factor labels
+
+
+
+
+p_facet <- ggplot(
+  data = table_filtered,
+  aes(x = percentage_of_spliced_reads,
+      y = genes_contributing_to_80._of_reads,
+      color = dataset_batch.y)) +
+  geom_point(size = 2, alpha = 0.8) +
+  facet_wrap(~ dataset_batch.y, scales = "free") +
+  scale_color_manual(
+    values = adjusted_palette,
+    drop = FALSE
+  ) +
+  labs(
+    x = "Percentage of spliced reads",
+    y = "NG80",
+    color = "Dataset"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    strip.text = element_text(face = "bold"),
+    axis.title = element_text(face = "bold"),
+    legend.text = element_text(size = 9),
+    legend.title = element_text(face = "bold"),
+    legend.key.height = unit(0.5, "lines"),
+    plot.background = element_rect(fill = "white", colour = "white")
+  ) +
+  guides(color = guide_legend(ncol = 1)) +
+  scale_y_continuous(trans = log10_trans())
+
+
+ggsave("~/figures/diversity_scatterplot_facet.png", p_facet, width = 20, height = 10, dpi = 600, device = ragg::agg_png)
+ggsave("~/figures/diversity_scatterplot_facet.pdf", p_facet, width = 20, height = 10, device = cairo_pdf)
+
+
+#################################
+# Per dataset k2 results vs mapping rate
+################################
+k2_results <- read.delim("tables/taxa_simple_df_w_batch.tsv")
+
+# First ensure dataset_batch is available in k2_results
+# Then clean sample_name only for affected dataset_batch values
+k2_results_clean <- k2_results %>%
+  mutate(sample_name = case_when(
+    dataset_batch %in% c("flomics_2", "decruyenaere") ~ sub("_.*", "", sample_name),
+    TRUE ~ sample_name
+  ))
+
+# Compute microbial reads again if not already there
+k2_results_clean$microbial <- k2_results_clean$fungi + k2_results_clean$bacteria
+
+# Merge into table_filtered using cleaned sample names
+table_filtered <- table_filtered %>%
+  left_join(k2_results_clean %>% select(sample_name, microbial),
+            by = c("sample_id" = "sample_name"))
+
+
+p_microbial <- ggplot(
+  data = table_filtered,
+  aes(x = mapped_percentage,
+      y = microbial,
+      color = dataset_batch.y)) +
+  
+  geom_point(size = 2, alpha = 0.8) +
+  geom_smooth(method = "lm", se = FALSE, linewidth = 0.8, color = "grey", alpha = 0.8) +
+  
+  stat_cor(
+    method = "pearson",
+    label.x.npc = "left", 
+    label.y.npc = "top",   
+    size = 3,
+    aes(label = ..r.label..),
+    color = "black"
+  ) +
+  
+  facet_wrap(~ dataset_batch.y, scales = "free") +
+  
+  scale_color_manual(
+    values = adjusted_palette,
+    drop = FALSE
+  ) +
+  labs(
+    x = "% reads mapped to reference human genome",
+    y = "% microbial reads",
+    color = "Dataset"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    strip.text = element_text(face = "bold"),
+    axis.title = element_text(face = "bold"),
+    legend.text = element_text(size = 9),
+    legend.title = element_text(face = "bold"),
+    legend.key.height = unit(0.5, "lines"),
+    plot.background = element_rect(fill = "white", colour = "white")
+  ) +
+  guides(color = guide_legend(ncol = 1))
+
+
+ggsave("~/figures/microbial_vs_mapped.png", p_microbial, width = 20, height = 10, dpi = 600, device = ragg::agg_png)
+ggsave("~/figures/microbial_vs_mapped.pdf", p_microbial, width = 20, height = 10, device = cairo_pdf)
 
 ##################################
 ################## Shannon entropy DEPRECATED

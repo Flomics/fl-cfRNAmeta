@@ -39,8 +39,8 @@ data_heatmap$centrifugation_step_2 <- trimws(data_heatmap$centrifugation_step_2)
 
 
 # Drop n_samples column and the GC1 and GC5, and other unnecessary columns
-data_heatmap <- subset(data_heatmap, select = -c(n_samples, libraryselection, genes_contributing_to_1._of_reads, genes_contributing_to_5._of_reads, cancer_stage,
-                                                 phenotype_subtype, stage_cancer_simple, is_excluded_from_study, race, lab, dev_stage, description, assemblyname, resequenced_sample,
+data_heatmap <- subset(data_heatmap, select = -c(n_samples, libraryselection, cancer_stage,
+                                                 phenotype_subtype, stage_cancer_simple, is_excluded_from_study, race, lab, dev_stage, description, assemblyname,
                                                  project, organism, bioproject, datastore_provider, datastore_region))
 
 giraldez_batches <- c("giraldez_standard", "giraldez_phospho-rna-seq")
