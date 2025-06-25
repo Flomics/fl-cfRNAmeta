@@ -342,7 +342,7 @@ def preprocess_toden(dataset_metadata):
     # re-name to match common metadata
     extra_df = extra_df.rename(columns={'center':'collection_center'})
     # match with 'run' columns
-    extra_df ['run'] = "SRRISOLATE_" + extra_df["isolate_id"].astype(str)
+    extra_df['run'] = "SRRISOLATE_" + extra_df["isolate_id"].astype(str)
     # add extra sample metadata
     df_merged = df_merged.merge(extra_df[['run', 'collection_center']], on='run', how='left')
 
