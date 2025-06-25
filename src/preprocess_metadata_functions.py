@@ -332,6 +332,20 @@ def preprocess_toden(dataset_metadata):
     cols.insert(0, cols.pop(cols.index("run")))
     df_merged = df_merged[cols]
 
+    
+    # Load extra sample metadata (244/243 missing one sample in merged: 'isolate_id': 3224)
+    # => from Vorperian: https://github.com/sevahn/deconvolution/issues/3
+    extra_csv_path =  "../sra_metadata/toden_metadata_extra.tsv"
+    extra_df = pd.read_csv(extra_csv_path, sep='\t')
+    # useful extra columns: ['center', 'ethnicity']
+    extra_df.columns = simplify_column_names(extra_df.columns)
+    # re-name to match common metadata
+    extra_df = extra_df.rename(columns={'center':'collection_center'})
+    # match with 'run' columns
+    extra_df['run'] = "SRRISOLATE_" + extra_df["isolate_id"].astype(str)
+    # add extra sample metadata
+    df_merged = df_merged.merge(extra_df[['run', 'collection_center', 'ethnicity']], on='run', how='left')
+
     df_merged['phenotype'] = df_merged['ad_status'].replace({
         'AD':"Alzheimers disease",
         'NCI':'Healthy',
