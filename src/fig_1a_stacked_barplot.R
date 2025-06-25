@@ -15,7 +15,7 @@ theme_set(theme_classic(base_family = "DejaVu Sans"))
 
 setwd("~/fl-cfRNAmeta/")
 
-data <- read.table("tables/cfRNA-meta_per_sample_metadata.tsv", header = TRUE, sep = "\t", fill = TRUE)
+data <- read.delim("tables/cfRNA-meta_per_sample_metadata.tsv", header = TRUE, sep = "\t", fill = TRUE)
 
 #Assign healthy phenotype to Flomics_1 and flomics_2
 data$phenotype[data$dataset_batch %in% c("flomics_1", "flomics_2", "giraldez_standard", "giraldez_phospho-rna-seq")] <- "healthy"
