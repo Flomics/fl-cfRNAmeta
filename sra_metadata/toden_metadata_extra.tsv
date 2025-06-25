@@ -1,0 +1,245 @@
+Isolate ID	PatientID	Ethnicity	Gender	Center	Disease	MMSE	CDR	Apoe status
+1817	434	None	Female	University of Washington at St. Louis	NCI	30	0	E3/E3
+1818	435	None	Female	University of Washington at St. Louis	NCI	30	0	E2/E4
+1821	438	None	Female	University of Washington at St. Louis	NCI	29	0	E3/E3
+1850	447	None	Male	University of Washington at St. Louis	NCI	29	0	E3/E4
+1854	451	None	Female	University of Washington at St. Louis	NCI	29	0	E3/E4
+1884	454	None	Male	University of Washington at St. Louis	NCI	30	0	E3/E3
+1888	456	None	Female	University of Washington at St. Louis	NCI	29	0	E2/E4
+1890	457	None	Female	University of Washington at St. Louis	NCI	30	0	E2/E4
+1894	459	None	Male	University of Washington at St. Louis	NCI	28	0	E3/E3
+1896	460	None	Female	University of Washington at St. Louis	NCI	30	0	E3/E3
+1900	462	None	Female	University of Washington at St. Louis	NCI	29	0	E3/E3
+1904	464	None	Male	University of Washington at St. Louis	NCI	30	0	E2/E3
+1906	465	None	Female	University of Washington at St. Louis	NCI	30	0	E3/E3
+1908	466	None	Male	University of Washington at St. Louis	NCI	30	0	E3/E3
+1912	468	None	Female	University of Washington at St. Louis	NCI	29	0	E3/E3
+1914	469	None	Male	University of Washington at St. Louis	NCI	30	0	E3/E4
+1916	470	None	Female	University of Washington at St. Louis	NCI	30	0	E3/E4
+1920	472	None	Female	University of Washington at St. Louis	NCI	29	0	E3/E3
+1922	473	None	Male	University of Washington at St. Louis	NCI	29	0	E3/E3
+1924	474	None	Male	University of Washington at St. Louis	NCI	28	0	E3/E3
+1926	475	None	Female	University of Washington at St. Louis	NCI	30	0	E2/E4
+1928	476	None	Male	University of Washington at St. Louis	NCI	29	0	E2/E3
+1932	478	None	Female	University of Washington at St. Louis	NCI	29	0	E3/E4
+1934	479	None	Male	University of Washington at St. Louis	NCI	28	0	E2/E3
+1936	480	None	Female	University of Washington at St. Louis	NCI	30	0	E3/E3
+1938	481	None	Male	University of Washington at St. Louis	NCI	29	0	E2/E3
+1940	482	None	Male	University of Washington at St. Louis	NCI	30	0	E3/E4
+1942	483	None	Male	University of Washington at St. Louis	NCI	30	0	E3/E3
+1944	484	None	Female	University of Washington at St. Louis	NCI	30	0	E3/E4
+1946	485	None	Female	University of Washington at St. Louis	NCI	29	0	E3/E3
+1948	486	None	Female	University of Washington at St. Louis	NCI	30	0	E3/E4
+1950	487	None	Female	University of Washington at St. Louis	NCI	30	0	E3/E4
+1952	488	None	Male	University of Washington at St. Louis	NCI	30	0	E4/E4
+1954	489	None	Female	University of Washington at St. Louis	NCI	29	0	E3/E3
+1956	490	None	Male	University of Washington at St. Louis	NCI	30	0	E3/E4
+1958	491	None	Female	University of Washington at St. Louis	NCI	28	0	E3/E3
+1960	492	None	Female	University of Washington at St. Louis	NCI	29	0	E3/E4
+1962	493	None	Female	University of Washington at St. Louis	NCI	30	0	E3/E4
+1978	501	None	Male	University of Washington at St. Louis	NCI	30	0	E3/E3
+2426	558	None	Female	University of Kentucky	AD	25	1	E3/E3
+3356	572	None	Female	University of Kentucky	AD	15	3	E3/E4
+3353	573	None	Female	University of Kentucky	AD	13	2	E3/E3
+3371	580	None	Female	University of Kentucky	AD	18	2	E3/E3
+3350	612	None	Male	University of Kentucky	AD	16	2	E3/E3
+3359	622	None	Female	University of Kentucky	AD	15	1	None
+2497	629	None	Male	University of Kentucky	AD	4	3	E3/E3
+2498	631	None	Male	University of Kentucky	AD	7	3	E3/E3
+2499	632	None	Female	University of Kentucky	AD	14	2	E2/E3
+2500	633	None	Female	University of Kentucky	AD	20	1	E3/E4
+2503	634	None	Female	University of Kentucky	AD	17	1	E4/E4
+2502	636	None	Female	University of Kentucky	AD	23	2	None
+2504	637	None	Female	University of Kentucky	AD	17	2	None
+2513	646	None	Male	University of Kentucky	AD	24	0.5	None
+2514	647	None	Female	University of Kentucky	AD	17	2	None
+2515	648	None	Male	University of Kentucky	AD	20	1	None
+2516	649	None	Female	University of Kentucky	AD	9	2	None
+2517	650	None	Female	University of Kentucky	AD	15	1	None
+2518	651	None	Male	University of Kentucky	AD	0	3	None
+2519	652	None	Male	University of Kentucky	AD	22	1	None
+2520	653	None	Female	University of Kentucky	AD	18	1	None
+2521	654	None	Female	University of Kentucky	AD	12	3	None
+2522	655	None	Female	University of Kentucky	AD	15	2	None
+2523	656	None	Female	University of Kentucky	AD	21	0.5	None
+2524	657	None	Male	University of Kentucky	AD	21	1	None
+2525	658	None	Female	University of Kentucky	AD	21	0.5	None
+2526	659	None	Female	University of Kentucky	AD	15	0.5	None
+2527	660	None	Male	University of Kentucky	AD	2	3	None
+2529	662	None	Female	University of Kentucky	AD	19	1	None
+2531	664	None	Male	University of Kentucky	AD	7	2	None
+2532	665	None	Female	University of Kentucky	AD	24	0.5	None
+2533	666	None	Male	University of Kentucky	AD	26	1	None
+2534	667	None	Male	University of Kentucky	AD	23	1	None
+2535	668	None	Female	University of Kentucky	AD	15	1	None
+2536	669	None	Female	University of Kentucky	AD	16	2	None
+2537	670	None	Male	University of Kentucky	AD	21	3	None
+2538	671	None	Male	University of Kentucky	AD	22	1	None
+2540	673	None	Male	University of Kentucky	AD	17	1	None
+2541	674	None	Male	University of Kentucky	AD	22	0.5	None
+2542	675	None	Male	University of Kentucky	AD	15	1	None
+2549	682	None	Female	University of Kentucky	AD	18	0.5	None
+2550	683	None	Female	University of Kentucky	AD	15	0.5	None
+2551	684	None	Male	University of Kentucky	AD	20	1	None
+2552	685	None	Female	University of Kentucky	AD	22	1	None
+2553	686	None	Female	University of Kentucky	AD	24	0.5	None
+2554	687	None	Female	University of Kentucky	AD	1	2	E3/E3
+2555	688	None	Female	University of Kentucky	AD	22	1	None
+2556	689	None	Female	University of Kentucky	AD	8	2	None
+2557	690	None	Male	University of Kentucky	AD	11	2	E3/E4
+2558	691	None	Male	University of Kentucky	AD	19	2	E3/E4
+2559	692	None	Female	University of Kentucky	AD	15	2	E4/E4
+2560	693	None	Female	University of Kentucky	AD	2	3	E3/E3
+2561	694	None	Male	University of Kentucky	AD	7	2	E3/E4
+2562	695	None	Female	University of Kentucky	AD	12	3	None
+2563	696	None	Male	University of Kentucky	AD	0	3	None
+2564	697	None	Female	University of Kentucky	AD	5	2	E4/E4
+2566	699	None	Male	University of Kentucky	AD	24	1	E3/E3
+2567	700	None	Male	University of Kentucky	AD	20	1	E3/E4
+2568	701	None	Male	University of Kentucky	AD	25	1	E3/E3
+2569	702	None	Female	University of Kentucky	AD	6	2	E2/E3
+2570	703	None	Female	University of Kentucky	AD	18	1	E4/E4
+2572	705	None	Male	University of Kentucky	AD	15	2	E3/E4
+2576	710	None	Male	University of Kentucky	AD	14	1	E3/E4
+2577	711	None	Male	University of Kentucky	AD	6	3	None
+2578	712	None	Male	University of Kentucky	AD	19	1	E3/E3
+2579	713	None	Female	University of Kentucky	AD	21	0.5	E3/E4
+3362	751	None	Female	University of Kentucky	NCI	29	0	E3/E3
+3368	752	None	Male	University of Kentucky	NCI	29	0	E3/E3
+3243	753	None	Female	University of Kentucky	NCI	30	0	E3/E4
+3364	754	None	Female	University of Kentucky	NCI	25	0	E3/E4
+3267	755	None	Male	University of Kentucky	NCI	26	0	E3/E3
+3264	756	None	Male	University of Kentucky	NCI	28	0	E3/E3
+3272	757	None	Female	University of Kentucky	NCI	30	0	E3/E3
+3260	758	None	Male	University of Kentucky	NCI	28	0	None
+3347	768	None	Male	University of Kentucky	NCI	29	0	E3/E3
+3257	769	None	Male	University of Kentucky	NCI	30	0	E3/E3
+3335	770	None	Male	University of Kentucky	NCI	28	0	E3/E4
+3295	771	None	Female	University of Kentucky	NCI	29	0	E3/E3
+3248	772	None	Female	University of Kentucky	NCI	29	0	E3/E4
+3240	773	None	Female	University of Kentucky	NCI	29	0	E2/E3
+3246	774	None	Female	University of Kentucky	NCI	30	0	E3/E3
+3223	776	None	Female	University of Kentucky	NCI	30	0	E3/E4
+3224	777	None	Male	University of Kentucky	NCI	30	0	E3/E3
+3225	778	None	Female	University of Kentucky	NCI	25	0	E3/E4
+3226	779	None	Female	University of Kentucky	NCI	26	0	E3/E3
+3227	780	None	Female	University of Kentucky	NCI	30	0	E3/E3
+3228	781	None	Male	University of Kentucky	NCI	29	0	E2/E3
+3229	782	None	Female	University of Kentucky	NCI	30	0	E3/E4
+3231	784	None	Female	University of Kentucky	NCI	28	0	E3/E3
+3237	790	None	Male	University of Kentucky	NCI	30	0	E3/E4
+5644	1004	None	Male	GEMs (Indiana)	NCI	None	None	None
+5645	1005	None	Female	GEMs (Indiana)	NCI	None	None	None
+5647	1007	None	Female	GEMs (Indiana)	NCI	None	0.5	None
+5649	1009	None	Male	GEMs (Indiana)	NCI	None	None	None
+5650	1010	None	Female	GEMs (Indiana)	NCI	None	None	None
+5651	1011	None	Male	GEMs (Indiana)	NCI	None	0.5	None
+5652	1012	None	Male	GEMs (Indiana)	NCI	None	0.5	None
+5653	1013	None	Female	GEMs (Indiana)	NCI	None	0.5	None
+5654	1014	None	Female	GEMs (Indiana)	NCI	None	0.5	None
+5655	1015	None	Male	GEMs (Indiana)	NCI	None	None	None
+5656	1016	None	Male	GEMs (Indiana)	NCI	None	None	None
+5657	1017	None	Female	GEMs (Indiana)	NCI	None	None	None
+5658	1018	None	Male	GEMs (Indiana)	NCI	None	0.5	None
+5660	1020	None	Female	GEMs (Indiana)	NCI	None	None	None
+5661	1021	None	Female	GEMs (Indiana)	NCI	None	None	None
+5664	1024	None	Female	GEMs (Indiana)	NCI	None	0.5	None
+5665	1025	None	Male	GEMs (Indiana)	NCI	None	None	None
+5666	1026	None	Female	GEMs (Indiana)	NCI	None	None	None
+5668	1028	None	Male	GEMs (Indiana)	NCI	None	None	None
+5669	1029	None	Female	GEMs (Indiana)	NCI	None	0.5	None
+5767	1030	None	Female	GEMs (Indiana)	NCI	None	0.5	None
+5702	1031	None	Female	GEMs (Indiana)	NCI	None	0.5	None
+5784	1031	None	Female	GEMs (Indiana)	AD	None	0.5	None
+5672	1032	None	Male	GEMs (Indiana)	NCI	None	0.5	None
+5673	1033	None	Male	GEMs (Indiana)	NCI	None	0.5	None
+5683	1034	None	Female	GEMs (Indiana)	NCI	None	0.5	None
+5706	1036	None	Male	GEMs (Indiana)	NCI	None	0.5	None
+11210	1509	None	Female	UCSD	AD	24	None	None
+11230	1510	None	Female	UCSD	AD	18	None	None
+11242	1511	None	Male	UCSD	AD	21	None	None
+11262	1512	None	Female	UCSD	AD	16	None	None
+11326	1513	None	Male	UCSD	AD	21	None	None
+11334	1514	None	Female	UCSD	AD	11	None	None
+11350	1515	None	Male	UCSD	AD	23	None	None
+11362	1516	None	Male	UCSD	AD	19	None	None
+11374	1517	None	Male	UCSD	AD	21	None	None
+11202	1518	None	Male	UCSD	AD	25	None	None
+11198	1519	None	Male	UCSD	AD	16	None	None
+11238	1520	None	Male	UCSD	AD	21	None	None
+11254	1521	None	Male	UCSD	AD	24	None	None
+11266	1522	None	Female	UCSD	AD	16	None	None
+11274	1523	None	Female	UCSD	AD	20	None	None
+11302	1524	None	Female	UCSD	AD	20	None	None
+11318	1525	None	Female	UCSD	AD	21	None	None
+11378	1526	None	Female	UCSD	AD	25	None	None
+11382	1527	None	Male	UCSD	AD	25	None	None
+11178	1528	None	Female	UCSD	AD	18	None	None
+11206	1529	None	Male	UCSD	AD	14	None	None
+11226	1530	None	Female	UCSD	AD	23	None	None
+11234	1531	None	Female	UCSD	AD	23	None	None
+11278	1532	None	Male	UCSD	AD	9	None	None
+11298	1533	None	Female	UCSD	AD	16	None	None
+11314	1534	None	Female	UCSD	AD	26	None	None
+11390	1535	None	Male	UCSD	AD	22	None	None
+11410	1536	None	Female	UCSD	AD	14	None	None
+11174	1537	None	Female	UCSD	AD	18	None	None
+11190	1538	None	Female	UCSD	AD	13	None	None
+11282	1539	None	Female	UCSD	AD	24	None	None
+11290	1540	None	Female	UCSD	AD	20	None	None
+11294	1541	None	Male	UCSD	AD	23	None	None
+11310	1542	None	Male	UCSD	AD	16	None	None
+11330	1543	None	Male	UCSD	AD	19	None	None
+11354	1544	None	Female	UCSD	AD	13	None	None
+11358	1545	None	Male	UCSD	AD	16	None	None
+11186	1546	None	Female	UCSD	AD	23	None	None
+11218	1547	None	Female	UCSD	AD	26	None	None
+11250	1548	None	Male	UCSD	AD	23	None	None
+11286	1549	None	Male	UCSD	AD	26	None	None
+11338	1550	None	Female	UCSD	AD	19	None	None
+11342	1551	None	Male	UCSD	AD	21	None	None
+11346	1552	None	Female	UCSD	AD	24	None	None
+11370	1553	None	Female	UCSD	AD	22	None	None
+11194	1554	None	Female	UCSD	AD	25	None	None
+11222	1555	None	Female	UCSD	AD	21	None	None
+11246	1556	None	Female	UCSD	AD	25	None	None
+11270	1558	None	Female	UCSD	AD	21	None	None
+11386	1559	None	Female	UCSD	AD	16	None	None
+11394	1560	None	Female	UCSD	AD	21	None	None
+11398	1561	None	Male	UCSD	AD	24	None	None
+11402	1562	None	Female	UCSD	AD	27	None	None
+11414	1563	None	Female	UCSD	AD	27	None	None
+11182	1565	None	Female	UCSD	AD	12	None	None
+11214	1566	None	Female	UCSD	AD	28	None	None
+11306	1567	None	Female	UCSD	AD	19	None	None
+11322	1568	None	Male	UCSD	AD	27	None	None
+11366	1569	None	Male	UCSD	AD	17	None	None
+11406	1570	None	Female	UCSD	AD	21	None	None
+17906	2617	None	Unknown	Unknown	None	None	None	None
+17921	2630	African American	Female	BioIVT	NCI	None	None	None
+17922	2631	Hispanic	Male	BioIVT	NCI	None	None	None
+17923	2632	Hispanic	Female	BioIVT	NCI	None	None	None
+17924	2633	Hispanic	Female	BioIVT	NCI	None	None	None
+17925	2634	Hispanic	Female	BioIVT	NCI	None	None	None
+17926	2635	Hispanic	Female	BioIVT	NCI	None	None	None
+17927	2636	Hispanic	Male	BioIVT	NCI	None	None	None
+17928	2637	Hispanic	Male	BioIVT	NCI	None	None	None
+17929	2638	Hispanic	Male	BioIVT	NCI	None	None	None
+17930	2639	Hispanic	Female	BioIVT	NCI	None	None	None
+17931	2640	Hispanic	Male	BioIVT	NCI	None	None	None
+17932	2641	Caucasian	Female	BioIVT	NCI	None	None	None
+17933	2642	African American	Male	BioIVT	NCI	None	None	None
+17934	2643	Caucasian	Female	BioIVT	NCI	None	None	None
+17937	2646	Caucasian	Male	BioIVT	NCI	None	None	None
+17938	2647	Caucasian	Female	BioIVT	NCI	None	None	None
+17940	2649	Caucasian	Male	BioIVT	NCI	None	None	None
+17942	2651	African American	Female	BioIVT	NCI	None	None	None
+17943	2652	None	Female	BioIVT	NCI	None	None	None
+17944	2653	Caucasian	Female	BioIVT	NCI	None	None	None
+17946	2655	Caucasian	Male	BioIVT	NCI	None	None	None
+17947	2656	Caucasian	Female	BioIVT	NCI	None	None	None
+17948	2657	Caucasian	Female	BioIVT	NCI	None	None	None
+17949	2658	African American	Male	BioIVT	NCI	None	None	None
+17950	2659	Hispanic	Female	BioIVT	NCI	None	None	None
+17951	2660	Hispanic	Male	BioIVT	NCI	None	None	None
+17953	2662	None	Male	BioIVT	NCI	None	None	None
