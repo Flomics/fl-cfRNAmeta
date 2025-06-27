@@ -414,7 +414,6 @@ def preprocess_block(dataset_metadata):
     df["read_length"] = np.where(df["dataset_batch"] == "block_150bp", "2x75", "2x150")
     df["centrifugation_step_1"] = "2000g"
     df["centrifugation_step_2"] = "None" 
-    df['collection_center'] = df['collection_center'].replace("CH,NJ", "CH, NJ")
 
     # Exclude non-plasma samples: Tissue, and Plasma-derived vesicles.
     df = df.rename(columns={'tissue':'biomaterial'})
@@ -432,6 +431,8 @@ def preprocess_block(dataset_metadata):
                   .reset_index()
                   .rename(columns={'Patient ID':'patient_id', 
                                    'Source/Place':'collection_center'}))
+    # Collection center harmonization
+    df['collection_center'] = df['collection_center'].replace("CH,NJ", "CH, NJ")
     # Merge with the sample-level metadata dataframe
     df['patient_id'] = df['sample_id'].str.extract(r'(.+\d)[^\d]*$')
     df = df.merge(supp_table, on='patient_id', how='left')
