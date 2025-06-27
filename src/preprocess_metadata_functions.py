@@ -431,8 +431,6 @@ def preprocess_block(dataset_metadata):
                   .reset_index()
                   .rename(columns={'Patient ID':'patient_id', 
                                    'Source/Place':'collection_center'}))
-    # Collection center harmonization
-    df['collection_center'] = df['collection_center'].replace("CH,NJ", "CH, NJ")
     # Merge with the sample-level metadata dataframe
     df['patient_id'] = df['sample_id'].str.extract(r'(.+\d)[^\d]*$')
     df = df.merge(supp_table, on='patient_id', how='left')
