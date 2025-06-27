@@ -83,18 +83,12 @@ fl-cfRNAmeta/
 
 - **`ng80.R`**  
   R script to obtain the NG80 metric reported on the manuscript. Needs the count matrix as input file.
-
-- **`QC_spliced_reads.sh`**  
-  Shell script to obtain the QC metrics related to spliced reads. Needs the BAM file and the GTF annotation.
-
-- **`makeIntrons.pl`**  
-  Helper Perl script for the `QC_spliced_reads.sh` script.
 ---
 
 ### 2. `nextflow/`
 
 - **Purpose:**  
-  Contains configuration files and parameter sets for running fl-rnaseq Nextflow pipeline with each dataset.
+  Contains configuration files and parameter sets for running nf-core/rnaseq Nextflow pipeline with each dataset.
 - **Files:**
   - `base.config`, `base_params.yml`: Base Nextflow configuration and parameters.
   - `smarter.config`, `smarter_v2_params.yml`, `smarter_v3_params.yml`: Configs for SMARTer protocols.
