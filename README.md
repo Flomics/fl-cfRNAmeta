@@ -53,6 +53,9 @@ fl-cfRNAmeta/
 
 - **`ng80.R`**  
   R script to obtain the NG80 metric reported on the manuscript. Needs the count matrix as input file.
+
+- **`spliced_reads.sh`**  
+  Shell script to obtain the number and the % of spliced reads. Needs the deduplicated BAM file as input file.
 ---
 
 ### 2. `nextflow/`
