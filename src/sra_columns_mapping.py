@@ -137,8 +137,7 @@ def rename_columns_and_values(df):
         'University of Kentucky':'UKY',
         'University of Washington at St. Louis':'WashU',
     }
-    df['collection_center_short_name'] = df['collection_center']
-    df['collection_center_short_name'] = df['collection_center_short_name'].replace(mapping)
+    df['collection_center_short_name'] = df['collection_center'].replace(mapping)
 
     # Improve compatibility with snakeDA (reserved vars: ['sample_id', 'sample_name'])
     df = df.rename(
