@@ -414,6 +414,7 @@ def preprocess_block(dataset_metadata):
     df["read_length"] = np.where(df["dataset_batch"] == "block_150bp", "2x75", "2x150")
     df["centrifugation_step_1"] = "2000g"
     df["centrifugation_step_2"] = "None" 
+    df['collection_center'] = df['collection_center'].replace("CH,NJ", "CH, NJ")
 
     # Exclude non-plasma samples: Tissue, and Plasma-derived vesicles.
     df = df.rename(columns={'tissue':'biomaterial'})
