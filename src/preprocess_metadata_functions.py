@@ -921,7 +921,9 @@ def preprocess_decruyenaere(dataset_metadata):
     df["disease"]            = df["phenotype"]
     df["read_length"]        = "2x100"
     df["centrifugation_step_1"] = "1900g"
-    df["centrifugation_step_2"] = "None" 
+    df["centrifugation_step_2"] = "None"
+    df["assay_type"] = "RNA-seq"
+    df["organism"] = "Homo sapiens" 
 
     # Exclude FFPE samples
     n1 = len(df)
