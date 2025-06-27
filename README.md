@@ -7,41 +7,11 @@ A repository for preprocessing, harmonizing, and analyzing metadata and data fro
 
 ```
 fl-cfRNAmeta/
-├── .gitignore
 ├── README.md
 ├── nextflow/
-│   ├── base_params.yml
-│   ├── base.config
-│   ├── hg38_gencodev39_params.yml
-│   ├── non_smarter_reverse_params.yml
-│   ├── non_smarter_unstranded_params.yml
-│   ├── non_smarter.config
-│   ├── smarter_v2_params.yml
-│   ├── smarter_v3_params.yml
-│   ├── smarter.config
-│   └── two-color-illumina.config
 ├── sra_metadata/
-│   └── ...
 ├── src/
-│   ├── boxplots_fig2.R
-│   ├── dataset_mappings.json
-│   ├── fig_1a_stacked_barplot.R
-│   ├── fig_1b_heatmap.R
-│   ├── gene_coverage_profile_fig2_tmpH.ipynb
-│   ├── join_count_matrix_and_qc_table.ipynb
-│   ├── makeIntrons.pl
-│   ├── merge_fastqs_array_isolate.sh
-│   ├── ng80.R
-│   ├── preprocess_metadata_functions.py
-│   ├── QC_spliced_reads.sh
-│   └── sra_columns_mapping.py
-├── tables/
-│   ├── cfRNA-meta_per_batch_metadata.tsv
-│   ├── cfRNA-meta_per_sample_metadata.tsv
-│   ├── sampleinfo_all-batches.tsv
-│   ├── sampleinfo_external_and_internal_datasets.tsv
-│   └── taxa_simple_df_w_batch.tsv
-└── ...
+└── tables/
 ```
 
 ---
