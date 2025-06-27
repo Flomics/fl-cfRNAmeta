@@ -6,10 +6,10 @@ library(jsonlite)
 library(grid)
 library(scales)
 library(showtext)
-font_add("DejaVu Sans", regular = "DejaVuSans.ttf")
+font_add(family="Arial", regular = "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf")
 showtext_opts(dpi = 600)  # MUST come before showtext_auto()
 showtext_auto()
-theme_set(theme_classic(base_family = "DejaVu Sans"))
+theme_set(theme_classic(base_family = "Arial"))
 
 
 
@@ -181,8 +181,9 @@ add_bottom_brackets <- function(p, bracket_df, factor_levels) {
     x2 <- which(factor_levels == bracket_df$xmax[i])
     if (length(x1) == 0 || length(x2) == 0) next
     
-    x_start <- (x1 - 1) / length(factor_levels)
-    x_end   <- x2 / length(factor_levels)
+    offset <- 0.005
+    x_start <- ((x1 - 1) / length(factor_levels)) + offset
+    x_end   <- (x2 / length(factor_levels)) - offset
     
     bracket <- linesGrob(
       x = unit.c(unit(x_start, "npc"), unit(x_end, "npc")),
@@ -215,17 +216,19 @@ add_bottom_brackets <- function(p, bracket_df, factor_levels) {
 
 p <- ggplot(phenotype_merged_plot_data, aes(x = dataset_batch_clean, y = count, fill = phenotype_merged)) +
   geom_bar(stat = "identity") +
-  scale_fill_manual(values = merged_colors, name = "Phenotype / Cancer subtype") +
+  scale_fill_manual(values = merged_colors, name = "Donor phenotype") +
   labs(x = "Dataset", y = "Number of samples") +
   theme_minimal(base_size = 20) +
   theme(
-    axis.text.x = element_text(angle = 45, vjust = 0.9, hjust = 1, face = "bold", size = 12, color = "black"),
-    axis.title.x = element_text(size = 20, face = "bold"), 
-    axis.title.y = element_text(size = 20, face = "bold"),  
+    axis.text.x = element_text(angle = 45, vjust = 0.9, hjust = 1, size = 12, color = "black"),
+    axis.title.x = element_text(size = 20), 
+    axis.title.y = element_text(size = 20),  
     legend.title = element_text(size = 18, face = "bold"),  
     legend.text = element_text(size = 14),  
-    panel.grid.major = element_line(size = 0.8),
-    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_line(size = 0.8), 
+    panel.grid.minor.y = element_blank(),
     plot.margin = margin(20, 20, 20, 20),
     plot.background = element_rect(fill = "white", colour = "white") 
   ) + coord_cartesian(clip = "off")
