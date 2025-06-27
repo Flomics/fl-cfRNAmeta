@@ -122,6 +122,24 @@ def rename_columns_and_values(df):
     df = df.drop(cols[1:], axis=1)
     print(f"df['{main_col}'].unique():\n", df[main_col].unique())
 
+    # collection center short name
+    mapping = {
+        'Chinese Academy of Medical Sciences and Peking Union Medical College':'PUMC',
+        'Eastern Hepatobiliary Surgery Hospital, Second Military Medical University':'SMMU (EHBH)',
+        'Global Alliance to Prevent Prematurity and Stillbirth (GAPPS)':'GAPPS',
+        'Hospital Clínic de Barcelona':'IDIBAPS',
+        'Lucile Packard Children Hospital':'LPCH',
+        'National Center for Liver Cancer':'NCC',
+        'Peking University First Affiliated Hospital':'PKUFH',
+        'Scripps Bone Marrow Transplant Center':'Scripps (BMT)',
+        'Scripps Clinic Cancer Center':'Scripps (CC)',
+        'Second Military Medical University':'SMMU',
+        'University of Kentucky':'UKY',
+        'University of Washington at St. Louis':'WashU',
+    }
+    df['collection_center_short_name'] = df['collection_center']
+    df['collection_center_short_name'] = df['collection_center_short_name'].replace(mapping)
+
     # Improve compatibility with snakeDA (reserved vars: ['sample_id', 'sample_name'])
     df = df.rename(
         columns={'sample_name':'sample_name_other', 'sample_id':'sample_id_other'}
