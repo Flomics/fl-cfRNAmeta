@@ -8,10 +8,10 @@ library(grid)
 library(jsonlite)
 library(colorspace)
 library(showtext)
-font_add("DejaVu Sans", regular = "DejaVuSans.ttf")
+font_add(family="Arial", regular = "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf")
 showtext_opts(dpi = 600)  # MUST come before showtext_auto()
 showtext_auto()
-theme_set(theme_classic(base_family = "DejaVu Sans"))
+theme_set(theme_classic(base_family = "Arial"))
 
 
 
@@ -52,13 +52,13 @@ data <- read.delim("tables/sampleinfo_all-batches.tsv", header = TRUE, sep = "\t
 metadata <- read.delim("tables/cfRNA-meta_per_sample_metadata.tsv", header = TRUE, sep = "\t", fill = TRUE)
 
 # Strip decruyenaere samples of the "_*" in their sample_id
-data$sample_id[data$sequencing_batch == "decruyenaere"] <- 
-  sub("_.*", "", data$sample_id[data$sequencing_batch == "decruyenaere"])
+#data$sample_id[data$sequencing_batch == "decruyenaere"] <- 
+  #sub("_.*", "", data$sample_id[data$sequencing_batch == "decruyenaere"])
 
 # MOdify flomics_2 sample ids from FL-SAMP-ID TO SAMPID
-data$sequencing_batch[grepl("^FL", data$sequencing_batch)] <- "flomics_2"
-data$sample_id[data$sequencing_batch == "flomics_2"] <- 
-  gsub("_.*", "", data$sample_id[data$sequencing_batch == "flomics_2"])
+#data$sequencing_batch[grepl("^FL", data$sequencing_batch)] <- "flomics_2"
+#data$sample_id[data$sequencing_batch == "flomics_2"] <- 
+  #gsub("_.*", "", data$sample_id[data$sequencing_batch == "flomics_2"])
 
 
 
@@ -199,7 +199,12 @@ ggplot_objects <- lapply(column_names, function(col_name) {
     label_block +
     theme_classic() +
     coord_cartesian(clip = "off") +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust=0.9),
+    theme(base_family= "Arial",
+          panel.grid.major.x = element_blank(),
+              panel.grid.minor.x = element_blank(),
+              panel.grid.major.y = element_line(size = 0.8), 
+              panel.grid.minor.y = element_blank(),
+      axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust=0.9),
           axis.title = element_text(size = 12, face = "bold"),
           plot.title = element_blank(),
           legend.position = "none") +
@@ -212,8 +217,9 @@ ggplot_objects <- lapply(column_names, function(col_name) {
     x2 <- which(levels(table_filtered$dataset_batch.y) == bracket_df$xmax[i])
     if (length(x1) == 0 || length(x2) == 0) next
     
-    x_start <- (x1 - 1) / length(core_order)  # LEFT tick
-    x_end   <- x2 / length(core_order)        # RIGHT tick
+    offset <- 0.005 #spacing
+    x_start <- ((x1 - 1) / length(core_order)) + offset  # LEFT tick
+    x_end   <- (x2 / length(core_order)) - offset        # RIGHT tick
     
     bracket <- linesGrob(
       x = unit.c(unit(x_start, "npc"), unit(x_end, "npc")),
@@ -258,8 +264,9 @@ add_bottom_brackets <- function(p, bracket_df, factor_levels) {
     x2 <- which(factor_levels == bracket_df$xmax[i])
     if (length(x1) == 0 || length(x2) == 0) next
     
-    x_start <- (x1 - 1) / length(factor_levels)
-    x_end   <- x2 / length(factor_levels)
+    offset <- 0.005 #spacing
+    x_start <- ((x1 - 1) / length(core_order)) + offset  # LEFT tick
+    x_end   <- (x2 / length(core_order)) - offset        # RIGHT tick
     
     bracket <- linesGrob(
       x = unit.c(unit(x_start, "npc"), unit(x_end, "npc")),
@@ -284,6 +291,362 @@ add_bottom_brackets <- function(p, bracket_df, factor_levels) {
   }
   return(p)
 }
+
+
+#######################################################
+############### Fragments mapped to the expected strand
+#######################################################
+
+table_filtered$Fragments_mapping_to_expected_strand_pct <- 100 - as.numeric(table_filtered$reads_mapping_sense_percentage)
+
+strandedness_info <- metadata[, c("run", "cdna_library_type")]
+table_filtered <- table_filtered %>%
+  left_join(strandedness_info, by = c("sample_id" = "run"))
+
+label_positions <- table_filtered %>%
+  group_by(dataset_batch.y, cdna_library_type) %>%
+  summarise(
+    y = max(Fragments_mapping_to_expected_strand_pct, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(y = y + 2)  
+
+
+strandedness_colors <- c(
+  "Reverse" = "#8DD3C7",
+  "Unstranded" = "#BEBADA"
+)
+
+annotation_df <- table_filtered %>%
+  select(dataset_batch.y, cdna_library_type) %>%
+  distinct() %>%
+  mutate(y = 105) 
+
+
+label_positions <- label_positions %>%
+  mutate(cdna_library_type = recode(cdna_library_type,
+                                    "Reverse" = "R",
+                                    "Unstranded" = "U"))
+
+
+
+p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = Fragments_mapping_to_expected_strand_pct, fill = dataset_batch.y)) +
+  geom_boxplot(alpha = 0.3, aes(color = dataset_batch.y), position = position_dodge(width = 0.75), outlier.shape = NA) +
+  geom_point(aes(y = Fragments_mapping_to_expected_strand_pct, color = dataset_batch.y), 
+             position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.8), 
+             shape = 21, size = 1.5, stroke = 0.2, alpha = 0.6) +
+  #geom_hline(yintercept=100, linetype='dashed', col = 'lightgrey') +
+  labs(title = "",
+       x = "Dataset", y = "% fragments mapping to correct gene orientation") +
+  theme_classic() +
+  theme(panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.y = element_line(size = 0.8), 
+        panel.grid.minor.y = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust = 0.9),
+        axis.title = element_text(size = 12, face = "bold"),
+        plot.title = element_text(size = 14, face = "bold"),
+        legend.position = "none") +
+  scale_x_discrete(labels = datasetsLabels) +
+  scale_fill_manual(values = datasetsPalette, labels = datasetsLabels, guide = "none") +
+  scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels, guide = "none") +
+  scale_y_continuous(
+    limits = c(0, 110),  # extend a bit for annotations
+    breaks = c(0, 25, 50, 75, 100),
+    labels = function(x) paste0(x, "%")
+  ) +
+  coord_cartesian(clip = "off")
+
+p <- p + new_scale_fill()  # VERY IMPORTANT, native ggplot does not like having two cals of scale_fill or scale_color, so ggnewscale is needed
+
+p <- p +
+  geom_tile(data = annotation_df,
+            aes(x = dataset_batch.y, y = y, fill = cdna_library_type),
+            width = 0.8, height = 4,
+            inherit.aes = FALSE) +
+  scale_fill_manual(
+    name = "Strandedness",
+    values = strandedness_colors
+  ) + theme(
+    legend.position = "top",  
+    legend.title = element_text(face = "bold", size = 9),
+    legend.text = element_text(size = 9),
+    legend.key.size = unit(0.4, "cm"),
+    legend.spacing.x = unit(0.2, "cm"),
+    legend.margin = margin(0, 0, 0, 0)
+  )
+
+p <- add_bottom_brackets(p, bracket_df, levels(table_filtered$dataset_batch.y))
+
+ggsave("fragments_mapped_expected_strand_with_strandedness_info.png", p, width = 11, height = 6, dpi = 600, device = ragg::agg_png)
+ggsave("fragments_mapped_expected_strand.pdf", p, width = 11, height = 6, dpi = 600, device = cairo_pdf)
+
+
+
+###################################
+################### Fragment number
+###################################
+
+table_filtered <- table_filtered %>%
+  mutate(fragment_number = if_else(
+    `dataset_batch.y` %in% c("giraldez_phospho-rna-seq", "giraldez_standard"),
+    read_number,           # Single-end: keep as is
+    read_number / 2        # Paired-end: divide by 2
+  ))
+
+p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = fragment_number, fill = dataset_batch.y)) +
+  geom_boxplot(alpha = 0.3, aes(color = dataset_batch.y), position = position_dodge(width = 0.75), outlier.shape = NA) +
+  geom_point(aes(y = fragment_number, color = dataset_batch.y), 
+             position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.8), 
+             shape = 21, size = 1.5, stroke = 0.2, alpha = 0.6) +
+  labs(title = "",
+       x = "Dataset", y = "Fragment number") +
+  theme_classic() +
+  theme(        panel.grid.major.x = element_blank(),
+                panel.grid.minor.x = element_blank(),
+                panel.grid.major.y = element_line(size = 0.8), 
+                panel.grid.minor.y = element_blank(),
+                axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust = 0.9),
+                axis.title = element_text(size = 12, face = "bold"),
+                plot.title = element_text(size = 14, face = "bold"),
+                legend.position = "none") +
+  scale_x_discrete(labels = datasetsLabels) +
+  scale_fill_manual(values = datasetsPalette, labels = datasetsLabels) +
+  scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels) +
+  scale_y_continuous(labels = label_number(scale_cut = cut_short_scale())) + 
+  coord_cartesian(clip = "off")
+
+p <- add_bottom_brackets(p, bracket_df, levels(table_filtered$dataset_batch.y))
+
+ggsave("fragment_number.png", p, width = 11, height = 6, dpi = 600, device = ragg::agg_png)
+ggsave("fragment_number.pdf", p, width = 11, height = 6, dpi = 600, device = cairo_pdf)
+
+
+#######################################################
+# NG80
+#######################################################
+
+p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = log_genes_80, fill = dataset_batch.y)) +
+  geom_boxplot(alpha = 0.3, aes(color = dataset_batch.y), position = position_dodge(width = 0.75), outlier.shape = NA) +
+  geom_point(aes(y = log_genes_80, color = dataset_batch.y), 
+             position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.8), 
+             shape = 21, size = 1.5, stroke = 0.2, alpha = 0.6) +
+  labs(title = "",
+       x = "Dataset", y = "NG80") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+        axis.title = element_text(size = 12, face = "bold"),
+        plot.title = element_text(size = 14, face = "bold"),
+        legend.position = "none") +
+  scale_x_discrete(labels = datasetsLabels) +
+  scale_fill_manual(values = datasetsPalette, labels = datasetsLabels) +
+  scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels)
+
+y_breaks <- pretty(range(table_filtered$genes_contributing_to_80._of_reads, na.rm = TRUE), n = 10)
+p <- p + scale_y_continuous(
+  breaks = log(y_breaks),
+  labels = round(y_breaks)
+)
+
+y_breaks <- log(c(100, 500, 1000, 5000, 10000, 20000))
+
+y_labels <- c(100, 500, 1000, 5000, 10000, 20000)
+
+p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = log_genes_80, fill = dataset_batch.y)) +
+  geom_boxplot(alpha = 0.3, aes(color = dataset_batch.y), position = position_dodge(width = 0.75), outlier.shape = NA) +
+  geom_point(aes(y = log_genes_80, color = dataset_batch.y), 
+             position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.8), 
+             shape = 21, size = 1.5, stroke = 0.2, alpha = 0.6) +
+  labs(title = "",
+       x = "Dataset", y = "NG80") +
+  theme_classic() +
+  theme(base_family= "Arial",
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.y = element_line(size = 0.8), 
+        panel.grid.minor.y = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust = 0.9),
+        axis.title = element_text(size = 12, face = "bold"),
+        plot.title = element_text(size = 14, face = "bold"),
+        legend.position = "none") +
+  scale_x_discrete(labels = datasetsLabels) +
+  scale_fill_manual(values = datasetsPalette, labels = datasetsLabels) +
+  scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels) +
+  scale_y_continuous(breaks = y_breaks, labels = y_labels) + 
+  coord_cartesian(clip = "off")
+
+p <- add_bottom_brackets(p, bracket_df, levels(table_filtered$dataset_batch.y))
+
+
+ggsave("ng80_non_transformed_axis.png", p, width = 11, height = 6, dpi = 600, device = ragg::agg_png)
+ggsave("ng80_non_transformed_axis.pdf", p, width = 11, height = 6, dpi = 600, device = cairo_pdf)
+
+
+
+#################################
+########### Diversity scatterplot
+#################################
+p <- ggplot(data = table_filtered, aes(x = percentage_of_spliced_reads, y = genes_contributing_to_80._of_reads, color = dataset_batch.y)) +
+  geom_point(size = 2, alpha = 0.7) + 
+  geom_density_2d(aes(color = dataset_batch.y), alpha = 0.5, size = 0.8) +
+  labs(title = "",
+       x = "Percentage of spliced reads",
+       y = "NG80",
+       color = "")+
+  theme_minimal(base_size = 14) + 
+  theme(
+    plot.title = element_text(size = 16, face = "bold", hjust = 0.5), 
+    axis.title = element_text(size = 14, face = "bold"), 
+    axis.text = element_text(size = 12), 
+    legend.title = element_text(size = 12, face = "bold"),
+    legend.text = element_text(size = 10), 
+    legend.position = "right", 
+    legend.key.height = unit(0.5, "lines"),  
+    legend.box = "vertical",
+    panel.grid.major = element_line(color = "gray80"), 
+    panel.grid.minor = element_blank(),
+    plot.background = element_rect(
+      fill = "white",
+      colour = "white"
+    )
+  ) +
+  scale_color_manual(values = datasetsPalette, labels= datasetsLabels) 
+
+ps <- p  +  scale_y_continuous(trans=log10_trans()) +
+  guides(color = guide_legend(ncol = 1))
+
+
+ggsave("~/figures/diversity_scatterplot.png", plot = ps, width = 12, height = 8, dpi = 600, device = ragg::agg_png)
+ggsave("~/figures/diversity_scatterplot.pdf", plot = ps, width = 12, height = 8,  dpi = 600, device = cairo_pdf)
+
+
+##################################
+# Per dataset diversity scatterplot
+##################################
+adjusted_palette <- datasetsPalette
+
+table_filtered$dataset_batch.y <- factor(table_filtered$dataset_batch.y, levels = core_order)
+adjusted_palette <- adjusted_palette[core_order]
+
+
+
+# Set proper order and labels
+table_filtered$dataset_batch.y <- factor(
+  table_filtered$dataset_batch.y,
+  levels = core_order,
+  labels = datasetsLabels[core_order]
+)
+
+adjusted_palette <- adjusted_palette[core_order]
+names(adjusted_palette) <- datasetsLabels[core_order]  # to match new factor labels
+
+
+
+
+p_facet <- ggplot(
+  data = table_filtered,
+  aes(x = percentage_of_spliced_reads,
+      y = genes_contributing_to_80._of_reads,
+      color = dataset_batch.y)) +
+  geom_point(size = 2, alpha = 0.8) +
+  facet_wrap(~ dataset_batch.y, scales = "free") +
+  scale_color_manual(
+    values = adjusted_palette,
+    drop = FALSE
+  ) +
+  labs(
+    x = "Percentage of spliced reads",
+    y = "NG80",
+    color = "Dataset"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    strip.text = element_text(face = "bold"),
+    axis.title = element_text(face = "bold"),
+    legend.text = element_text(size = 9),
+    legend.title = element_text(face = "bold"),
+    legend.key.height = unit(0.5, "lines"),
+    plot.background = element_rect(fill = "white", colour = "white")
+  ) +
+  guides(color = guide_legend(ncol = 1)) +
+  scale_y_continuous(trans = log10_trans())
+
+
+ggsave("~/figures/diversity_scatterplot_facet.png", p_facet, width = 20, height = 10, dpi = 600, device = ragg::agg_png)
+ggsave("~/figures/diversity_scatterplot_facet.pdf", p_facet, width = 20, height = 10, device = cairo_pdf)
+
+
+#################################
+# Per dataset k2 results vs mapping rate
+################################
+k2_results <- read.delim("~/fl-cfRNAmeta/tables/taxa_simple_df_w_batch.tsv")
+
+# First ensure dataset_batch is available in k2_results
+# Then clean sample_name only for affected dataset_batch values
+k2_results_clean <- k2_results %>%
+  mutate(sample_name = case_when(
+    dataset_batch %in% c("flomics_2", "decruyenaere") ~ sub("_.*", "", sample_name),
+    TRUE ~ sample_name
+  ))
+
+# Compute microbial reads again if not already there
+k2_results_clean$microbial <- k2_results_clean$fungi + k2_results_clean$bacteria
+
+# Merge into table_filtered using cleaned sample names
+table_filtered <- table_filtered %>%
+  left_join(k2_results_clean %>% select(sample_name, microbial),
+            by = c("sample_id" = "sample_name"))
+
+
+p_microbial <- ggplot(
+  data = table_filtered,
+  aes(x = mapped_percentage,
+      y = microbial,
+      color = dataset_batch.y)) +
+  
+  geom_point(size = 2, alpha = 0.8) +
+  geom_smooth(method = "lm", se = FALSE, linewidth = 0.8, color = "grey", alpha = 0.8) +
+  
+  stat_cor(
+    method = "pearson",
+    label.x.npc = "left", 
+    label.y.npc = "top",   
+    size = 3,
+    aes(label = ..r.label..),
+    color = "black"
+  ) +
+  
+  facet_wrap(~ dataset_batch.y, scales = "free") +
+  
+  scale_color_manual(
+    values = adjusted_palette,
+    drop = FALSE
+  ) +
+  labs(
+    x = "% reads mapped to reference human genome",
+    y = "% microbial reads",
+    color = "Dataset"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    base_family= "Arial",
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_line(size = 0.8), 
+    panel.grid.minor.y = element_blank(),
+    strip.text = element_text(face = "bold"),
+    axis.title = element_text(face = "bold"),
+    legend.text = element_text(size = 9),
+    legend.title = element_text(face = "bold"),
+    legend.key.height = unit(0.5, "lines"),
+    plot.background = element_rect(fill = "white", colour = "white")
+  ) +
+  guides(color = guide_legend(ncol = 1))
+
+
+ggsave("~/figures/microbial_vs_mapped.png", p_microbial, width = 20, height = 10, dpi = 600, device = ragg::agg_png)
+ggsave("~/figures/microbial_vs_mapped.pdf", p_microbial, width = 20, height = 10, device = cairo_pdf)
+
 
 ####################################
 ############ Biotype stacked barplot (DEPRECATED)
@@ -413,165 +776,6 @@ ggsave("protein_coding_pct.pdf", p, width = 9, height = 6, dpi = 600)
 #   scale_color_manual(values = datasetsPalette, labels = datasetsLabels)+
 #   scale_fill_manual(values = datasetsPalette) 
 
-#################################
-########### Diversity scatterplot
-#################################
-p <- ggplot(data = table_filtered, aes(x = percentage_of_spliced_reads, y = genes_contributing_to_80._of_reads, color = dataset_batch.y)) +
-  geom_point(size = 2, alpha = 0.7) + 
-  geom_density_2d(aes(color = dataset_batch.y), alpha = 0.5, size = 0.8) +
-  labs(title = "",
-       x = "Percentage of spliced reads",
-       y = "NG80",
-       color = "")+
-  theme_minimal(base_size = 14) + 
-  theme(
-    plot.title = element_text(size = 16, face = "bold", hjust = 0.5), 
-    axis.title = element_text(size = 14, face = "bold"), 
-    axis.text = element_text(size = 12), 
-    legend.title = element_text(size = 12, face = "bold"),
-    legend.text = element_text(size = 10), 
-    legend.position = "right", 
-    legend.key.height = unit(0.5, "lines"),  
-    legend.box = "vertical",
-    panel.grid.major = element_line(color = "gray80"), 
-    panel.grid.minor = element_blank(),
-    plot.background = element_rect(
-      fill = "white",
-      colour = "white"
-    )
-  ) +
-  scale_color_manual(values = datasetsPalette, labels= datasetsLabels) 
-
-ps <- p  +  scale_y_continuous(trans=log10_trans()) +
-  guides(color = guide_legend(ncol = 1))
-
-
-ggsave("~/figures/diversity_scatterplot.png", plot = ps, width = 12, height = 8, dpi = 600, device = ragg::agg_png)
-ggsave("~/figures/diversity_scatterplot.pdf", plot = ps, width = 12, height = 8,  dpi = 600, device = cairo_pdf)
-
-
-##################################
-# Per dataset diversity scatterplot
-##################################
-adjusted_palette <- datasetsPalette
-
-table_filtered$dataset_batch.y <- factor(table_filtered$dataset_batch.y, levels = core_order)
-adjusted_palette <- adjusted_palette[core_order]
-
-
-
-# Set proper order and labels
-table_filtered$dataset_batch.y <- factor(
-  table_filtered$dataset_batch.y,
-  levels = core_order,
-  labels = datasetsLabels[core_order]
-)
-
-adjusted_palette <- adjusted_palette[core_order]
-names(adjusted_palette) <- datasetsLabels[core_order]  # to match new factor labels
-
-
-
-
-p_facet <- ggplot(
-  data = table_filtered,
-  aes(x = percentage_of_spliced_reads,
-      y = genes_contributing_to_80._of_reads,
-      color = dataset_batch.y)) +
-  geom_point(size = 2, alpha = 0.8) +
-  facet_wrap(~ dataset_batch.y, scales = "free") +
-  scale_color_manual(
-    values = adjusted_palette,
-    drop = FALSE
-  ) +
-  labs(
-    x = "Percentage of spliced reads",
-    y = "NG80",
-    color = "Dataset"
-  ) +
-  theme_minimal(base_size = 13) +
-  theme(
-    strip.text = element_text(face = "bold"),
-    axis.title = element_text(face = "bold"),
-    legend.text = element_text(size = 9),
-    legend.title = element_text(face = "bold"),
-    legend.key.height = unit(0.5, "lines"),
-    plot.background = element_rect(fill = "white", colour = "white")
-  ) +
-  guides(color = guide_legend(ncol = 1)) +
-  scale_y_continuous(trans = log10_trans())
-
-
-ggsave("~/figures/diversity_scatterplot_facet.png", p_facet, width = 20, height = 10, dpi = 600, device = ragg::agg_png)
-ggsave("~/figures/diversity_scatterplot_facet.pdf", p_facet, width = 20, height = 10, device = cairo_pdf)
-
-
-#################################
-# Per dataset k2 results vs mapping rate
-################################
-k2_results <- read.delim("tables/taxa_simple_df_w_batch.tsv")
-
-# First ensure dataset_batch is available in k2_results
-# Then clean sample_name only for affected dataset_batch values
-k2_results_clean <- k2_results %>%
-  mutate(sample_name = case_when(
-    dataset_batch %in% c("flomics_2", "decruyenaere") ~ sub("_.*", "", sample_name),
-    TRUE ~ sample_name
-  ))
-
-# Compute microbial reads again if not already there
-k2_results_clean$microbial <- k2_results_clean$fungi + k2_results_clean$bacteria
-
-# Merge into table_filtered using cleaned sample names
-table_filtered <- table_filtered %>%
-  left_join(k2_results_clean %>% select(sample_name, microbial),
-            by = c("sample_id" = "sample_name"))
-
-
-p_microbial <- ggplot(
-  data = table_filtered,
-  aes(x = mapped_percentage,
-      y = microbial,
-      color = dataset_batch.y)) +
-  
-  geom_point(size = 2, alpha = 0.8) +
-  geom_smooth(method = "lm", se = FALSE, linewidth = 0.8, color = "grey", alpha = 0.8) +
-  
-  stat_cor(
-    method = "pearson",
-    label.x.npc = "left", 
-    label.y.npc = "top",   
-    size = 3,
-    aes(label = ..r.label..),
-    color = "black"
-  ) +
-  
-  facet_wrap(~ dataset_batch.y, scales = "free") +
-  
-  scale_color_manual(
-    values = adjusted_palette,
-    drop = FALSE
-  ) +
-  labs(
-    x = "% reads mapped to reference human genome",
-    y = "% microbial reads",
-    color = "Dataset"
-  ) +
-  theme_minimal(base_size = 13) +
-  theme(
-    strip.text = element_text(face = "bold"),
-    axis.title = element_text(face = "bold"),
-    legend.text = element_text(size = 9),
-    legend.title = element_text(face = "bold"),
-    legend.key.height = unit(0.5, "lines"),
-    plot.background = element_rect(fill = "white", colour = "white")
-  ) +
-  guides(color = guide_legend(ncol = 1))
-
-
-ggsave("~/figures/microbial_vs_mapped.png", p_microbial, width = 20, height = 10, dpi = 600, device = ragg::agg_png)
-ggsave("~/figures/microbial_vs_mapped.pdf", p_microbial, width = 20, height = 10, device = cairo_pdf)
-
 ##################################
 ################## Shannon entropy DEPRECATED
 ##################################
@@ -631,176 +835,6 @@ p <- ggplot(table_filtered_combined, aes(x = sequencing_batch.x, y = ShannonEntr
 ggsave("shannon_entropy_boxplot.png", plot = p, width = 9, height = 6, dpi = 600)
 ggsave("shannon_entropy_boxplot.pdf", plot = p, width = 9, height = 6, dpi = 600)
 
-#######################################################
-############### Fragments mapped to the expected strand
-#######################################################
-
-table_filtered$Fragments_mapping_to_expected_strand_pct <- 100 - as.numeric(table_filtered$reads_mapping_sense_percentage)
-
-strandedness_info <- metadata[, c("run", "cdna_library_type")]
-table_filtered <- table_filtered %>%
-  left_join(strandedness_info, by = c("sample_id" = "run"))
-
-label_positions <- table_filtered %>%
-  group_by(dataset_batch.y, cdna_library_type) %>%
-  summarise(
-    y = max(Fragments_mapping_to_expected_strand_pct, na.rm = TRUE),
-    .groups = "drop"
-  ) %>%
-  mutate(y = y + 2)  
-
-
-strandedness_colors <- c(
-  "Reverse" = "#8DD3C7",
-  "Unstranded" = "#BEBADA"
-)
-
-annotation_df <- table_filtered %>%
-  select(dataset_batch.y, cdna_library_type) %>%
-  distinct() %>%
-  mutate(y = 105) 
-
-
-label_positions <- label_positions %>%
-  mutate(cdna_library_type = recode(cdna_library_type,
-                                    "Reverse" = "R",
-                                    "Unstranded" = "U"))
-
-
-
-p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = Fragments_mapping_to_expected_strand_pct, fill = dataset_batch.y)) +
-  geom_boxplot(alpha = 0.3, aes(color = dataset_batch.y), position = position_dodge(width = 0.75), outlier.shape = NA) +
-  geom_point(aes(y = Fragments_mapping_to_expected_strand_pct, color = dataset_batch.y), 
-             position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.8), 
-             shape = 21, size = 1.5, stroke = 0.2, alpha = 0.6) +
-  geom_hline(yintercept=100, linetype='dashed', col = 'lightgrey') +
-  geom_hline(yintercept=50, linetype='dashed', col = 'lightgrey') +
-  labs(title = "",
-       x = "Dataset", y = "% fragments mapping to correct gene orientation") +
-  theme_classic() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust = 0.9),
-        axis.title = element_text(size = 12, face = "bold"),
-        plot.title = element_text(size = 14, face = "bold"),
-        legend.position = "none") +
-  scale_x_discrete(labels = datasetsLabels) +
-  scale_fill_manual(values = datasetsPalette, labels = datasetsLabels, guide = "none") +
-  scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels, guide = "none") +
-  coord_cartesian(clip = "off")
-
-p <- p + new_scale_fill()  # VERY IMPORTANT, native ggplot does not like having two cals of scale_fill or scale_color, so ggnewscale is needed
-
-p <- p +
-  geom_tile(data = annotation_df,
-            aes(x = dataset_batch.y, y = y, fill = cdna_library_type),
-            width = 0.8, height = 4,
-            inherit.aes = FALSE) +
-  scale_fill_manual(
-    name = "Strandedness",
-    values = strandedness_colors
-  ) + theme(
-    legend.position = "top",  
-    legend.title = element_text(face = "bold", size = 9),
-    legend.text = element_text(size = 9),
-    legend.key.size = unit(0.4, "cm"),
-    legend.spacing.x = unit(0.2, "cm"),
-    legend.margin = margin(0, 0, 0, 0)
-  )
-
-p <- add_bottom_brackets(p, bracket_df, levels(table_filtered$dataset_batch.y))
-
-ggsave("fragments_mapped_expected_strand_with_strandedness_info.png", p, width = 11, height = 6, dpi = 600, device = ragg::agg_png)
-ggsave("fragments_mapped_expected_strand.pdf", p, width = 11, height = 6, dpi = 600, device = cairo_pdf)
-
-
-
-###################################
-################### Fragment number
-###################################
-
-table_filtered <- table_filtered %>%
-  mutate(fragment_number = if_else(
-    `dataset_batch.y` %in% c("giraldez_phospho-rna-seq", "giraldez_standard"),
-    read_number,           # Single-end: keep as is
-    read_number / 2        # Paired-end: divide by 2
-  ))
-
-p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = fragment_number, fill = dataset_batch.y)) +
-  geom_boxplot(alpha = 0.3, aes(color = dataset_batch.y), position = position_dodge(width = 0.75), outlier.shape = NA) +
-  geom_point(aes(y = fragment_number, color = dataset_batch.y), 
-             position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.8), 
-             shape = 21, size = 1.5, stroke = 0.2, alpha = 0.6) +
-  labs(title = "",
-       x = "Dataset", y = "Fragment number") +
-  theme_classic() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust = 0.9),
-        axis.title = element_text(size = 12, face = "bold"),
-        plot.title = element_text(size = 14, face = "bold"),
-        legend.position = "none") +
-  scale_x_discrete(labels = datasetsLabels) +
-  scale_fill_manual(values = datasetsPalette, labels = datasetsLabels) +
-  scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels) +
-  scale_y_continuous(labels = label_number(scale_cut = cut_short_scale())) + 
-  coord_cartesian(clip = "off")
-
-p <- add_bottom_brackets(p, bracket_df, levels(table_filtered$dataset_batch.y))
-
-ggsave("fragment_number.png", p, width = 11, height = 6, dpi = 600, device = ragg::agg_png)
-ggsave("fragment_number.pdf", p, width = 11, height = 6, dpi = 600, device = cairo_pdf)
-
-
-#######################################################
-# NG80
-#######################################################
-
-p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = log_genes_80, fill = dataset_batch.y)) +
-  geom_boxplot(alpha = 0.3, aes(color = dataset_batch.y), position = position_dodge(width = 0.75), outlier.shape = NA) +
-  geom_point(aes(y = log_genes_80, color = dataset_batch.y), 
-             position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.8), 
-             shape = 21, size = 1.5, stroke = 0.2, alpha = 0.6) +
-  labs(title = "",
-       x = "Dataset", y = "NG80") +
-  theme_classic() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
-        axis.title = element_text(size = 12, face = "bold"),
-        plot.title = element_text(size = 14, face = "bold"),
-        legend.position = "none") +
-  scale_x_discrete(labels = datasetsLabels) +
-  scale_fill_manual(values = datasetsPalette, labels = datasetsLabels) +
-  scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels)
-
-y_breaks <- pretty(range(table_filtered$genes_contributing_to_80._of_reads, na.rm = TRUE), n = 10)
-p <- p + scale_y_continuous(
-  breaks = log(y_breaks),
-  labels = round(y_breaks)
-)
-
-y_breaks <- log(c(100, 500, 1000, 5000, 10000, 20000))
-
-y_labels <- c(100, 500, 1000, 5000, 10000, 20000)
-
-p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = log_genes_80, fill = dataset_batch.y)) +
-  geom_boxplot(alpha = 0.3, aes(color = dataset_batch.y), position = position_dodge(width = 0.75), outlier.shape = NA) +
-  geom_point(aes(y = log_genes_80, color = dataset_batch.y), 
-             position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.8), 
-             shape = 21, size = 1.5, stroke = 0.2, alpha = 0.6) +
-  labs(title = "",
-       x = "Dataset", y = "NG80") +
-  theme_classic() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust = 0.9),
-        axis.title = element_text(size = 12, face = "bold"),
-        plot.title = element_text(size = 14, face = "bold"),
-        legend.position = "none") +
-  scale_x_discrete(labels = datasetsLabels) +
-  scale_fill_manual(values = datasetsPalette, labels = datasetsLabels) +
-  scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels) +
-  scale_y_continuous(breaks = y_breaks, labels = y_labels) + 
-  coord_cartesian(clip = "off")
-
-p <- add_bottom_brackets(p, bracket_df, levels(table_filtered$dataset_batch.y))
-
-
-ggsave("ng80_non_transformed_axis.png", p, width = 11, height = 6, dpi = 600, device = ragg::agg_png)
-ggsave("ng80_non_transformed_axis.pdf", p, width = 11, height = 6, dpi = 600, device = cairo_pdf)
 
 
 ################################################################################

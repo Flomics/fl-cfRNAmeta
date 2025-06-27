@@ -10,10 +10,10 @@ library(jsonlite)
 library(wesanderson)
 library(grid)
 library(showtext)
-font_add("DejaVu Sans", regular = "DejaVuSans.ttf")
+font_add(family="Arial", regular = "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf")
 showtext_opts(dpi = 600)  # MUST come before showtext_auto()
 showtext_auto()
-theme_set(theme_classic(base_family = "DejaVu Sans"))
+theme_set(theme_classic(base_family = "Arial"))
 
 setwd("~/fl-cfRNAmeta/")
 
@@ -213,8 +213,8 @@ bracket_df <- data.frame(
 core_order <- colnames(metadata_matrix)  # your x-axis order
 
 # Convert dataset names to indices
-bracket_df$xmin_idx <- match(bracket_df$xmin, core_order)
-bracket_df$xmax_idx <- match(bracket_df$xmax, core_order)
+bracket_df$xmin_idx <- match(bracket_df$xmin, core_order) 
+bracket_df$xmax_idx <- match(bracket_df$xmax, core_order) 
 
 heatmap_list <- lapply(row_order, function(var) {
   if (is.null(palette_list[[var]])) {
@@ -368,10 +368,12 @@ for (i in seq_len(nrow(bracket_df))) {
   x2 <- bracket_df$xmax_idx[i]
   if (is.na(x1) || is.na(x2)) next
   
-  x_start_np <- x_min_np + (x1 - 1) / n_cols * dx_np
-  x_end_np   <- x_min_np + x2       / n_cols * dx_np
-  x_start_u  <- unit(x_start_np, "npc")
-  x_end_u    <- unit(x_end_np,   "npc")
+  offset <- 0.005
+  x_start_np <- (x_min_np + (x1 - 1) / n_cols * dx_np) + offset
+  x_end_np   <- (x_min_np + x2       / n_cols * dx_np) - offset
+
+  x_start_u  <- unit(x_start_np, "npc") 
+  x_end_u    <- unit(x_end_np,   "npc") 
   
   h_bar <- linesGrob(
     x = unit.c(x_start_u, x_end_u),
