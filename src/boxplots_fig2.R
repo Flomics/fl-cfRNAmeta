@@ -14,16 +14,6 @@ showtext_auto()
 theme_set(theme_classic(base_family = "Arial"))
 
 
-
-###############################################################################
-# BEWARE!!!!! Code is very messy now, code fairies will fix it soon
-###############################################################################
-
-
-################################################################################
-# Combine with Flomics liquidx for META-ANALYSIS
-################################################################################
-
 # Read column names from text file
 setwd("~/fl-cfRNAmeta/")
 column_names <- c("read_number",
