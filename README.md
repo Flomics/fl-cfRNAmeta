@@ -34,16 +34,16 @@ fl-cfRNAmeta/
   JSON file with mappings for dataset names, colours, orders, or values used across scripts.
 
 - **`boxplots_fig2.R`**  
-  R script for generating boxplots for Figure 2 of the associated analysis.
+  R script to generate the following boxplots: percentage of spliced reads, percentage of exonic reads, percentage of fragments mapping to the correct gene orientation, NG80, fragment number, percentage of reads mapping to reference human genome, percentage of reads mapping to ERCC spike-ins, effective fragment length distribution, etc. Also used to create the NG80 vs spliced reads scatterplot, and the percent of human reads vs percent of microbial reads scatterplot.
 
 - **`fig_1a_stacked_barplot.R`**  
-  R script for creating a stacked barplot for Figure 1A.
+  R script for creating donor phenotype stacked bar plot.
 
 - **`fig_1b_heatmap.R`**  
-  R script for generating a heatmap for Figure 1B.
+  R script for creating the pre-analytical variables heatmap.
 
 - **`gene_coverage_profile_fig2_tmpH.ipynb`**  
-  Jupyter notebook for plotting gene coverage profiles, for Figure 2.
+  Jupyter notebook for plotting gene coverage profiles.
 
 - **`join_count_matrix_and_qc_table.ipynb`**  
   Jupyter notebook for merging sliced count matrices and QC tables into a single matrix or QC table file.
