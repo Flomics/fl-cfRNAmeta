@@ -29,9 +29,12 @@ fl-cfRNAmeta/
 │   ├── fig_1b_heatmap.R
 │   ├── gene_coverage_profile_fig2_tmpH.ipynb
 │   ├── join_count_matrix_and_qc_table.ipynb
+│   ├── makeIntrons.pl
 │   ├── merge_fastqs_array_isolate.sh
+│   ├── ng80.R
 │   ├── preprocess_metadata_functions.py
-│   └──sra_columns_mapping.py
+│   ├── QC_spliced_reads.sh
+│   └── sra_columns_mapping.py
 ├── tables/
 │   ├── cfRNA-meta_per_batch_metadata.tsv
 │   ├── cfRNA-meta_per_sample_metadata.tsv
@@ -78,6 +81,14 @@ fl-cfRNAmeta/
 - **`merge_fastqs_array_isolate.sh`**  
   Shell script for merging FASTQ files by array or isolate.
 
+- **`ng80.R`**  
+  R script to obtain the NG80 metric reported on the manuscript. Needs the count matrix as input file.
+
+- **`QC_spliced_reads.sh`**  
+  Shell script to obtain the QC metrics related to spliced reads. Needs the BAM file and the GTF annotation.
+
+- **`makeIntrons.pl`**  
+  Helper Perl script for the `QC_spliced_reads.sh` script.
 ---
 
 ### 2. `nextflow/`
