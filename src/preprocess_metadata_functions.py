@@ -991,7 +991,9 @@ def preprocess_flomics_1(dataset_metadata):
     df["dataset_batch"] = "flomics_1"
     df["read_length"] = "2x150"
     df["centrifugation_step_1"] = "2000g"
-    df["centrifugation_step_2"] = "None" 
+    df["centrifugation_step_2"] = "None"
+    df["assay_type"] = "RNA-seq"
+    df["organism"] = "Homo sapiens"
     
     #df["run"] = df["sample_name"]
     df["run"] = df["sample_display_name"]
@@ -1040,7 +1042,9 @@ def preprocess_flomics_2(dataset_metadata):
     df["dataset_batch"] = "flomics_2"
     df["read_length"] = "2x150"
     df["centrifugation_step_1"] = "1500g"
-    df["centrifugation_step_2"] = "2500g" 
+    df["centrifugation_step_2"] = "2500g"
+    df["assay_type"] = "RNA-seq"
+    df["organism"] = "Homo sapiens" 
 
     #df["run"] = df["sample_name"]
     df["run"] = df["sample_display_name"]
