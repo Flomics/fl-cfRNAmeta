@@ -93,7 +93,7 @@ filtered_df$exonic_reads_minus_spike_ins <- (filtered_df$exonic_reads_minus_spik
 
 # Keep specified columns
 selected_columns <- NULL
-selected_columns <- c( "sample_id", "sequencing_batch", "status", "spike_in_pct", "protein_coding_pct", "percentage_of_spliced_reads", "dataset_batch.y", column_names)
+selected_columns <- c( "sample_id", "sample_name", "sequencing_batch", "status", "spike_in_pct", "protein_coding_pct", "percentage_of_spliced_reads", "dataset_batch.y", column_names)
 filtered_data <- filtered_df[ ,selected_columns]
 
 filtered_data$percent_of_reads_mapping_to_spike_ins <- biotype_data$percent_of_reads_mapping_to_spike_ins
@@ -154,6 +154,7 @@ table_filtered$percent_of_multimapped_reads_total_reads_mapped <- (table_filtere
 column_names <- c(column_names, "percent_of_multimapped_reads_total_reads_mapped")
 
 #write.table(table_filtered, file="Qc_table_filtered.tsv", row.names = FALSE)
+table_filtered$spike_in_pct <- table_filtered$spike_in_pct * 100
 
 ggplot_objects <- lapply(column_names, function(col_name) {
   yvals <- table_filtered[[col_name]]
@@ -173,9 +174,13 @@ ggplot_objects <- lapply(column_names, function(col_name) {
   label_block <- if (col_name == "mapped_percentage") {
     labs(title = NULL, x = "Dataset", y = "% reads mapped to reference human genome")
   } else if (col_name == "exonic_reads_minus_spike_ins") {
-    labs(title = NULL, x = "Dataset", y =  "% reads mapping to exons")
+    labs(title = NULL, x = "Dataset", y =  "Fraction of exonic reads (FER)")
   } else if (col_name == "avg_mapped_read_length") {
     labs(title = NULL, x = "Dataset", y =  "Effective fragment length\n(average mapped length)")
+  } else if (col_name == "spike_in_pct") {
+    labs(title = NULL, x = "Dataset", y =  "Fraction of reads mapping to ERCC spike-ins")
+  } else if (col_name == "percentage_of_spliced_reads") {
+    labs(title = NULL, x = "Dataset", y =  "Fraction of spliced reads (FSR)")
   } else {
     labs(title = NULL, x = "Dataset", y = clean_label(col_name))
   }
@@ -238,7 +243,7 @@ ggplot_objects <- lapply(column_names, function(col_name) {
 })
 
 
-setwd("~/cfRNA-meta/full_comparison_2025_06_16/")
+setwd("figures/")
 
 for (i in 1:length(ggplot_objects)) {
   col_name <- column_names[i]
@@ -281,6 +286,169 @@ add_bottom_brackets <- function(p, bracket_df, factor_levels) {
   }
   return(p)
 }
+
+#####################################################
+# Stats for manuscript SPLICED READS
+####################################################
+x <- table_filtered$percentage_of_spliced_reads[table_filtered$dataset_batch.y == "wei"]
+median_value <- median(x, na.rm = TRUE)
+sd_value <- sd(x, na.rm = TRUE)
+
+cat("Median ± SD:", sprintf("%.2f ± %.2f", median_value, sd_value), "\n")
+
+
+x <- table_filtered$percentage_of_spliced_reads[table_filtered$dataset_batch.y == "flomics_1"]
+median_value <- median(x, na.rm = TRUE)
+sd_value <- sd(x, na.rm = TRUE)
+
+cat("Median ± SD:", sprintf("%.2f ± %.2f", median_value, sd_value), "\n")
+
+
+x <- table_filtered$percentage_of_spliced_reads[table_filtered$dataset_batch.y == "flomics_2"]
+median_value <- median(x, na.rm = TRUE)
+sd_value <- sd(x, na.rm = TRUE)
+
+cat("Median ± SD:", sprintf("%.2f ± %.2f", median_value, sd_value), "\n")
+
+x <- table_filtered$percentage_of_spliced_reads[table_filtered$dataset_batch.y == "flomics_1"]
+median_value <- median(x, na.rm = TRUE)
+sd_value <- sd(x, na.rm = TRUE)
+
+cat("Median ± SD:", sprintf("%.2f ± %.2f", median_value, sd_value), "\n")
+
+
+x <- table_filtered$percentage_of_spliced_reads[table_filtered$dataset_batch.y == "flomics_2"]
+median_value <- median(x, na.rm = TRUE)
+sd_value <- sd(x, na.rm = TRUE)
+
+cat("Median ± SD:", sprintf("%.2f ± %.2f", median_value, sd_value), "\n")
+
+x <- table_filtered$percentage_of_spliced_reads[table_filtered$dataset_batch.y == "reggiardo_bioivt"]
+median_value <- median(x, na.rm = TRUE)
+sd_value <- sd(x, na.rm = TRUE)
+
+cat("Median ± SD:", sprintf("%.2f ± %.2f", median_value, sd_value), "\n")
+
+
+x <- table_filtered$percentage_of_spliced_reads[table_filtered$dataset_batch.y == "reggiardo_dls"]
+median_value <- median(x, na.rm = TRUE)
+sd_value <- sd(x, na.rm = TRUE)
+
+cat("Median ± SD:", sprintf("%.2f ± %.2f", median_value, sd_value), "\n")
+
+x <- table_filtered$percentage_of_spliced_reads[table_filtered$dataset_batch.y == "roskams_pilot"]
+median_value <- median(x, na.rm = TRUE)
+sd_value <- sd(x, na.rm = TRUE)
+
+cat("Median ± SD:", sprintf("%.2f ± %.2f", median_value, sd_value), "\n")
+
+x <- table_filtered$percentage_of_spliced_reads[table_filtered$dataset_batch.y == "roskams_validation"]
+median_value <- median(x, na.rm = TRUE)
+sd_value <- sd(x, na.rm = TRUE)
+
+cat("Median ± SD:", sprintf("%.2f ± %.2f", median_value, sd_value), "\n")
+
+
+#####################################################
+# Stats for manuscript ng80
+####################################################
+x <- table_filtered$genes_contributing_to_80._of_reads[table_filtered$dataset_batch.y == "rozowsky"]
+median_value <- median(x, na.rm = TRUE)
+sd_value <- sd(x, na.rm = TRUE)
+
+cat("Median ± SD:", sprintf("%.2f ± %.2f", median_value, sd_value), "\n")
+
+x <- table_filtered$genes_contributing_to_80._of_reads[table_filtered$dataset_batch.y == "wei"]
+median_value <- median(x, na.rm = TRUE)
+sd_value <- sd(x, na.rm = TRUE)
+
+cat("Median ± SD:", sprintf("%.2f ± %.2f", median_value, sd_value), "\n")
+
+capture <- c("chalasani", "toden", "ibarra_buffy_coat", "ibarra_plasma_cancer", "ibarra_plasma_non_cancer", "ibarra_serum")
+
+x <- table_filtered$genes_contributing_to_80._of_reads[table_filtered$dataset_batch.y %in% capture]
+median_value <- median(x, na.rm = TRUE)
+sd_value <- sd(x, na.rm = TRUE)
+
+cat("Median ± SD:", sprintf("%.2f ± %.2f", median_value, sd_value), "\n")
+
+gdna <- c("block_150bp", "block_300bp", "sun_2")
+
+x <- table_filtered$genes_contributing_to_80._of_reads[table_filtered$dataset_batch.y == "sun_2"]
+median_value <- median(x, na.rm = TRUE)
+sd_value <- sd(x, na.rm = TRUE)
+
+cat("Median ± SD:", sprintf("%.2f ± %.2f", median_value, sd_value), "\n")
+
+gdna <- c("block_150bp", "block_300bp")
+
+x <- table_filtered$genes_contributing_to_80._of_reads[table_filtered$dataset_batch.y %in% gdna]
+median_value <- median(x, na.rm = TRUE)
+sd_value <- sd(x, na.rm = TRUE)
+
+cat("Median ± SD:", sprintf("%.2f ± %.2f", median_value, sd_value), "\n")
+
+high_q <- c("chen", "decruyenaere", "flomics_1", "flomics_2", "moufarrej_site_1", "moufarrej_site_2", "reggiardo_bioivt", "reggiardo_dls", "roskams_pilot", "roskams_validation", "tao", "zhu")
+
+x <- table_filtered$genes_contributing_to_80._of_reads[table_filtered$dataset_batch.y %in% high_q]
+median_value <- median(x, na.rm = TRUE)
+sd_value <- sd(x, na.rm = TRUE)
+
+cat("Median ± SD:", sprintf("%.2f ± %.2f", median_value, sd_value), "\n")
+
+#####################################################
+# Stats for manuscript spike-ins
+####################################################
+summary(table_filtered$spike_in_pct[table_filtered$dataset_batch.y=="chen"])
+
+######################################################
+# High quality samples barplot
+######################################################
+# Create summary for high-quality sample barplot
+quality_summary <- table_filtered %>%
+  group_by(dataset_batch.y) %>%
+  summarise(
+    total = n(),
+    high_quality = sum(genes_contributing_to_80._of_reads > 1000 & percentage_of_spliced_reads > 10, na.rm = TRUE)
+  ) %>%
+  mutate(
+    percent_high_quality = 100 * high_quality / total,
+    dataset_batch.y = factor(dataset_batch.y, levels = core_order)
+  )
+
+# Barplot of % high-quality samples per dataset batch
+quality_plot <- ggplot(quality_summary, aes(x = dataset_batch.y, y = percent_high_quality, fill = dataset_batch.y)) +
+  geom_bar(stat = "identity", alpha = 0.8) +
+  geom_text(aes(label = paste0("N=", high_quality)), vjust = -0.5, size = 3) +
+  scale_fill_manual(values = datasetsPalette) +
+  scale_x_discrete(labels = datasetsLabels) +
+  labs(
+    x = "Dataset",
+    y = "Fraction of samples with NG80>1,000 and FSR>10%",
+    title = "High-Quality Samples per Dataset"
+  ) +
+  ylim(0, 105) +
+  theme_classic() +
+  coord_cartesian(clip = "off") +
+  theme(base_family= "Arial",
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.y = element_line(size = 0.8), 
+        panel.grid.minor.y = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust=0.9),
+        axis.title = element_text(size = 12, face = "bold"),
+        plot.title = element_blank(),
+        legend.position = "none") +
+  scale_x_discrete(labels = datasetsLabels) +
+  scale_fill_manual(values = datasetsPalette, labels = datasetsLabels) +
+  scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels)
+
+quality_plot <- add_bottom_brackets(quality_plot, bracket_df, levels(table_filtered$dataset_batch.y))
+
+
+# Save the new barplot
+ggsave("figures/high_quality_sample_fraction_barplot.png", quality_plot, width = 11, height = 6, dpi = 600, device = ragg::agg_png)
+ggsave("figures/high_quality_sample_fraction_barplot.pdf", quality_plot, width = 11, height = 6, dpi = 600, device = cairo_pdf)
 
 
 #######################################################
@@ -355,7 +523,7 @@ p <- p +
             width = 0.8, height = 4,
             inherit.aes = FALSE) +
   scale_fill_manual(
-    name = "Strandedness",
+    name = "Library strandedness",
     values = strandedness_colors
   ) + theme(
     legend.position = "top",  
@@ -468,11 +636,165 @@ p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = log_genes_80, fill = da
 p <- add_bottom_brackets(p, bracket_df, levels(table_filtered$dataset_batch.y))
 
 
-ggsave("ng80_non_transformed_axis.png", p, width = 11, height = 6, dpi = 600, device = ragg::agg_png)
-ggsave("ng80_non_transformed_axis.pdf", p, width = 11, height = 6, dpi = 600, device = cairo_pdf)
+ggsave("figures/ng80_non_transformed_axis.png", p, width = 11, height = 6, dpi = 600, device = ragg::agg_png)
+ggsave("figures/ng80_non_transformed_axis.pdf", p, width = 11, height = 6, dpi = 600, device = cairo_pdf)
+
+#################################
+# NG80 protein coding
+################################
+setwd("~/fl-cfRNAmeta/")
+
+ng_only_mrna <- read.delim("tables/genes_contributing_to_percentage_reads.tsv")
+
+ng80_table <- table_filtered %>%
+  left_join(ng_only_mrna, by = c("sample_name" = "Sample"))
+
+ng80_table$log_genes_80_pc <- log(ng80_table$number_of_genes_contributing_to_80._of_reads)
+
+y_breaks <- log(c(100, 500, 1000, 5000, 10000, 20000))
+
+y_labels <- c(100, 500, 1000, 5000, 10000, 20000)
+
+p <- ggplot(ng80_table, aes(x = dataset_batch.y, y = log_genes_80, fill = dataset_batch.y)) +
+  geom_boxplot(alpha = 0.3, aes(color = dataset_batch.y), position = position_dodge(width = 0.75), outlier.shape = NA) +
+  geom_point(aes(y = log_genes_80, color = dataset_batch.y), 
+             position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.8), 
+             shape = 21, size = 1.5, stroke = 0.2, alpha = 0.6) +
+  labs(title = "",
+       x = "Dataset", y = "NG80 (protein coding genes)") +
+  theme_classic() +
+  theme(base_family= "Arial",
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.y = element_line(size = 0.8), 
+        panel.grid.minor.y = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust = 0.9),
+        axis.title = element_text(size = 12, face = "bold"),
+        plot.title = element_text(size = 14, face = "bold"),
+        legend.position = "none") +
+  scale_x_discrete(labels = datasetsLabels) +
+  scale_fill_manual(values = datasetsPalette, labels = datasetsLabels) +
+  scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels) +
+  scale_y_continuous(breaks = y_breaks, labels = y_labels) + 
+  coord_cartesian(clip = "off")
+
+p <- add_bottom_brackets(p, bracket_df, levels(table_filtered$dataset_batch.y))
 
 
+ggsave("figures/ng80_mrna_non_transformed_axis.png", p, width = 11, height = 6, dpi = 600, device = ragg::agg_png)
+ggsave("figures/ng80_mrna_non_transformed_axis.pdf", p, width = 11, height = 6, dpi = 600, device = cairo_pdf)
 
+
+################################
+# NpcG80 vs NG80
+###############################
+
+ng80_table$ratio <- ng80_table$number_of_genes_contributing_to_80._of_reads / ng80_table$genes_contributing_to_80._of_reads
+
+y_breaks <- log(c(100, 500, 1000, 5000, 10000, 20000))
+
+y_labels <- c(100, 500, 1000, 5000, 10000, 20000)
+
+to_keep <- c("chalasani", "toden", "ibarra_buffy_coat", "ibarra_plasma_cancer", "ibarra_plasma_non_cancer", "ibarra_serum", "chen", "decruyenaere", "flomics_1", "flomics_2", "moufarrej_site_1", "moufarrej_site_2", "reggiardo_bioivt", "reggiardo_dls", "roskams_pilot", "roskams_validation", "tao", "zhu")
+
+core_order_filtered <- c( "chalasani" ,               "chen"  ,                   "decruyenaere"   ,          "flomics_1"    ,            "flomics_2"               
+,"ibarra_buffy_coat"   ,     "ibarra_plasma_cancer"  ,   "ibarra_plasma_non_cancer" ,"ibarra_serum"     ,        "moufarrej_site_1"       
+, "moufarrej_site_2"    ,                  "reggiardo_bioivt"      ,   "reggiardo_dls"    ,        "roskams_pilot"          ,  "roskams_validation"  ,                
+"tao"       ,              "toden"        ,                    "zhu" )                    
+
+ng80_table <- ng80_table %>%
+  filter(dataset_batch.y %in% to_keep) %>%
+  mutate(dataset_batch.y = fct_relevel(factor(dataset_batch.y), core_order_filtered ))
+
+bracket_df <- data.frame(
+  xmin = c("ibarra_buffy_coat", "moufarrej_site_1", "reggiardo_bioivt", "roskams_pilot"),
+  xmax = c( "ibarra_serum","moufarrej_site_2", "reggiardo_dls", "roskams_validation"),
+  label = c( "Ibarra", "Moufarrej", "Reggiardo", "Roskams-Hieter")
+)
+
+p <- ggplot(ng80_table, aes(x = dataset_batch.y, y = ratio, fill = dataset_batch.y)) +
+  geom_boxplot(alpha = 0.3, aes(color = dataset_batch.y), position = position_dodge(width = 0.75), outlier.shape = NA) +
+  geom_point(aes(y = ratio, color = dataset_batch.y), 
+             position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.8), 
+             shape = 21, size = 1.5, stroke = 0.2, alpha = 0.6) +
+  labs(title = "",
+       x = "Dataset", y = "NP80 / NG80") +
+  theme_classic() +
+  theme(base_family= "Arial",
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.y = element_line(size = 0.8), 
+        panel.grid.minor.y = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust = 0.9),
+        axis.title = element_text(size = 12, face = "bold"),
+        plot.title = element_text(size = 14, face = "bold"),
+        legend.position = "none") +
+  ylim(c(0,2.5))+
+  geom_hline(yintercept=1, linetype='dashed', col = 'darkgrey') +
+  scale_x_discrete(labels = datasetsLabels) +
+  scale_fill_manual(values = datasetsPalette, labels = datasetsLabels) +
+  scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels) +
+  #scale_y_continuous(breaks = y_breaks, labels = y_labels) + 
+  coord_cartesian(clip = "off")
+
+add_bottom_brackets_filtered <- function(p, bracket_df, x_levels, offset = 0.005) {
+  for (i in seq_len(nrow(bracket_df))) {
+    x1 <- which(x_levels == bracket_df$xmin[i])
+    x2 <- which(x_levels == bracket_df$xmax[i])
+    if (length(x1) == 0 || length(x2) == 0) next
+    
+    # Add small spacing between brackets
+    offset <- 0.005 #spacing
+    x_start <- ((x1 - 1) / length(core_order_filtered)) + offset  # LEFT tick
+    x_end   <- (x2 / length(core_order_filtered)) - offset  
+    
+    bracket <- linesGrob(
+      x = unit.c(unit(x_start, "npc"), unit(x_end, "npc")),
+      y = unit(c(-0.03, -0.03), "npc"),
+      gp = gpar(col = "black", lwd = 0.8)
+    )
+    
+    verticals <- gList(
+      linesGrob(
+        x = unit.c(unit(x_start, "npc"), unit(x_start, "npc")),
+        y = unit(c(-0.03, -0.045), "npc"),
+        gp = gpar(col = "black", lwd = 0.95)
+      ),
+      linesGrob(
+        x = unit.c(unit(x_end, "npc"), unit(x_end, "npc")),
+        y = unit(c(-0.03, -0.045), "npc"),
+        gp = gpar(col = "black", lwd = 0.95)
+      )
+    )
+    
+    p <- p + annotation_custom(grobTree(bracket, verticals))
+  }
+  return(p)
+}
+
+
+p <- add_bottom_brackets_filtered(p, bracket_df, levels(ng80_table$dataset_batch.y))
+
+
+ggsave("figures/ng80_ratio_non_transformed_axis_filtered.png", p, width = 11, height = 6, dpi = 600, device = ragg::agg_png)
+ggsave("figures/ng80_ratio_non_transformed_axis_filtered.pdf", p, width = 11, height = 6, dpi = 600, device = cairo_pdf)
+
+
+capture <- c("chalasani", "toden", "ibarra_buffy_coat", "ibarra_plasma_cancer", "ibarra_plasma_non_cancer", "ibarra_serum")
+
+x <- ng80_table$ratio[ng80_table$dataset_batch.y %in% capture]
+median_value <- median(x, na.rm = TRUE)
+sd_value <- sd(x, na.rm = TRUE)
+
+cat("Median ± SD:", sprintf("%.2f ± %.2f", median_value, sd_value), "\n")
+
+high_q <- c("chen", "decruyenaere", "flomics_1", "flomics_2", "moufarrej_site_1", "moufarrej_site_2", "reggiardo_bioivt", "reggiardo_dls", "roskams_pilot", "roskams_validation", "tao", "zhu")
+
+x <- ng80_table$ratio[ng80_table$dataset_batch.y %in% high_q]
+median_value <- median(x, na.rm = TRUE)
+sd_value <- sd(x, na.rm = TRUE)
+
+cat("Median ± SD:", sprintf("%.2f ± %.2f", median_value, sd_value), "\n")
 #################################
 ########### Diversity scatterplot
 #################################
@@ -539,13 +861,13 @@ p_facet <- ggplot(
       y = genes_contributing_to_80._of_reads,
       color = dataset_batch.y)) +
   geom_point(size = 2, alpha = 0.8) +
-  facet_wrap(~ dataset_batch.y, scales = "free") +
+  facet_wrap(~ dataset_batch.y, scales = "fixed") +
   scale_color_manual(
     values = adjusted_palette,
     drop = FALSE
   ) +
   labs(
-    x = "Percentage of spliced reads",
+    x = "Fraction of spliced reads (FSR)",
     y = "NG80",
     color = "Dataset"
   ) +
@@ -562,8 +884,42 @@ p_facet <- ggplot(
   scale_y_continuous(trans = log10_trans())
 
 
-ggsave("~/figures/diversity_scatterplot_facet.png", p_facet, width = 20, height = 10, dpi = 600, device = ragg::agg_png)
-ggsave("~/figures/diversity_scatterplot_facet.pdf", p_facet, width = 20, height = 10, device = cairo_pdf)
+# Define axis limits globally
+x_lim <- range(table_filtered$percentage_of_spliced_reads, na.rm = TRUE)
+y_lim <- range(table_filtered$genes_contributing_to_80._of_reads, na.rm = TRUE)
+
+p_facet <- ggplot(
+  data = table_filtered,
+  aes(x = percentage_of_spliced_reads,
+      y = genes_contributing_to_80._of_reads,
+      color = dataset_batch.y)) +
+  geom_point(size = 2, alpha = 0.8) +
+  # Trick to enforce shared limits even with scales = "free"
+  geom_blank(aes(x = x_lim[1], y = y_lim[1])) +
+  geom_blank(aes(x = x_lim[2], y = y_lim[2])) +
+  facet_wrap(~ dataset_batch.y, scales = "free") +
+  scale_color_manual(values = adjusted_palette, drop = FALSE) +
+  labs(
+    x = "Fraction of spliced reads (FSR)",
+    y = "NG80",
+    color = "Dataset"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    strip.text = element_text(face = "bold"),
+    axis.title = element_text(face = "bold"),
+    legend.text = element_text(size = 9),
+    legend.title = element_text(face = "bold"),
+    legend.key.height = unit(0.5, "lines"),
+    plot.background = element_rect(fill = "white", colour = "white"),
+    panel.spacing = unit(0.8, "lines")
+  ) +
+  guides(color = guide_legend(ncol = 1)) +
+  scale_y_continuous(trans = log10_trans())
+
+
+ggsave("figures/diversity_scatterplot_facet.png", p_facet, width = 20, height = 10, dpi = 600, device = ragg::agg_png)
+ggsave("figures/diversity_scatterplot_facet.pdf", p_facet, width = 20, height = 10, device = cairo_pdf)
 
 
 #################################
@@ -580,11 +936,11 @@ k2_results_clean <- k2_results %>%
   ))
 
 # Compute microbial reads again if not already there
-k2_results_clean$microbial <- k2_results_clean$fungi + k2_results_clean$bacteria
+k2_results$microbial <- k2_results$fungi + k2_results$bacteria
 
 # Merge into table_filtered using cleaned sample names
 table_filtered <- table_filtered %>%
-  left_join(k2_results_clean %>% select(sample_name, microbial),
+  left_join(k2_results %>% select(sample_name, microbial),
             by = c("sample_id" = "sample_name"))
 
 
