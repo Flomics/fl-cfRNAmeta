@@ -86,5 +86,5 @@
     "flomics_1": "Flomics 1",
     "flomics_2": "Flomics 2"
   },
-  "datasetVisualOrder": ["block_150bp", "block_300bp", "chalasani", "chen", "decruyenaere", "flomics_1", "flomics_2", "giraldez_phospho-rna-seq", "giraldez_standard", "ibarra_buffy_coat", "ibarra_plasma_cancer", "ibarra_plasma_non_cancer", "ibarra_serum", "moufarrej_site_1", "moufarrej_site_2", "ngo", "reggiardo_bioivt", "reggiardo_dls", "roskams_pilot", "roskams_validation", "sun_2", "tao", "toden", "wang", "zhu", "rozowsky", "wei"]
+  "datasetVisualOrder": ["giraldez_phospho-rna-seq", "giraldez_standard", "sun_2", "wang", "chalasani", "ibarra_buffy_coat", "ibarra_plasma_cancer", "ibarra_plasma_non_cancer", "ibarra_serum", "toden", "reggiardo_bioivt", "reggiardo_dls", "block_150bp", "block_300bp", "chen", "decruyenaere", "flomics_1", "flomics_2", "moufarrej_site_1", "moufarrej_site_2", "ngo", "roskams_pilot", "roskams_validation", "tao", "zhu", "rozowsky", "wei"]
 }
