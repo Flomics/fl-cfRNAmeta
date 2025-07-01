@@ -5,6 +5,7 @@ library(forcats)
 library(jsonlite)
 library(grid)
 library(scales)
+library(svglite)
 library(showtext)
 font_add(family="Arial", regular = "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf")
 showtext_opts(dpi = 600)  # MUST come before showtext_auto()
@@ -235,8 +236,8 @@ p <- ggplot(phenotype_merged_plot_data, aes(x = dataset_batch_clean, y = count, 
 
 p <- add_bottom_brackets(p, bracket_df, levels(phenotype_merged_plot_data$dataset_batch_clean))
 
-ggsave("~/figures/fig_1a_combined_simplified_and_cancer_detail.png",
+ggsave("figures/fig_1a_combined_simplified_and_cancer_detail.png",
        width = 17, height = 8, dpi = 600, units = "in", bg = "white",device = ragg::agg_png)
-ggsave("~/figures/fig_1a_combined_simplified_and_cancer_detail.pdf",
-       width = 17, height = 8, dpi = 600, units = "in", bg = "white", device = cairo_pdf)
+ggsave("figures/fig_1a_combined_simplified_and_cancer_detail.svg",
+       width = 17, height = 8, dpi = 600, units = "in", bg = "white", device = "svg")
 
