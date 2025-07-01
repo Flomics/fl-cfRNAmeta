@@ -159,6 +159,11 @@ bracket_df <- data.frame(
   label = c("Block", "Giráldez", "Ibarra","Reggiardo" , "Moufarrej", "Roskams-Hieter")
 )
 
+bracket_df_2 <- data.frame(
+  xmin = c("Giráldez (phospho-RNA-seq)", "Chalasani", "Reggiardo" , "Block (2x75bp)", "Wei (cfDNA)" ),
+  xmax = c("Wang", "Toden", "Reggiardo" ,"ENCODE (bulk tissue RNA-Seq)","Wei (cfDNA)" ),
+  label = c("Custom", "Exome-based", "Whole RNA-Seq (oligo-dT pr.)", "Whole RNA-Seq (random pr.)", "cfDNA")
+)
 
 phenotype_merged_plot_data$phenotype_merged <- fct_recode(
   phenotype_merged_plot_data$phenotype_merged,
@@ -176,7 +181,7 @@ phenotype_merged_plot_data$phenotype_merged <- factor(phenotype_merged_plot_data
 
 merged_colors <- merged_colors[legend_order]
 
-add_bottom_brackets <- function(p, bracket_df, factor_levels) {
+add_bottom_brackets <- function(p, bracket_df, factor_levels, y_base = -0.03, height = 0.015, col="black", lwd=0.8) {
   for (i in seq_len(nrow(bracket_df))) {
     x1 <- which(factor_levels == bracket_df$xmin[i])
     x2 <- which(factor_levels == bracket_df$xmax[i])
@@ -188,20 +193,20 @@ add_bottom_brackets <- function(p, bracket_df, factor_levels) {
     
     bracket <- linesGrob(
       x = unit.c(unit(x_start, "npc"), unit(x_end, "npc")),
-      y = unit(c(-0.03, -0.03), "npc"),
-      gp = gpar(col = "black", lwd = 0.8)
+      y = unit(c(y_base, y_base), "npc"),
+      gp = gpar(col = col, lwd = lwd)
     )
     
     verticals <- gList(
       linesGrob(
         x = unit.c(unit(x_start, "npc"), unit(x_start, "npc")),
-        y = unit(c(-0.03, -0.045), "npc"),
-        gp = gpar(col = "black", lwd = 0.95)
+        y = unit(c(y_base, y_base - height), "npc"),
+        gp = gpar(col = col, lwd = lwd)
       ),
       linesGrob(
         x = unit.c(unit(x_end, "npc"), unit(x_end, "npc")),
-        y = unit(c(-0.03, -0.045), "npc"),
-        gp = gpar(col = "black", lwd = 0.95)
+        y = unit(c(y_base, y_base - height), "npc"),
+        gp = gpar(col = col, lwd = lwd)
       )
     )
     
@@ -230,11 +235,16 @@ p <- ggplot(phenotype_merged_plot_data, aes(x = dataset_batch_clean, y = count, 
     panel.grid.minor.x = element_blank(),
     panel.grid.major.y = element_line(size = 0.8), 
     panel.grid.minor.y = element_blank(),
-    plot.margin = margin(20, 20, 20, 20),
+    plot.margin = margin(20, 20, 20, 40),
     plot.background = element_rect(fill = "white", colour = "white") 
   ) + coord_cartesian(clip = "off")
 
-p <- add_bottom_brackets(p, bracket_df, levels(phenotype_merged_plot_data$dataset_batch_clean))
+#p <- add_bottom_brackets(p, bracket_df, levels(phenotype_merged_plot_data$dataset_batch_clean))
+
+p <- add_bottom_brackets(p, bracket_df, levels(phenotype_merged_plot_data$dataset_batch_clean), y_base = -0.03)
+
+p <- add_bottom_brackets(p, bracket_df_2, levels(phenotype_merged_plot_data$dataset_batch_clean), y_base = -0.001, col = "grey60", lwd=2)
+
 
 ggsave("figures/fig_1a_combined_simplified_and_cancer_detail.png",
        width = 17, height = 8, dpi = 600, units = "in", bg = "white",device = ragg::agg_png)
