@@ -6,6 +6,7 @@ src/__pycache__
 
 .Rproj.user
 *.Rproj
+.Rhistory
 
 tables/.~lock*
 figures/*
