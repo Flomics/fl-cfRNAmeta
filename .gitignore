@@ -8,3 +8,4 @@ src/__pycache__
 *.Rproj
 
 tables/.~lock*
+figures/*
