@@ -86,5 +86,12 @@
     "flomics_1": "Flomics 1",
     "flomics_2": "Flomics 2"
   },
-  "datasetVisualOrder": ["giraldez_phospho-rna-seq", "giraldez_standard", "sun_2", "wang", "chalasani", "ibarra_buffy_coat", "ibarra_plasma_cancer", "ibarra_plasma_non_cancer", "ibarra_serum", "toden", "reggiardo_bioivt", "reggiardo_dls", "block_150bp", "block_300bp", "chen", "decruyenaere", "flomics_1", "flomics_2", "moufarrej_site_1", "moufarrej_site_2", "ngo", "roskams_pilot", "roskams_validation", "tao", "zhu", "rozowsky", "wei"]
+  "datasetVisualOrder": ["giraldez_phospho-rna-seq", "giraldez_standard", "sun_2", "wang", "chalasani", "ibarra_buffy_coat", "ibarra_plasma_cancer", "ibarra_plasma_non_cancer", "ibarra_serum", "toden", "reggiardo_bioivt", "reggiardo_dls", "block_150bp", "block_300bp", "chen", "decruyenaere", "flomics_1", "flomics_2", "moufarrej_site_1", "moufarrej_site_2", "ngo", "roskams_pilot", "roskams_validation", "tao", "zhu", "rozowsky", "wei"],
+  "datasetGroups" : {
+    "cfDNA": ["wei"],
+    "custom": ["giraldez_phospho-rna-seq", "giraldez_standard", "sun_2", "wang"],
+    "exome_based": ["chalasani", "ibarra_buffy_coat", "ibarra_plasma_cancer", "ibarra_plasma_non_cancer", "ibarra_serum", "toden"],
+    "wro": ["reggiardo_bioivt", "reggiardo_dls"],
+    "wrr": ["block_150bp", "block_300bp", "chen", "decruyenaere", "flomics_1", "flomics_2", "moufarrej_site_1", "moufarrej_site_2", "ngo", "roskams_pilot", "roskams_validation", "tao", "zhu", "rozowsky"]
+  }
 }
