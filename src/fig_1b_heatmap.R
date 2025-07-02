@@ -173,6 +173,11 @@ palette_list$library_prep_kit_short_name[6] <- "#FDBE85"
 palette_list$library_prep_kit_short_name[7] <- "#FD8D3C"
 palette_list$library_prep_kit_short_name[8] <- "#E6550D"
 
+palette_list$broad_protocol_category[1] <- "#AECAD9"
+palette_list$broad_protocol_category[2] <- "#D9BBAE"
+palette_list$broad_protocol_category[3] <- "#BBE0BB"
+palette_list$broad_protocol_category[4] <- "#D0AED9"
+palette_list$broad_protocol_category[5] <- "#D9D6AE"
 
 clean_names <- c(
   biomaterial = "Biomaterial",
@@ -186,7 +191,7 @@ clean_names <- c(
   centrifugation_step_1 = "Centrifugation, step 1",
   centrifugation_step_2 = "Centrifugation, step 2",
   plasma_tubes_short_name = "Blood collection tube",
-  broad_protocol_category = "Broad protocol category"
+  broad_protocol_category = "Broad protocol category (BPC)"
 )
 
 row_order <- c(
@@ -416,7 +421,7 @@ for (var in row_order) {
     )
   } else if (var =="broad_protocol_category") {
     bottom_anno <- HeatmapAnnotation(
-      spacer = anno_empty(border = FALSE, height = unit(0.8, "cm")) # this controls the whitespace between BPC and column names, to give space to brackets
+      spacer = anno_empty(border = FALSE, height = unit(0.5, "cm")) # this controls the whitespace between BPC and column names, to give space to brackets
     )
   }
   
@@ -464,7 +469,7 @@ ht_drw <- draw(ht_list, heatmap_legend_side = "right")
 
 ht_pos <- htPositionsOnDevice(ht_drw)
 
-y_top_in <- ht_pos[ht_pos$heatmap == "Broad protocol category", "y_min"] - unit(0.8, "in") #this addition or subtraction here controls the position of the brackets. I could not find a better way to do it
+y_top_in <- ht_pos[ht_pos$heatmap == "Broad protocol category (BPC)", "y_min"] - unit(0.6, "in") #this addition or subtraction here controls the position of the brackets. I could not find a better way to do it
 y_top_np <- convertY(y_top_in, "npc", valueOnly = FALSE)
 
 y_bracket <- y_top_np + unit(0.1, "mm")          
@@ -511,51 +516,51 @@ for (i in seq_len(nrow(bracket_df))) {
   grid.draw(grobTree(h_bar, v_bars))
 }
 
-bracket_df_2$xmin_idx <- match(bracket_df_2$xmin, core_order)
-bracket_df_2$xmax_idx <- match(bracket_df_2$xmax, core_order)
-
-y_top_in <- ht_pos[ht_pos$heatmap == "Broad protocol category", "y_min"] - unit(1, "in")
-y_top_np <- convertY(y_top_in, "npc", valueOnly = FALSE)
-
-y_bracket_1 <- y_top_np + unit(0.1, "mm")          
-y_vert_hi_1 <- y_bracket_1
-y_vert_lo_1 <- y_bracket_1 - unit(2, "mm")    
-
-y_bracket_2 <- y_top_np - unit(2.5, "mm")   # space between brackets
-y_vert_hi_2 <- y_bracket_2
-y_vert_lo_2 <- y_bracket_2 - unit(2, "mm")
-y_vert_lo_2 <- y_bracket_2 + unit(2, "mm")
-
-
-for (i in seq_len(nrow(bracket_df_2))) {
-  x1 <- bracket_df_2$xmin_idx[i]
-  x2 <- bracket_df_2$xmax_idx[i]
-  if (is.na(x1) || is.na(x2)) next
-  
-  offset <- 0.005
-  x_start_np <- (x_min_np + (x1 - 1) / n_cols * dx_np) + offset
-  x_end_np   <- (x_min_np + x2       / n_cols * dx_np) - offset
-  
-  x_start_u  <- unit(x_start_np, "npc") 
-  x_end_u    <- unit(x_end_np,   "npc") 
-  
-  h_bar <- linesGrob(
-    x = unit.c(x_start_u, x_end_u),
-    y = unit.c(y_bracket_2, y_bracket_2),
-    gp = gpar(col = "grey60", lwd = 2)
-  )
-  
-  v_bars <- gList(
-    linesGrob(x = unit.c(x_start_u, x_start_u),
-              y = unit.c(y_vert_lo_2, y_vert_hi_2),
-              gp = gpar(col = "grey60", lwd = 2)),
-    linesGrob(x = unit.c(x_end_u, x_end_u),
-              y = unit.c(y_vert_lo_2, y_vert_hi_2),
-              gp = gpar(col = "grey60", lwd = 2))
-  )
-  
-  grid.draw(grobTree(h_bar, v_bars))
-}
+# bracket_df_2$xmin_idx <- match(bracket_df_2$xmin, core_order)
+# bracket_df_2$xmax_idx <- match(bracket_df_2$xmax, core_order)
+# 
+# y_top_in <- ht_pos[ht_pos$heatmap == "Broad protocol category", "y_min"] - unit(1, "in")
+# y_top_np <- convertY(y_top_in, "npc", valueOnly = FALSE)
+# 
+# y_bracket_1 <- y_top_np + unit(0.1, "mm")          
+# y_vert_hi_1 <- y_bracket_1
+# y_vert_lo_1 <- y_bracket_1 - unit(2, "mm")    
+# 
+# y_bracket_2 <- y_top_np - unit(2.5, "mm")   # space between brackets
+# y_vert_hi_2 <- y_bracket_2
+# y_vert_lo_2 <- y_bracket_2 - unit(2, "mm")
+# y_vert_lo_2 <- y_bracket_2 + unit(2, "mm")
+# 
+# 
+# for (i in seq_len(nrow(bracket_df_2))) {
+#   x1 <- bracket_df_2$xmin_idx[i]
+#   x2 <- bracket_df_2$xmax_idx[i]
+#   if (is.na(x1) || is.na(x2)) next
+#   
+#   offset <- 0.005
+#   x_start_np <- (x_min_np + (x1 - 1) / n_cols * dx_np) + offset
+#   x_end_np   <- (x_min_np + x2       / n_cols * dx_np) - offset
+#   
+#   x_start_u  <- unit(x_start_np, "npc") 
+#   x_end_u    <- unit(x_end_np,   "npc") 
+#   
+#   h_bar <- linesGrob(
+#     x = unit.c(x_start_u, x_end_u),
+#     y = unit.c(y_bracket_2, y_bracket_2),
+#     gp = gpar(col = "grey60", lwd = 2)
+#   )
+#   
+#   v_bars <- gList(
+#     linesGrob(x = unit.c(x_start_u, x_start_u),
+#               y = unit.c(y_vert_lo_2, y_vert_hi_2),
+#               gp = gpar(col = "grey60", lwd = 2)),
+#     linesGrob(x = unit.c(x_end_u, x_end_u),
+#               y = unit.c(y_vert_lo_2, y_vert_hi_2),
+#               gp = gpar(col = "grey60", lwd = 2))
+#   )
+#   
+#   grid.draw(grobTree(h_bar, v_bars))
+# }
 
 
 dev.off()
@@ -568,7 +573,7 @@ ht_drw <- draw(ht_list, heatmap_legend_side = "right")
 
 ht_pos <- htPositionsOnDevice(ht_drw)
 
-y_top_in <- ht_pos[ht_pos$heatmap == "Broad protocol category", "y_min"] - unit(0.8, "in") #this addition or subtraction here controls the position of the brackets. I could not find a better way to do it
+y_top_in <- ht_pos[ht_pos$heatmap == "Broad protocol category (BPC)", "y_min"] - unit(0.6, "in") #this addition or subtraction here controls the position of the brackets. I could not find a better way to do it
 y_top_np <- convertY(y_top_in, "npc", valueOnly = FALSE)
 
 y_bracket <- y_top_np + unit(0.1, "mm")          
@@ -615,51 +620,51 @@ for (i in seq_len(nrow(bracket_df))) {
   grid.draw(grobTree(h_bar, v_bars))
 }
 
-bracket_df_2$xmin_idx <- match(bracket_df_2$xmin, core_order)
-bracket_df_2$xmax_idx <- match(bracket_df_2$xmax, core_order)
-
-y_top_in <- ht_pos[ht_pos$heatmap == "Broad protocol category", "y_min"] - unit(1, "in")
-y_top_np <- convertY(y_top_in, "npc", valueOnly = FALSE)
-
-y_bracket_1 <- y_top_np + unit(0.1, "mm")          
-y_vert_hi_1 <- y_bracket_1
-y_vert_lo_1 <- y_bracket_1 - unit(2, "mm")    
-
-y_bracket_2 <- y_top_np - unit(2.5, "mm")   # space between brackets
-y_vert_hi_2 <- y_bracket_2
-y_vert_lo_2 <- y_bracket_2 - unit(2, "mm")
-y_vert_lo_2 <- y_bracket_2 + unit(2, "mm")
-
-
-for (i in seq_len(nrow(bracket_df_2))) {
-  x1 <- bracket_df_2$xmin_idx[i]
-  x2 <- bracket_df_2$xmax_idx[i]
-  if (is.na(x1) || is.na(x2)) next
-  
-  offset <- 0.005
-  x_start_np <- (x_min_np + (x1 - 1) / n_cols * dx_np) + offset
-  x_end_np   <- (x_min_np + x2       / n_cols * dx_np) - offset
-  
-  x_start_u  <- unit(x_start_np, "npc") 
-  x_end_u    <- unit(x_end_np,   "npc") 
-  
-  h_bar <- linesGrob(
-    x = unit.c(x_start_u, x_end_u),
-    y = unit.c(y_bracket_2, y_bracket_2),
-    gp = gpar(col = "grey60", lwd = 2)
-  )
-  
-  v_bars <- gList(
-    linesGrob(x = unit.c(x_start_u, x_start_u),
-              y = unit.c(y_vert_lo_2, y_vert_hi_2),
-              gp = gpar(col = "grey60", lwd = 2)),
-    linesGrob(x = unit.c(x_end_u, x_end_u),
-              y = unit.c(y_vert_lo_2, y_vert_hi_2),
-              gp = gpar(col = "grey60", lwd = 2))
-  )
-  
-  grid.draw(grobTree(h_bar, v_bars))
-}
+# bracket_df_2$xmin_idx <- match(bracket_df_2$xmin, core_order)
+# bracket_df_2$xmax_idx <- match(bracket_df_2$xmax, core_order)
+# 
+# y_top_in <- ht_pos[ht_pos$heatmap == "Broad protocol category", "y_min"] - unit(1, "in")
+# y_top_np <- convertY(y_top_in, "npc", valueOnly = FALSE)
+# 
+# y_bracket_1 <- y_top_np + unit(0.1, "mm")          
+# y_vert_hi_1 <- y_bracket_1
+# y_vert_lo_1 <- y_bracket_1 - unit(2, "mm")    
+# 
+# y_bracket_2 <- y_top_np - unit(2.5, "mm")   # space between brackets
+# y_vert_hi_2 <- y_bracket_2
+# y_vert_lo_2 <- y_bracket_2 - unit(2, "mm")
+# y_vert_lo_2 <- y_bracket_2 + unit(2, "mm")
+# 
+# 
+# for (i in seq_len(nrow(bracket_df_2))) {
+#   x1 <- bracket_df_2$xmin_idx[i]
+#   x2 <- bracket_df_2$xmax_idx[i]
+#   if (is.na(x1) || is.na(x2)) next
+#   
+#   offset <- 0.005
+#   x_start_np <- (x_min_np + (x1 - 1) / n_cols * dx_np) + offset
+#   x_end_np   <- (x_min_np + x2       / n_cols * dx_np) - offset
+#   
+#   x_start_u  <- unit(x_start_np, "npc") 
+#   x_end_u    <- unit(x_end_np,   "npc") 
+#   
+#   h_bar <- linesGrob(
+#     x = unit.c(x_start_u, x_end_u),
+#     y = unit.c(y_bracket_2, y_bracket_2),
+#     gp = gpar(col = "grey60", lwd = 2)
+#   )
+#   
+#   v_bars <- gList(
+#     linesGrob(x = unit.c(x_start_u, x_start_u),
+#               y = unit.c(y_vert_lo_2, y_vert_hi_2),
+#               gp = gpar(col = "grey60", lwd = 2)),
+#     linesGrob(x = unit.c(x_end_u, x_end_u),
+#               y = unit.c(y_vert_lo_2, y_vert_hi_2),
+#               gp = gpar(col = "grey60", lwd = 2))
+#   )
+#   
+#   grid.draw(grobTree(h_bar, v_bars))
+# }
 
 #showtext::showtext_end()
 dev.off()

@@ -199,6 +199,81 @@ add_bottom_brackets <- function(p, bracket_df, factor_levels, y_base = -0.03, he
 }
 
 
+# ggplot_objects <- lapply(column_names, function(col_name) {
+#   yvals <- table_filtered[[col_name]]
+#   yvals <- yvals[!is.na(yvals) & is.finite(yvals)]
+#   if (length(yvals) == 0) return(NULL)
+#   
+#   y_max <- max(yvals)
+#   y_range <- diff(range(yvals))
+#   bracket_y <- y_max + 0.05 * y_range
+#   
+#   bracket_df_top <- bracket_df %>%
+#     mutate(
+#       y.position = bracket_y,
+#       y.position = ifelse(label == "Roskams-Hieter", bracket_y + 0.03 * y_range, y.position)
+#     )
+#   
+#   label_block <- if (col_name == "mapped_percentage") {
+#     labs(title = NULL, x = "Dataset", y = "% reads mapped to reference human genome")
+#   } else if (col_name == "exonic_reads_minus_spike_ins") {
+#     labs(title = NULL, x = "Dataset", y =  "Fraction of exonic reads (FER)")
+#   } else if (col_name == "avg_mapped_read_length") {
+#     labs(title = NULL, x = "Dataset", y =  "Effective fragment length\n(average mapped length)")
+#   } else if (col_name == "spike_in_pct") {
+#     labs(title = NULL, x = "Dataset", y =  "Fraction of reads mapping to ERCC spike-ins")
+#   } else if (col_name == "percentage_of_spliced_reads") {
+#     labs(title = NULL, x = "Dataset", y =  "Fraction of spliced reads (FSR)")
+#   } else {
+#     labs(title = NULL, x = "Dataset", y = clean_label(col_name))
+#   }
+#   
+#   
+#   p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = .data[[col_name]], fill = dataset_batch.y)) +
+#     geom_boxplot(aes(color = dataset_batch.y), alpha = 0.3, position = position_dodge(width = 0.75), outlier.shape = NA) +
+#     geom_point(aes(y = .data[[col_name]], color = dataset_batch.y), 
+#                position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.8), 
+#                shape = 21, size = 1.5, stroke = 0.2, alpha = 0.6) +
+#     label_block +
+#     theme_classic() +
+#     coord_cartesian(clip = "off") +
+#     theme(text=element_text(family="Arial"),
+#           panel.grid.major.x = element_blank(),
+#               panel.grid.minor.x = element_blank(),
+#               panel.grid.major.y = element_line(size = 0.8), 
+#               panel.grid.minor.y = element_blank(),
+#           plot.margin = margin(20, 20, 20, 50),
+#       axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust=0.85),
+#           axis.title = element_text(size = 12, face = "bold"),
+#           plot.title = element_blank(),
+#           legend.position = "none") +
+#     scale_x_discrete(labels = datasetsLabels) +
+#     scale_fill_manual(values = datasetsPalette, labels = datasetsLabels) +
+#     scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels)
+#   
+#   p <- add_bottom_brackets(p, bracket_df, levels(table_filtered$dataset_batch.y), y_base = -0.055)
+#   
+#   p <- add_bottom_brackets(p, bracket_df_2, levels(table_filtered$dataset_batch.y), y_base = -0.025, col = "grey60", lwd=2)
+#   
+#   
+#   return(p)
+# })
+# 
+# 
+# setwd("figures/")
+# 
+# for (i in 1:length(ggplot_objects)) {
+#   col_name <- column_names[i]
+#   output_file <- paste0(gsub(" ", "_", tolower(col_name)), "_external_datasets_boxplot_with_points.png")
+#   ggsave(output_file, ggplot_objects[[i]], width = 11, height = 6, dpi = 600, device = ragg::agg_png)
+#   output_file <- paste0(gsub(" ", "_", tolower(col_name)), "_external_datasets_boxplot_with_points.svg")
+#   ggsave(output_file, ggplot_objects[[i]], width = 11, height = 6, dpi = 600, device = "svg")
+# }
+
+#######
+# BPC prototype
+#######
+
 ggplot_objects <- lapply(column_names, function(col_name) {
   yvals <- table_filtered[[col_name]]
   yvals <- yvals[!is.na(yvals) & is.finite(yvals)]
@@ -229,6 +304,53 @@ ggplot_objects <- lapply(column_names, function(col_name) {
   }
   
   
+  bpc_info <- metadata[, c("run", "broad_protocol_category")]
+  table_filtered <- table_filtered %>%
+    left_join(bpc_info, by = c("sample_id" = "run"))
+  
+  
+  bpc_colors <- c(
+    "cfDNA" =  "#AECAD9",
+    "Custom" = "#D9BBAE",
+    "Exome-based (EB)" = "#BBE0BB",
+    "Whole RNA-Seq (oligo-dT pr.) (WRO)" = "#D0AED9",
+    "Whole RNA-Seq (random pr.) (WRR)" = "#D9D6AE"
+  )
+  
+  bpc_labels <- c(
+    "Custom" = "Custom",
+    "Exome-based (EB)" = "EB",
+    "Whole RNA-Seq (oligo-dT pr.) (WRO)" = "WRO",
+    "Whole RNA-Seq (random pr.) (WRR)" = "WRR",
+    "cfDNA" = "cfDNA"
+  )
+  
+  y_min <- min(table_filtered[[col_name]], na.rm = TRUE)
+  y_max <- max(table_filtered[[col_name]], na.rm = TRUE)
+  y_range <- y_max - y_min
+  
+  # Always place annotation tile below
+  annotation_y <- 0 - 0.05 * y_range
+  annotation_height <- 0.03 * y_range
+  
+  # Extend y-limits for tile 
+  y_limit_min <- min(annotation_y - annotation_height, y_min - 0.02 * y_range)
+  y_limit_max <- y_max + 0.1 * y_range
+  
+  
+  
+  bpc_order <- c("Custom", "Exome-based (EB)", "Whole RNA-Seq (oligo-dT pr.) (WRO)", "Whole RNA-Seq (random pr.) (WRR)", "cfDNA")
+  
+  annotation_df <- table_filtered %>%
+    select(dataset_batch.y, broad_protocol_category) %>%
+    distinct() %>%
+    mutate(
+      y = annotation_y,
+      broad_protocol_category = factor(broad_protocol_category, levels = bpc_order)
+    )
+  
+  
+  
   p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = .data[[col_name]], fill = dataset_batch.y)) +
     geom_boxplot(aes(color = dataset_batch.y), alpha = 0.3, position = position_dodge(width = 0.75), outlier.shape = NA) +
     geom_point(aes(y = .data[[col_name]], color = dataset_batch.y), 
@@ -238,39 +360,60 @@ ggplot_objects <- lapply(column_names, function(col_name) {
     theme_classic() +
     coord_cartesian(clip = "off") +
     theme(text=element_text(family="Arial"),
+          line = element_blank(),
           panel.grid.major.x = element_blank(),
-              panel.grid.minor.x = element_blank(),
-              panel.grid.major.y = element_line(size = 0.8), 
-              panel.grid.minor.y = element_blank(),
+          panel.grid.minor.x = element_blank(),
+          panel.grid.major.y = element_line(size = 0.8), 
+          panel.grid.minor.y = element_blank(),
           plot.margin = margin(20, 20, 20, 50),
-      axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust=0.85),
+          axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust=1.1),
           axis.title = element_text(size = 12, face = "bold"),
+          axis.title.x = element_blank(),
           plot.title = element_blank(),
           legend.position = "none") +
     scale_x_discrete(labels = datasetsLabels) +
-    scale_fill_manual(values = datasetsPalette, labels = datasetsLabels) +
-    scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels)
+    scale_fill_manual(values = datasetsPalette, labels = datasetsLabels, guide = "none") +
+    scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels, guide= "none") +
+    scale_y_continuous(
+      limits = c(y_limit_min, y_limit_max)  # extend a bit for annotations
+    )
   
-  p <- add_bottom_brackets(p, bracket_df, levels(table_filtered$dataset_batch.y), y_base = -0.055)
+  p <- p + new_scale_fill()  # VERY IMPORTANT, native ggplot does not like having two cals of scale_fill or scale_color, so ggnewscale is needed
   
-  p <- add_bottom_brackets(p, bracket_df_2, levels(table_filtered$dataset_batch.y), y_base = -0.025, col = "grey60", lwd=2)
+  p <- p +
+    geom_tile(data = annotation_df,
+              aes(x = dataset_batch.y, y = y, fill = broad_protocol_category),
+              width = 0.95, height = annotation_height,
+              inherit.aes = FALSE) +
+    scale_fill_manual(
+      name = "Bropad Protocol Category (BPC)",
+      values = bpc_colors,
+      labels = bpc_labels
+    ) + theme(text=element_text(family="Arial"),
+              legend.position = "bottom",  
+              legend.title = element_text(face = "bold", size = 9),
+              legend.text = element_text(size = 9),
+              legend.key.size = unit(0.4, "cm"),
+              legend.spacing.x = unit(0.2, "cm"),
+              legend.margin = margin(0, 0, 0, 0)
+    )
   
+  
+  p <- add_bottom_brackets(p, bracket_df, levels(table_filtered$dataset_batch.y),  y_base = 0.03)
+  #p <- add_bottom_brackets(p, bracket_df_2, levels(table_filtered$dataset_batch.y), y_base = -0.025, col = "grey60", lwd=2)
   
   return(p)
 })
-
 
 setwd("figures/")
 
 for (i in 1:length(ggplot_objects)) {
   col_name <- column_names[i]
-  output_file <- paste0(gsub(" ", "_", tolower(col_name)), "_external_datasets_boxplot_with_points.png")
+  output_file <- paste0(gsub(" ", "_", tolower(col_name)), "_annotation_row.png")
   ggsave(output_file, ggplot_objects[[i]], width = 11, height = 6, dpi = 600, device = ragg::agg_png)
-  output_file <- paste0(gsub(" ", "_", tolower(col_name)), "_external_datasets_boxplot_with_points.svg")
+  output_file <- paste0(gsub(" ", "_", tolower(col_name)), "_annotation_row.svg")
   ggsave(output_file, ggplot_objects[[i]], width = 11, height = 6, dpi = 600, device = "svg")
 }
-
-
 #####################################################
 # Stats for manuscript SPLICED READS
 ####################################################
@@ -401,36 +544,95 @@ quality_summary <- table_filtered %>%
     dataset_batch.y = factor(dataset_batch.y, levels = core_order)
   )
 
+bpc_info <- metadata[, c("dataset_batch", "broad_protocol_category")]
+bpc_info$dataset_batch.y <- bpc_info$dataset_batch
+
+
+bpc_colors <- c(
+  "cfDNA" =  "#AECAD9",
+  "Custom" = "#D9BBAE",
+  "Exome-based (EB)" = "#BBE0BB",
+  "Whole RNA-Seq (oligo-dT pr.) (WRO)" = "#D0AED9",
+  "Whole RNA-Seq (random pr.) (WRR)" = "#D9D6AE"
+)
+
+bpc_labels <- c(
+  "Custom" = "Custom",
+  "Exome-based (EB)" = "EB",
+  "Whole RNA-Seq (oligo-dT pr.) (WRO)" = "WRO",
+  "Whole RNA-Seq (random pr.) (WRR)" = "WRR",
+  "cfDNA" = "cfDNA"
+)
+
+y_limit_min <- min(table_filtered[[col_name]], na.rm = TRUE) - 6
+y_limit_max <- max(table_filtered[[col_name]], na.rm = TRUE) + 10
+
+bpc_order <- c("Custom", "Exome-based (EB)", "Whole RNA-Seq (oligo-dT pr.) (WRO)", "Whole RNA-Seq (random pr.) (WRR)", "cfDNA")
+
+annotation_df <- quality_summary %>%
+  select(dataset_batch.y) %>%
+  distinct() %>%
+  left_join(bpc_info, by = "dataset_batch.y") %>%
+  mutate(
+    y = -3,  # row height below 0 (stacked bars start at 0)
+    broad_protocol_category = factor(broad_protocol_category, levels = bpc_order)
+  )
+
+
 # Barplot of % high-quality samples per dataset batch
 quality_plot <- ggplot(quality_summary, aes(x = dataset_batch.y, y = percent_high_quality, fill = dataset_batch.y)) +
   geom_bar(stat = "identity", alpha = 0.8) +
   geom_text(aes(label = paste0("N=", high_quality)), vjust = -0.5, size = 3) +
-  scale_fill_manual(values = datasetsPalette) +
-  scale_x_discrete(labels = datasetsLabels) +
   labs(
     x = "Dataset",
     y = "Fraction of samples with NG80>1,000 and FSR>10%",
     title = "High-Quality Samples per Dataset"
   ) +
-  ylim(0, 105) +
+  #ylim(0, 105) +
   theme_classic() +
-  coord_cartesian(clip = "off") +
+  coord_cartesian(clip = "off", ylim = c(-6, 105)) +
   theme(text=element_text(family="Arial"),
+        line = element_blank(),
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank(),
         panel.grid.major.y = element_line(size = 0.8), 
         panel.grid.minor.y = element_blank(),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust=0.85),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust=1.1),
         axis.title = element_text(size = 12, face = "bold"),
+        axis.title.x = element_blank(),
         plot.title = element_blank(),
         plot.margin = margin(20, 20, 20, 45),
-        legend.position = "none") +
+        legend = "none") +
   scale_x_discrete(labels = datasetsLabels) +
-  scale_fill_manual(values = datasetsPalette, labels = datasetsLabels) +
+  scale_fill_manual(values = datasetsPalette, labels = datasetsLabels, guide = "none") +
   scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels)
 
-quality_plot <- add_bottom_brackets(quality_plot, bracket_df, levels(table_filtered$dataset_batch.y),  y_base = -0.055)
-quality_plot <- add_bottom_brackets(quality_plot, bracket_df_2, levels(table_filtered$dataset_batch.y), y_base = -0.025, col = "grey60", lwd=2)
+quality_plot <- quality_plot + new_scale_fill()
+
+quality_plot <- quality_plot +
+  geom_tile(
+    data = annotation_df,
+    aes(x = dataset_batch.y, y = y, fill = broad_protocol_category),
+    width = 0.95, height = 3,
+    inherit.aes = FALSE
+  ) +
+  scale_fill_manual(
+    name = "Broad Protocol Category (BPC)",
+    values = bpc_colors,
+    labels = bpc_labels
+  ) +
+  theme(
+    legend.position = "bottom",
+    legend.title = element_text(face = "bold", size = 10),
+    legend.text = element_text(size = 9),
+    legend.key.size = unit(0.4, "cm"),
+    legend.spacing.x = unit(0.2, "cm"),
+    legend.margin = margin(0, 0, 0, 0)
+  )
+
+
+quality_plot <- add_bottom_brackets(quality_plot, bracket_df, levels(table_filtered$dataset_batch.y),  y_base = 0.03)
+#quality_plot <- add_bottom_brackets(quality_plot, bracket_df_2, levels(table_filtered$dataset_batch.y), y_base = -0.025, col = "grey60", lwd=2)
 
 
 # Save the new barplot
@@ -448,13 +650,13 @@ strandedness_info <- metadata[, c("run", "cdna_library_type")]
 table_filtered <- table_filtered %>%
   left_join(strandedness_info, by = c("sample_id" = "run"))
 
-label_positions <- table_filtered %>%
-  group_by(dataset_batch.y, cdna_library_type) %>%
-  summarise(
-    y = max(Fragments_mapping_to_expected_strand_pct, na.rm = TRUE),
-    .groups = "drop"
-  ) %>%
-  mutate(y = y + 2)  
+# label_positions <- table_filtered %>%
+#   group_by(dataset_batch.y, cdna_library_type) %>%
+#   summarise(
+#     y = max(Fragments_mapping_to_expected_strand_pct, na.rm = TRUE),
+#     .groups = "drop"
+#   ) %>%
+#   mutate(y = y + 2)  
 
 
 strandedness_colors <- c(
@@ -468,10 +670,10 @@ annotation_df <- table_filtered %>%
   mutate(y = 105) 
 
 
-label_positions <- label_positions %>%
-  mutate(cdna_library_type = recode(cdna_library_type,
-                                    "Reverse" = "R",
-                                    "Unstranded" = "U"))
+# label_positions <- label_positions %>%
+#   mutate(cdna_library_type = recode(cdna_library_type,
+#                                     "Reverse" = "R",
+#                                     "Unstranded" = "U"))
 
 
 

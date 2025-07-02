@@ -215,9 +215,47 @@ add_bottom_brackets <- function(p, bracket_df, factor_levels, y_base = -0.03, he
   return(p)
 }
 
+bpc_info <- metadata[, c("dataset_batch", "broad_protocol_category")]
+bpc_info$dataset_batch_clean <- recode(bpc_info$dataset_batch, !!!clean_dataset_names)
+
+# label_positions <- table_filtered %>%
+#   group_by(dataset_batch.y, broad_protocol_category) %>%
+#   summarise(
+#     y = max(col_name, na.rm = TRUE),
+#     .groups = "drop"
+#   ) %>%
+#   mutate(y = y + 2)  
 
 
+bpc_colors <- c(
+  "cfDNA" =  "#AECAD9",
+  "Custom" = "#D9BBAE",
+  "Exome-based (EB)" = "#BBE0BB",
+  "Whole RNA-Seq (oligo-dT pr.) (WRO)" = "#D0AED9",
+  "Whole RNA-Seq (random pr.) (WRR)" = "#D9D6AE"
+)
 
+bpc_labels <- c(
+  "Custom" = "Custom",
+  "Exome-based (EB)" = "EB",
+  "Whole RNA-Seq (oligo-dT pr.) (WRO)" = "WRO",
+  "Whole RNA-Seq (random pr.) (WRR)" = "WRR",
+  "cfDNA" = "cfDNA"
+)
+
+y_limit_min <- min(table_filtered[[col_name]], na.rm = TRUE) - 6
+y_limit_max <- max(table_filtered[[col_name]], na.rm = TRUE) + 10
+
+bpc_order <- c("Custom", "Exome-based (EB)", "Whole RNA-Seq (oligo-dT pr.) (WRO)", "Whole RNA-Seq (random pr.) (WRR)", "cfDNA")
+
+annotation_df <- phenotype_merged_plot_data %>%
+  select(dataset_batch_clean) %>%
+  distinct() %>%
+  left_join(bpc_info, by = "dataset_batch_clean") %>%
+  mutate(
+    y = -12,  # row height below 0 (stacked bars start at 0)
+    broad_protocol_category = factor(broad_protocol_category, levels = bpc_order)
+  )
 
 
 p <- ggplot(phenotype_merged_plot_data, aes(x = dataset_batch_clean, y = count, fill = phenotype_merged)) +
@@ -227,9 +265,10 @@ p <- ggplot(phenotype_merged_plot_data, aes(x = dataset_batch_clean, y = count, 
   theme_minimal(base_size = 20) +
   theme(
     text=element_text(family="Arial"),
-    axis.text.x = element_text(angle = 45, vjust = 0.9, hjust = 1, size = 12, color = "black"),
-    axis.title.x = element_text(size = 20), 
-    axis.title.y = element_text(size = 20),  
+    axis.text.x = element_text(angle = 45, vjust = 1.1, hjust = 1, size = 12, color = "black"),
+    axis.title.x = element_blank(), 
+    axis.title.y = element_text(size = 20), 
+    legend.position = "right",
     legend.title = element_text(size = 18, face = "bold"),  
     legend.text = element_text(size = 14),  
     panel.grid.major.x = element_blank(),
@@ -238,13 +277,35 @@ p <- ggplot(phenotype_merged_plot_data, aes(x = dataset_batch_clean, y = count, 
     panel.grid.minor.y = element_blank(),
     plot.margin = margin(20, 20, 20, 40),
     plot.background = element_rect(fill = "white", colour = "white") 
-  ) + coord_cartesian(clip = "off")
+  ) + coord_cartesian(clip = "off")#, ylim = c(-20, NA))
 
-#p <- add_bottom_brackets(p, bracket_df, levels(phenotype_merged_plot_data$dataset_batch_clean))
+# p <- p + new_scale_fill()
+# 
+# p <- p +
+#   geom_tile(
+#     data = annotation_df,
+#     aes(x = dataset_batch_clean, y = y, fill = broad_protocol_category),
+#     width = 0.95, height = 8,
+#     inherit.aes = FALSE
+#   ) +
+#   scale_fill_manual(
+#     name = "BPC",
+#     values = bpc_colors,
+#     labels = bpc_labels
+#   ) +
+#   theme(
+#     legend.position = "right",
+#     legend.title = element_text(face = "bold", size = 14),
+#     legend.text = element_text(size = 12),
+#     legend.key.size = unit(0.4, "cm"),
+#     legend.spacing.x = unit(0.2, "cm"),
+#     legend.margin = margin(0, 0, 0, 0)
+#   )
 
-p <- add_bottom_brackets(p, bracket_df, levels(phenotype_merged_plot_data$dataset_batch_clean), y_base = -0.03)
 
-p <- add_bottom_brackets(p, bracket_df_2, levels(phenotype_merged_plot_data$dataset_batch_clean), y_base = -0.001, col = "grey60", lwd=2)
+p <- add_bottom_brackets(p, bracket_df, levels(phenotype_merged_plot_data$dataset_batch_clean), y_base = 0.03)
+
+#p <- add_bottom_brackets(p, bracket_df_2, levels(phenotype_merged_plot_data$dataset_batch_clean), y_base = -0.001, col = "grey60", lwd=2)
 
 
 ggsave("figures/fig_1a_combined_simplified_and_cancer_detail.png",
