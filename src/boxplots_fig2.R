@@ -256,11 +256,9 @@ ggplot_objects <- lapply(column_names, function(col_name) {
   y_max <- max(table_filtered[[col_name]], na.rm = TRUE)
   y_range <- y_max - y_min
   
-  # Always place annotation tile below
   annotation_y <- 0 - 0.05 * y_range
   annotation_height <- 0.03 * y_range
   
-  # Extend y-limits for tile 
   y_limit_min <- min(annotation_y - annotation_height, y_min - 0.02 * y_range)
   y_limit_max <- y_max + 0.1 * y_range
   
@@ -298,7 +296,7 @@ ggplot_objects <- lapply(column_names, function(col_name) {
     scale_fill_manual(values = datasetsPalette, labels = datasetsLabels, guide = "none") +
     scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels, guide= "none") +
     scale_y_continuous(
-      limits = c(y_limit_min, y_limit_max)  # extend a bit for annotations
+      limits = c(y_limit_min, y_limit_max)  
     )
   
   p <- p + new_scale_fill()  # VERY IMPORTANT, native ggplot does not like having two cals of scale_fill or scale_color, so ggnewscale is needed
@@ -469,13 +467,11 @@ quality_summary <- table_filtered %>%
 bpc_info <- metadata[, c("dataset_batch", "broad_protocol_category")]
 bpc_info$dataset_batch.y <- bpc_info$dataset_batch
 
-# Compute y-axis range
 y_vals <- quality_summary$percent_high_quality
 y_min <- min(y_vals, na.rm = TRUE)
 y_max <- max(y_vals, na.rm = TRUE)
 y_range <- y_max - y_min
 
-# Always place annotation tile below 0, proportional to range
 annotation_y <- 0 - 0.05 * y_range
 annotation_height <- 0.03 * y_range
 
@@ -688,7 +684,6 @@ table_filtered <- table_filtered %>%
   ))
 
 
-# Compute dynamic placement below zero
 y_vals <- table_filtered$fragment_number
 y_min <- min(y_vals, na.rm = TRUE)
 y_max <- max(y_vals, na.rm = TRUE)
@@ -1095,42 +1090,6 @@ median_value <- median(x, na.rm = TRUE)
 sd_value <- sd(x, na.rm = TRUE)
 
 cat("Median ± SD:", sprintf("%.2f ± %.2f", median_value, sd_value), "\n")
-#################################
-########### Diversity scatterplot
-#################################
-p <- ggplot(data = table_filtered, aes(x = percentage_of_spliced_reads, y = genes_contributing_to_80._of_reads, color = dataset_batch.y)) +
-  geom_point(size = 2, alpha = 0.7) + 
-  geom_density_2d(aes(color = dataset_batch.y), alpha = 0.5, size = 0.8) +
-  labs(title = "",
-       x = "Percentage of spliced reads",
-       y = "NG80",
-       color = "")+
-  theme_minimal(base_size = 14) + 
-  theme(
-    plot.title = element_text(size = 16, face = "bold", hjust = 0.5), 
-    axis.title = element_text(size = 14, face = "bold"), 
-    axis.text = element_text(size = 12), 
-    legend.title = element_text(size = 12, face = "bold"),
-    legend.text = element_text(size = 10), 
-    legend.position = "right", 
-    legend.key.height = unit(0.5, "lines"),  
-    legend.box = "vertical",
-    panel.grid.major = element_line(color = "gray80"), 
-    panel.grid.minor = element_blank(),
-    plot.background = element_rect(
-      fill = "white",
-      colour = "white"
-    )
-  ) +
-  scale_color_manual(values = datasetsPalette, labels= datasetsLabels) 
-
-ps <- p  +  scale_y_continuous(trans=log10_trans()) +
-  guides(color = guide_legend(ncol = 1))
-
-
-ggsave("figures/diversity_scatterplot.png", plot = ps, width = 12, height = 8, dpi = 600, device = ragg::agg_png)
-ggsave("figures/diversity_scatterplot.svg", plot = ps, width = 12, height = 8,  dpi = 600, device = "svg")
-
 
 ##################################
 # Per dataset diversity scatterplot
@@ -1141,8 +1100,6 @@ table_filtered$dataset_batch.y <- factor(table_filtered$dataset_batch.y, levels 
 adjusted_palette <- adjusted_palette[core_order]
 
 
-
-# Set proper order and labels
 table_filtered$dataset_batch.y <- factor(
   table_filtered$dataset_batch.y,
   levels = core_order,
@@ -1151,8 +1108,6 @@ table_filtered$dataset_batch.y <- factor(
 
 adjusted_palette <- adjusted_palette[core_order]
 names(adjusted_palette) <- datasetsLabels[core_order]  # to match new factor labels
-
-
 
 
 p_facet <- ggplot(
@@ -1184,7 +1139,6 @@ p_facet <- ggplot(
   scale_y_continuous(trans = log10_trans())
 
 
-# Define axis limits globally
 x_lim <- range(table_filtered$percentage_of_spliced_reads, na.rm = TRUE)
 y_lim <- range(table_filtered$genes_contributing_to_80._of_reads, na.rm = TRUE)
 
@@ -1227,18 +1181,8 @@ ggsave("figures/diversity_scatterplot_facet.svg", p_facet, width = 20, height = 
 ################################
 k2_results <- read.delim("~/fl-cfRNAmeta/tables/taxa_simple_df_w_batch.tsv")
 
-# First ensure dataset_batch is available in k2_results
-# Then clean sample_name only for affected dataset_batch values
-# k2_results_clean <- k2_results %>%
-#   mutate(sample_name = case_when(
-#     dataset_batch %in% c("flomics_2", "decruyenaere") ~ sub("_.*", "", sample_name),
-#     TRUE ~ sample_name
-#   ))
-
-# Compute microbial reads again if not already there
 k2_results$microbial <- k2_results$fungi + k2_results$bacteria
 
-# Merge into table_filtered using cleaned sample names
 table_filtered <- table_filtered %>%
   left_join(k2_results %>% select(sample_name, microbial),
             by = c("sample_id" = "sample_name"))
@@ -1292,477 +1236,3 @@ p_microbial <- ggplot(
 
 ggsave("figures/microbial_vs_mapped.png", p_microbial, width = 20, height = 10, dpi = 600, device = ragg::agg_png)
 ggsave("figures/microbial_vs_mapped.svg", p_microbial, width = 20, height = 10, device = "svg")
-
-
-####################################
-############ Biotype stacked barplot (DEPRECATED)
-####################################
-biotype_columns <- grep("_pct$", names(table_filtered), value = TRUE)
-
-biotype_data <- merged_df[, 66:147]
-biotype_data <- biotype_data %>% dplyr::select(-contains('_fc'))
-
-# Create supergroups with corrected names
-biotype_data$protein_coding_1 <- rowSums(biotype_data[, c("ig_c_gene", "ig_d_gene", "ig_j_gene",
-                                                          "ig_v_gene", "tr_c_gene", "tr_d_gene", "tr_j_gene",
-                                                          "tr_v_gene", "protein_coding")], na.rm = TRUE)
-
-#biotype_data$mt_ncrna <- rowSums(biotype_data[, c("mt_rrna", "mt_trna")], na.rm = TRUE)
-
-biotype_data$smrna <- rowSums(biotype_data[, c("mirna", "snrna", "snorna")], na.rm = TRUE)
-
-biotype_data$pseudogene_1 <- rowSums(biotype_data[, c(
-  "ig_c_pseudogene", "ig_j_pseudogene", "ig_v_pseudogene", "ig_pseudogene", "tr_j_pseudogene",
-  "tr_v_pseudogene", "polymorphic_pseudogene", "processed_pseudogene", "pseudogene", "rrna_pseudogene",
-  "transcribed_processed_pseudogene", "transcribed_unitary_pseudogene", "transcribed_unprocessed_pseudogene",
-  "translated_processed_pseudogene", "translated_unprocessed_pseudogene", "unitary_pseudogene",
-  "unprocessed_pseudogene")], na.rm = TRUE)
-
-
-biotype_data$other <- rowSums(biotype_data[, c("tec", "ribozyme", "srna", "scrna", "scarna", "vault_rna")], na.rm = TRUE)
-
-# Select supergroup columns + sequencing_batch
-biotype_data_selected <- biotype_data %>%
-  mutate(sequencing_batch = merged_df$sequencing_batch) %>%
-  dplyr::select(sequencing_batch,
-                protein_coding_1,
-                lncrna,
-                mt_rrna,
-                mt_trna,
-                smrna,
-                rrna,
-                misc_rna,
-                pseudogene_1,
-                spike_in,
-                other)
-
-biotype_data_selected$sequencing_batch[grepl("^FL", biotype_data_selected$sequencing_batch)] <- "liquidx"
-
-
-# Summarize across datasets
-biotype_summary_supergroups <- biotype_data_selected %>%
-  group_by(sequencing_batch) %>%
-  summarise(across(everything(), ~mean(.x, na.rm = TRUE))) %>%
-  pivot_longer(-sequencing_batch, names_to = "biotype", values_to = "mean_pct")
-
-
-# Clean labels
-biotype_summary_supergroups$biotype <- gsub("_1$", "", biotype_summary_supergroups$biotype)
-biotype_summary_supergroups$biotype <- gsub("_", " ", biotype_summary_supergroups$biotype)
-
-# Use your dataset label mapping
-biotype_summary_supergroups$sequencing_batch <- factor(biotype_summary_supergroups$sequencing_batch,
-                                                       levels = names(datasetsLabels),
-                                                       labels = datasetsLabels)
-
-biotype_summary_supergroups$sequencing_batch <- factor(biotype_summary_supergroups$sequencing_batch,
-                                                       levels = core_order)
-
-
-# Distinct palette for supergroups
-supergroup_palette <- c(
-  "protein coding" = "#1f77b4",
-  "lncrna"         = "#ff7f0e",
-  "mt rrna"        = "#2ca02c",
-  "mt trna"        = "darkgreen",
-  "smrna"          = "#d62728",
-  "rrna"           = "#9467bd",
-  "misc rna"       = "#17becf",
-  "pseudogene"     = "#bcbd22",
-  "spike in"       = "#8c564b",
-  "other"          = "gray"
-)
-
-# Plot
-p_supergroups <- ggplot(biotype_summary_supergroups, aes(x = sequencing_batch, y = mean_pct, fill = biotype)) +
-  geom_bar(stat = "identity", position = "fill") +
-  scale_y_continuous(labels = scales::percent_format()) +
-  labs(x = "Dataset", y = "% of reads", fill = "Biotype Group") +
-  scale_fill_manual(values = supergroup_palette) +
-  theme_minimal(base_size = 12) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        legend.position = "bottom",
-        legend.key.size = unit(0.5, "cm"),
-        legend.spacing.x = unit(0.3, 'cm'))
-
-ggsave("biotype_supergroup_distribution_per_dataset.png", p_supergroups, width = 12, height = 4, dpi = 600)
-ggsave("biotype_supergroup_distribution_per_dataset.pdf", p_supergroups, width = 12, height = 4, dpi = 600)
-########################################
-
-###############################
-############ Protein coding pct DEPRECATED
-###############################
-p <- ggplot(table_filtered, aes(x = sequencing_batch, y = protein_coding_pct, fill = sequencing_batch)) +
-  geom_boxplot(alpha = 0.6, aes(color = sequencing_batch), position = position_dodge(width = 0.75), outlier.shape = NA) +
-  geom_point(aes(y = protein_coding_pct, color = sequencing_batch), 
-             position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.8), 
-             shape = 21, size = 1.5, stroke = 0.2, alpha = 0.6) +
-  labs(title = "",
-       x = "Dataset", y = "Protein coding %") +
-  theme_classic() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
-        axis.title = element_text(size = 12, face = "bold"),
-        plot.title = element_text(size = 14, face = "bold"),
-        legend.position = "none") +
-  scale_x_discrete(labels = datasetsLabels) +
-  scale_fill_manual(values = datasetsPalette, labels = datasetsLabels) +
-  scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels)
-
-
-ggsave("protein_coding_pct.png", p, width = 9, height = 6, dpi = 600)
-ggsave("protein_coding_pct.pdf", p, width = 9, height = 6, dpi = 600)
-
-# p <- ggplot(data = table_filtered, aes(x = Exonic_percentage, y = log(Genes_contributing_to_80._of_reads), color = dataset)) +
-#   geom_point() +
-#   geom_density_2d() + # comment to remove the density lines
-#   labs(x = "exonic percentage",
-#        y = "log(# of genes contributing to 80% of reads)",
-#        color = "") +
-#   theme_minimal() +
-#   scale_color_manual(values = datasetsPalette, labels = datasetsLabels)+
-#   scale_fill_manual(values = datasetsPalette) 
-
-##################################
-################## Shannon entropy DEPRECATED
-##################################
-
-shannon <- read.table("~/cfRNA-meta/exp_mat/shannon_entropy_with_flomics_1_andliquidx.csv", header = TRUE, sep = ",")
-colnames(shannon) <- c("sequencing_batch", "sample_id", "ShannonEntropy")
-
-table_filtered_clean <- table_filtered
-table_filtered_clean$sample_id <- gsub("FL-|-", "", table_filtered_clean$sample_id)
-
-
-table_filtered_combined <- left_join(table_filtered_clean, shannon, by = "sample_id")
-
-p <- ggplot(data = table_filtered_combined, aes(x = exonic_reads_minus_spike_ins, y = ShannonEntropy, color = dataset)) +
-  geom_point(size = 2, alpha = 0.7) + 
-  geom_density_2d(aes(color = dataset), alpha = 0.5, size = 0.8) +
-  labs(title = "",
-       x = "Exonic percentage minus spike-ins",
-       y = "Shannon Entropy",
-       color = "")+
-  theme_minimal(base_size = 14) + 
-  theme(
-    plot.title = element_text(size = 16, face = "bold", hjust = 0.5), 
-    axis.title = element_text(size = 14, face = "bold"), 
-    axis.text = element_text(size = 12), 
-    legend.title = element_text(size = 12, face = "bold"),
-    legend.text = element_text(size = 10), 
-    legend.position = "right", 
-    panel.grid.major = element_line(color = "gray80"), 
-    panel.grid.minor = element_blank(),
-    plot.background = element_rect(
-      fill = "white",
-      colour = "white"
-    )
-  ) +
-  scale_color_manual(values = datasetsPalette, labels= datasetsLabels) 
-
-p <- ggplot(table_filtered_combined, aes(x = sequencing_batch.x, y = ShannonEntropy, fill = sequencing_batch.x)) +
-  geom_boxplot(alpha = 0.3, aes(color = sequencing_batch.x), position = position_dodge(width = 0.75), outlier.shape = NA ) +
-  geom_point(aes(y = ShannonEntropy, color = sequencing_batch.x), 
-             position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.8), 
-             shape = 16, size = 2) +
-  labs(title = "",
-       x = "Dataset", y = "Shannon Entropy") +
-  theme_classic() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
-        axis.title = element_text(size = 12, face = "bold"),
-        plot.title = element_blank(),
-        legend.position = "none", 
-        legend.title = element_blank(),
-        legend.key.size = unit(0.5, "cm"),
-        legend.spacing.y = unit(0.2, 'cm')) +
-  scale_x_discrete(labels = datasetsLabels) +
-  scale_fill_manual(values = datasetsPalette, labels = datasetsLabels) +
-  scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels)
-
-ggsave("shannon_entropy_boxplot.png", plot = p, width = 9, height = 6, dpi = 600)
-ggsave("shannon_entropy_boxplot.pdf", plot = p, width = 9, height = 6, dpi = 600)
-
-
-
-################################################################################
-# FOR SLIDE DECK
-################################################################################
-table_filtered_slide_deck <- table_filtered
-
-# Remove datasets
-table_filtered_slide_deck <- table_filtered_slide_deck[table_filtered_slide_deck$sequencing_batch != "chalasani", ]
-table_filtered_slide_deck <- table_filtered_slide_deck[table_filtered_slide_deck$sequencing_batch != "toden", ]
-table_filtered_slide_deck <- table_filtered_slide_deck[table_filtered_slide_deck$sequencing_batch != "ibarra", ]
-table_filtered_slide_deck <- table_filtered_slide_deck[table_filtered_slide_deck$sequencing_batch != "sun_1", ]
-table_filtered_slide_deck <- table_filtered_slide_deck[table_filtered_slide_deck$sequencing_batch != "sun_2", ]
-table_filtered_slide_deck <- table_filtered_slide_deck[table_filtered_slide_deck$sequencing_batch != "reggiardo", ]
-table_filtered_slide_deck <- table_filtered_slide_deck[table_filtered_slide_deck$sequencing_batch != "wang", ]
-table_filtered_slide_deck <- table_filtered_slide_deck[table_filtered_slide_deck$sequencing_batch != "giraldez", ]
-table_filtered_slide_deck <- table_filtered_slide_deck[table_filtered_slide_deck$sequencing_batch != "moufarrej", ]
-table_filtered_slide_deck <- table_filtered_slide_deck[table_filtered_slide_deck$sequencing_batch != "rozowsky", ]
-
-#joint_table_final <- joint_table_final[joint_table_final$sequencing_batch != "taowei", ]
-
-table_filtered_slide_deck$sequencing_batch <- as.character(table_filtered_slide_deck$sequencing_batch)
-
-table_filtered_slide_deck$dataset <- ifelse(
-  table_filtered_slide_deck$sequencing_batch %in% c("block_1", "block_2"), "block",
-  ifelse(table_filtered_slide_deck$sequencing_batch %in% c("roskams_1", "roskams_2"), "roskams",
-         table_filtered_slide_deck$sequencing_batch)
-)
-
-table_filtered_slide_deck$dataset <- factor(table_filtered_slide_deck$dataset, levels = c( "liquidx","block" ,"decruyenaere", "zhu", "chen",  "ngo", "roskams", "moufarrej","tao","rozowsky", "taowei"))
-
-datasetsPalette=c( "liquidx" = "#144d6b", "block" = "#b3b3b3" , "decruyenaere" =  "#b3b3b3" , "zhu" = "#b3b3b3", "chen" = "#b3b3b3", "ngo" =  "#b3b3b3", "roskams" = "#b3b3b3" , "moufarrej" = "#b3b3b3",  "tao" ="#b3b3b3","rozowsky" = "#006600", "taowei"="#B32400")
-
-datasetsLabels=c("liquidx" = "Flomics", "block" = "Block", "chen" = "Chen", "decruyenaere" = "Decruyenaere", "ngo" = "Ngo", "roskams" = "Roskams-Hieter","moufarrej" = "Moufarrej ","rozowsky"="ENCODE\n(bulk tissue RNA-Seq)", "tao" = "Tao", "zhu" ="Zhu", "taowei"="Wei (cfDNA)")
-
-
-darken_color <- function(color, factor = 1.3) {
-  rgb_col <- col2rgb(color) / 255
-  darker_rgb <- pmin(rgb_col * (1 / factor), 1)
-  rgb(darker_rgb[1], darker_rgb[2], darker_rgb[3])
-}
-
-datasetsOutlinePalette <- sapply(datasetsPalette, darken_color)
-
-p <- ggplot(table_filtered_slide_deck, aes(x = dataset, y = percentage_of_spliced_reads, fill = dataset)) +
-  geom_boxplot(aes(color = dataset), alpha = 0.6, position = position_dodge(width = 0.75), outlier.shape = NA) +
-  geom_point(aes(y = percentage_of_spliced_reads, color = dataset), 
-             position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.8), 
-             shape = 21, size = 1.5, stroke = 0.2, alpha = 0.6) +
-  labs(title = "",
-       x = "Dataset", y = "Percent of spliced reads") +
-  theme_classic() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
-        axis.title = element_text(size = 12, face = "bold"),
-        plot.title = element_text(size = 14, face = "bold"),
-        legend.position = "none", 
-        legend.title = element_blank(),
-        legend.key.size = unit(0.5, "cm"),
-        legend.spacing.y = unit(0.2, 'cm')) +
-  scale_x_discrete(labels = datasetsLabels) +
-  scale_fill_manual(values = datasetsPalette, labels = datasetsLabels) +
-  scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels) + # Match outline colors to fill
-  guides(fill = guide_legend(override.aes = list(color = "black"), ncol = 1)) 
-
-ggsave("percent_of_spliced_reads_slide_deck_darker_outline.png", p, width = 8, height = 6)
-ggsave("percent_of_spliced_reads_slide_deck_darker_outline.pdf", p, width = 8, height = 6)
-
-darken_color <- function(color, factor = 1.3) {
-  rgb_col <- col2rgb(color) / 255
-  darker_rgb <- pmin(rgb_col * (1 / factor), 1)
-  rgb(darker_rgb[1], darker_rgb[2], darker_rgb[3])
-}
-
-datasetsOutlinePalette <- sapply(datasetsPalette, darken_color)
-
-
-p <- ggplot(table_filtered_slide_deck, aes(x = dataset, y = genes_contributing_to_80._of_reads, fill = dataset)) +
-  geom_boxplot(aes(color = dataset), alpha = 0.6, position = position_dodge(width = 0.75), outlier.shape = NA) +
-  geom_point(aes(y = genes_contributing_to_80._of_reads, color = dataset), 
-             position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.8), 
-             shape = 21, size = 1.5, stroke = 0.2, alpha = 0.6) +
-  labs(title = "",
-       x = "Dataset", y = "Library diversity\n(# genes contributing to 80% of reads)") +
-  theme_classic() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
-        axis.title = element_text(size = 12, face = "bold"),
-        plot.title = element_text(size = 14, face = "bold"),
-        legend.position = "none", 
-        legend.title = element_blank(),
-        legend.key.size = unit(0.5, "cm"),
-        legend.spacing.y = unit(0.2, 'cm')) +
-  scale_x_discrete(labels = datasetsLabels) +
-  scale_fill_manual(values = datasetsPalette, labels = datasetsLabels) +
-  scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels) + # Match outline colors to fill
-  guides(fill = guide_legend(override.aes = list(color = "black"), ncol = 1)) 
-
-ggsave("library_diversity_slide_deck.png", p, width = 8, height = 6)
-ggsave("library_diversity_slide_deck.pdf", p, width = 8, height = 6)
-
-ps <- p  +  scale_y_continuous(trans=log10_trans()) 
-ggsave("library_diversity_slide_deck_log10.png", ps, width = 8, height = 6)
-ggsave("library_diversity_slide_deck_log10.pdf", ps, width = 8, height = 6)
-
-
-################## Shannon entropy
-
-shannon <- read.table("~/cfRNA-meta/exp_mat/shannon_entropy_with_liquidx.csv", header = TRUE, sep = ",")
-colnames(shannon) <- c("sequencing_batch", "sample_id", "ShannonEntropy")
-
-# Remove FL- and - from sample_id column so both tables match
-table_filtered_slide_deck$sample_id <- gsub("-", "", gsub("^FL-", "", table_filtered_slide_deck$sample_id))
-
-table_filtered_combined <- left_join(table_filtered_slide_deck, shannon, by = "sample_id")
-
-p <- ggplot(data = table_filtered_combined, aes(x = percentage_of_spliced_reads, y = genes_contributing_to_80._of_reads, color = dataset)) +
-  geom_point(size = 2, alpha = 0.7) + 
-  geom_density_2d(aes(color = dataset), alpha = 0.5, size = 0.8) +
-  labs(title = "",
-       x = "Percent of spliced reads",
-       y = "Library diversity",
-       color = "")+
-  theme_minimal(base_size = 14) + 
-  theme(
-    plot.title = element_text(size = 16, face = "bold", hjust = 0.5), 
-    axis.title = element_text(size = 14, face = "bold"), 
-    axis.text = element_text(size = 12), 
-    legend.title = element_text(size = 12, face = "bold"),
-    legend.text = element_text(size = 10), 
-    legend.position = "right", 
-    panel.grid.major = element_line(color = "gray80"), 
-    panel.grid.minor = element_blank(),
-    plot.background = element_rect(
-      fill = "white",
-      colour = "white"
-    )
-  ) +
-  scale_color_manual(values = datasetsPalette, labels= datasetsLabels) 
-ps <- p  +  scale_y_continuous(trans=log2_trans()) 
-
-ggsave("library_vs_spliced.png", plot = ps, width = 12, height = 8, dpi = 600)
-ggsave("library_vs_spliced.pdf", plot = ps, width = 12, height = 8, dpi = 600)
-
-
-p <- ggplot(data = table_filtered_combined, aes(x = percentage_of_spliced_reads, y = genes_contributing_to_80._of_reads, color = dataset)) +
-  geom_point(size = 2, alpha = 0.7) + 
-  geom_density_2d(aes(color = dataset), alpha = 0.5, size = 0.8) +
-  labs(title = "",
-       x = "Percent of spliced reads",
-       y = "Library diversity",
-       color = "") +
-  theme_minimal(base_size = 14) + 
-  theme(
-    plot.title = element_text(size = 16, face = "bold", hjust = 0.5), 
-    axis.title = element_text(size = 14, face = "bold"), 
-    axis.text = element_text(size = 12), 
-    legend.title = element_text(size = 12, face = "bold"),
-    legend.text = element_text(size = 10), 
-    legend.position = "left", 
-    panel.grid.major = element_line(color = "gray80"), 
-    panel.grid.minor = element_blank(),
-    plot.background = element_rect(fill = "white", colour = "white")
-  ) +
-  scale_color_manual(values = datasetsPalette, labels = datasetsLabels) +
-  scale_y_continuous(trans = log2_trans())
-
-pd <- ggMarginal(p, groupColour = TRUE, groupFill = TRUE, type = "density")
-pb <- ggMarginal(p, groupColour = FALSE, groupFill = TRUE, type = "boxplot")
-
-ggsave("library_vs_spliced_bp.png", plot = pb, width = 15, height = 8, dpi = 600)
-ggsave("library_vs_spliced_bp.pdf", plot = pb, width = 15, height = 8, dpi = 600)
-
-
-datasetsLabels <- c(
-  "liquidx" = "Flomics",
-  "block" = "Block",
-  "decruyenaere" = "Decruyenaere",
-  "zhu" = "Zhu",
-  "chen" = "Chen",
-  "ngo" = "Ngo",
-  "roskams" = "Roskams-Hieter",
-  "moufarrej" = "Moufarrej",
-  "tao" = "Tao",
-  "rozowsky" = "ENCODE (bulk tissue RNA-Seq)",
-  "taowei" = "Wei (cfDNA)"
-)
-datasetsPalette=c( "Flomics" = "#144d6b",
-                   "Block" = "#b3b3b3" ,
-                   "Decruyenaere" =  "#b3b3b3",
-                   "Zhu" = "#b3b3b3",
-                   "Chen" = "#b3b3b3",
-                   "Ngo" =  "#b3b3b3", 
-                   "Roskams-Hieter" = "#b3b3b3",
-                   "Moufarrej" = "#b3b3b3",  
-                   "Tao" ="#b3b3b3",
-                   "ENCODE (bulk tissue RNA-Seq)" = "#006600", 
-                   "Wei (cfDNA)"="#B32400")
-
-
-
-table_plot <- table_filtered_combined %>%
-  mutate(
-    dataset = datasetsLabels[dataset],  # relabel dataset values
-    log_lib_diversity = genes_contributing_to_80._of_reads
-    #log_lib_diversity = log10(genes_contributing_to_80._of_reads)
-  ) %>%
-  filter(!is.na(percentage_of_spliced_reads), !is.na(log_lib_diversity))
-
-order <- c("Flomics", "Block", "Decruyenaere", "Zhu", "Chen", "Ngo", "Roskams-Hieter", "Moufarrej", "Tao", "Wei (cfDNA)", "ENCODE (bulk tissue RNA-Seq)")
-table_plot$dataset <- factor(table_plot$dataset, levels = order)
-
-
-p <- ggplot(table_plot, aes(x = percentage_of_spliced_reads, y = log_lib_diversity, color = dataset)) +
-  geom_point(size = 2, alpha = 0.7) +
-  geom_density_2d(alpha = 0.5, size = 0.8) +
-  
-  geom_xsideboxplot(
-    aes(y = dataset, fill = dataset), orientation = "y",
-    width = 0.6,
-    outlier.shape = NA,
-    #coef = 0,
-    alpha = 0.3,
-    side = "top",
-    show.legend = FALSE
-  ) +
-  
-  geom_ysideboxplot(
-    aes(x = dataset, group = dataset, fill = dataset), orientation = "x",
-    width = 0.6,
-    outlier.shape = NA,
-    #coef = 0,
-    alpha = 0.3,
-    side = "right",
-    show.legend = FALSE
-  ) +
-  
-  scale_color_manual(values = datasetsPalette, labels = datasetsLabels) +
-  scale_fill_manual(values = datasetsPalette) +
-  
-  labs(
-    x = "Percent of spliced reads",
-    y = "Library diversity\n(# of genes contributing to 80% of reads)",
-    color = ""
-  ) +
-  
-  theme_minimal(base_size = 14) +
-  theme(
-    legend.position = "none",
-    ggside.panel.scale = 0.3, 
-    ggside.axis.text = element_text(size = 8),
-    panel.grid.minor = element_blank(),
-    ggside.axis.text.x = element_blank(),
-    ggside.panel.scale.x = 0.25,  # smaller panel
-    ggside.panel.scale.y = 0.25, 
-    plot.background = element_rect(fill = "white", colour = "white"),
-    panel.grid.major = element_blank()
-  )
-
-ps <- p + scale_y_continuous(trans=log10_trans()) 
-
-ggsave("library_vs_spliced_boxplots.png", plot = ps, width = 13, height = 10, dpi = 600)
-ggsave("library_vs_spliced_boxplots.pdf", plot = ps, width = 13, height = 10, dpi = 600)
-
-
-p <- ggplot(table_filtered_combined, aes(x = dataset, y = ShannonEntropy, fill = dataset)) +
-  geom_boxplot(alpha = 0.3, color = "black", position = position_dodge(width = 0.75), outlier.shape = NA ) +
-  geom_point(aes(y = ShannonEntropy, color = dataset), 
-             position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.8), 
-             shape = 16, size = 2) +
-  labs(title = "",
-       x = "Dataset", y = "Shannon Entropy") +
-  theme_classic() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
-        axis.title = element_text(size = 12, face = "bold"),
-        plot.title = element_blank(),
-        legend.position = "none", 
-        legend.title = element_blank(),
-        legend.key.size = unit(0.5, "cm"),
-        legend.spacing.y = unit(0.2, 'cm')) +
-  scale_x_discrete(labels = datasetsLabels) +
-  scale_fill_manual(values = datasetsPalette, labels = datasetsLabels) +
-  scale_color_manual(values = datasetsPalette, labels = datasetsLabels)
-
-ggsave("shannon_entropy_boxplot.png", plot = p, width = 9, height = 6, dpi = 600)
-ggsave("shannon_entropy_boxplot.pdf", plot = p, width = 9, height = 6, dpi = 600)
-
