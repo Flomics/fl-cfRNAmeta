@@ -8,10 +8,12 @@ library(grid)
 library(jsonlite)
 library(colorspace)
 library(showtext)
-font_add(family="Arial", regular = "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf")
-showtext_opts(dpi = 600)  # MUST come before showtext_auto()
-showtext_auto()
-theme_set(theme_classic(base_family = "Arial"))
+library(svglite)
+#font_add(family="Arial", regular = "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf")
+#showtext_opts(dpi = 600)  # MUST come before showtext_auto()
+#showtext_auto()
+#theme_set(theme_classic(base_family = "Arial"))
+library("extrafont")
 
 
 # Read column names from text file
@@ -147,6 +149,12 @@ bracket_df <- data.frame(
   label = c("Block", "Giráldez", "Ibarra", "Reggiardo", "Moufarrej", "Roskams-Hieter")
 )
 
+bracket_df_2 <- data.frame(
+  xmin = c("giraldez_phospho-rna-seq", "chalasani", "reggiardo_bioivt" , "block_150bp", "wei" ),
+  xmax = c("wang", "toden", "reggiardo_dls" ,"rozowsky","wei" ),
+  label = c("Custom", "Exome-based", "Whole RNA-Seq (oligo-dT pr.)", "Whole RNA-Seq (random pr.)", "cfDNA")
+)
+
 table_filtered$percent_of_multimapped_reads <- (table_filtered$number_of_multimapped_reads /table_filtered$total_reads)*100
 column_names <- c(column_names, "percent_of_multimapped_reads")
 
@@ -155,6 +163,41 @@ column_names <- c(column_names, "percent_of_multimapped_reads_total_reads_mapped
 
 #write.table(table_filtered, file="Qc_table_filtered.tsv", row.names = FALSE)
 table_filtered$spike_in_pct <- table_filtered$spike_in_pct * 100
+
+add_bottom_brackets <- function(p, bracket_df, factor_levels, y_base = -0.03, height = 0.015, col="black", lwd=0.8) {
+  for (i in seq_len(nrow(bracket_df))) {
+    x1 <- which(factor_levels == bracket_df$xmin[i])
+    x2 <- which(factor_levels == bracket_df$xmax[i])
+    if (length(x1) == 0 || length(x2) == 0) next
+    
+    offset <- 0.005
+    x_start <- ((x1 - 1) / length(factor_levels)) + offset
+    x_end   <- (x2 / length(factor_levels)) - offset
+    
+    bracket <- linesGrob(
+      x = unit.c(unit(x_start, "npc"), unit(x_end, "npc")),
+      y = unit(c(y_base, y_base), "npc"),
+      gp = gpar(col = col, lwd = lwd)
+    )
+    
+    verticals <- gList(
+      linesGrob(
+        x = unit.c(unit(x_start, "npc"), unit(x_start, "npc")),
+        y = unit(c(y_base, y_base - height), "npc"),
+        gp = gpar(col = col, lwd = lwd)
+      ),
+      linesGrob(
+        x = unit.c(unit(x_end, "npc"), unit(x_end, "npc")),
+        y = unit(c(y_base, y_base - height), "npc"),
+        gp = gpar(col = col, lwd = lwd)
+      )
+    )
+    
+    p <- p + annotation_custom(grobTree(bracket, verticals))
+  }
+  return(p)
+}
+
 
 ggplot_objects <- lapply(column_names, function(col_name) {
   yvals <- table_filtered[[col_name]]
@@ -194,12 +237,13 @@ ggplot_objects <- lapply(column_names, function(col_name) {
     label_block +
     theme_classic() +
     coord_cartesian(clip = "off") +
-    theme(base_family= "Arial",
+    theme(text=element_text(family="Arial"),
           panel.grid.major.x = element_blank(),
               panel.grid.minor.x = element_blank(),
               panel.grid.major.y = element_line(size = 0.8), 
               panel.grid.minor.y = element_blank(),
-      axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust=0.9),
+          plot.margin = margin(20, 20, 20, 50),
+      axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust=0.85),
           axis.title = element_text(size = 12, face = "bold"),
           plot.title = element_blank(),
           legend.position = "none") +
@@ -207,36 +251,9 @@ ggplot_objects <- lapply(column_names, function(col_name) {
     scale_fill_manual(values = datasetsPalette, labels = datasetsLabels) +
     scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels)
   
-  for (i in seq_len(nrow(bracket_df))) {
-    x1 <- which(levels(table_filtered$dataset_batch.y) == bracket_df$xmin[i])
-    x2 <- which(levels(table_filtered$dataset_batch.y) == bracket_df$xmax[i])
-    if (length(x1) == 0 || length(x2) == 0) next
-    
-    offset <- 0.005 #spacing
-    x_start <- ((x1 - 1) / length(core_order)) + offset  # LEFT tick
-    x_end   <- (x2 / length(core_order)) - offset        # RIGHT tick
-    
-    bracket <- linesGrob(
-      x = unit.c(unit(x_start, "npc"), unit(x_end, "npc")),
-      y = unit(c(-0.03, -0.03), "npc"),
-      gp = gpar(col = "black", lwd = 0.8)
-    )
-    
-    verticals <- gList(
-      linesGrob(
-        x = unit.c(unit(x_start, "npc"), unit(x_start, "npc")),
-        y = unit(c(-0.03, -0.045), "npc"),
-        gp = gpar(col = "black", lwd = 0.95)
-      ),
-      linesGrob(
-        x = unit.c(unit(x_end, "npc"), unit(x_end, "npc")),
-        y = unit(c(-0.03, -0.045), "npc"),
-        gp = gpar(col = "black", lwd = 0.95)
-      )
-    )
-    
-    p <- p + annotation_custom(grobTree(bracket, verticals))
-  }
+  p <- add_bottom_brackets(p, bracket_df, levels(table_filtered$dataset_batch.y), y_base = -0.055)
+  
+  p <- add_bottom_brackets(p, bracket_df_2, levels(table_filtered$dataset_batch.y), y_base = -0.025, col = "grey60", lwd=2)
   
   
   return(p)
@@ -249,76 +266,8 @@ for (i in 1:length(ggplot_objects)) {
   col_name <- column_names[i]
   output_file <- paste0(gsub(" ", "_", tolower(col_name)), "_external_datasets_boxplot_with_points.png")
   ggsave(output_file, ggplot_objects[[i]], width = 11, height = 6, dpi = 600, device = ragg::agg_png)
-  output_file <- paste0(gsub(" ", "_", tolower(col_name)), "_external_datasets_boxplot_with_points.pdf")
-  ggsave(output_file, ggplot_objects[[i]], width = 11, height = 6, dpi = 600, device = cairo_pdf)
-}
-
-add_bottom_brackets <- function(p, bracket_df, factor_levels) {
-  for (i in seq_len(nrow(bracket_df))) {
-    x1 <- which(factor_levels == bracket_df$xmin[i])
-    x2 <- which(factor_levels == bracket_df$xmax[i])
-    if (length(x1) == 0 || length(x2) == 0) next
-    
-    offset <- 0.005 #spacing
-    x_start <- ((x1 - 1) / length(core_order)) + offset  # LEFT tick
-    x_end   <- (x2 / length(core_order)) - offset        # RIGHT tick
-    
-    bracket <- linesGrob(
-      x = unit.c(unit(x_start, "npc"), unit(x_end, "npc")),
-      y = unit(c(-0.03, -0.03), "npc"),
-      gp = gpar(col = "black", lwd = 0.8)
-    )
-    
-    verticals <- gList(
-      linesGrob(
-        x = unit.c(unit(x_start, "npc"), unit(x_start, "npc")),
-        y = unit(c(-0.03, -0.045), "npc"),
-        gp = gpar(col = "black", lwd = 0.95)
-      ),
-      linesGrob(
-        x = unit.c(unit(x_end, "npc"), unit(x_end, "npc")),
-        y = unit(c(-0.03, -0.045), "npc"),
-        gp = gpar(col = "black", lwd = 0.95)
-      )
-    )
-    
-    p <- p + annotation_custom(grobTree(bracket, verticals))
-  }
-  return(p)
-}
-
-add_bottom_brackets <- function(p, bracket_df, factor_levels, y_base = -0.03, height = 0.015, col="black", lwd=0.8) {
-  for (i in seq_len(nrow(bracket_df))) {
-    x1 <- which(factor_levels == bracket_df$xmin[i])
-    x2 <- which(factor_levels == bracket_df$xmax[i])
-    if (length(x1) == 0 || length(x2) == 0) next
-    
-    offset <- 0.005
-    x_start <- ((x1 - 1) / length(factor_levels)) + offset
-    x_end   <- (x2 / length(factor_levels)) - offset
-    
-    bracket <- linesGrob(
-      x = unit.c(unit(x_start, "npc"), unit(x_end, "npc")),
-      y = unit(c(y_base, y_base), "npc"),
-      gp = gpar(col = col, lwd = lwd)
-    )
-    
-    verticals <- gList(
-      linesGrob(
-        x = unit.c(unit(x_start, "npc"), unit(x_start, "npc")),
-        y = unit(c(y_base, y_base - height), "npc"),
-        gp = gpar(col = col, lwd = lwd)
-      ),
-      linesGrob(
-        x = unit.c(unit(x_end, "npc"), unit(x_end, "npc")),
-        y = unit(c(y_base, y_base - height), "npc"),
-        gp = gpar(col = col, lwd = lwd)
-      )
-    )
-    
-    p <- p + annotation_custom(grobTree(bracket, verticals))
-  }
-  return(p)
+  output_file <- paste0(gsub(" ", "_", tolower(col_name)), "_external_datasets_boxplot_with_points.svg")
+  ggsave(output_file, ggplot_objects[[i]], width = 11, height = 6, dpi = 600, device = "svg")
 }
 
 
@@ -440,6 +389,7 @@ summary(table_filtered$spike_in_pct[table_filtered$dataset_batch.y=="chen"])
 # High quality samples barplot
 ######################################################
 # Create summary for high-quality sample barplot
+setwd("~/fl-cfRNAmeta/")
 quality_summary <- table_filtered %>%
   group_by(dataset_batch.y) %>%
   summarise(
@@ -465,25 +415,27 @@ quality_plot <- ggplot(quality_summary, aes(x = dataset_batch.y, y = percent_hig
   ylim(0, 105) +
   theme_classic() +
   coord_cartesian(clip = "off") +
-  theme(base_family= "Arial",
+  theme(text=element_text(family="Arial"),
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank(),
         panel.grid.major.y = element_line(size = 0.8), 
         panel.grid.minor.y = element_blank(),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust=0.9),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust=0.85),
         axis.title = element_text(size = 12, face = "bold"),
         plot.title = element_blank(),
+        plot.margin = margin(20, 20, 20, 45),
         legend.position = "none") +
   scale_x_discrete(labels = datasetsLabels) +
   scale_fill_manual(values = datasetsPalette, labels = datasetsLabels) +
   scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels)
 
-quality_plot <- add_bottom_brackets(quality_plot, bracket_df, levels(table_filtered$dataset_batch.y))
+quality_plot <- add_bottom_brackets(quality_plot, bracket_df, levels(table_filtered$dataset_batch.y),  y_base = -0.055)
+quality_plot <- add_bottom_brackets(quality_plot, bracket_df_2, levels(table_filtered$dataset_batch.y), y_base = -0.025, col = "grey60", lwd=2)
 
 
 # Save the new barplot
 ggsave("figures/high_quality_sample_fraction_barplot.png", quality_plot, width = 11, height = 6, dpi = 600, device = ragg::agg_png)
-ggsave("figures/high_quality_sample_fraction_barplot.pdf", quality_plot, width = 11, height = 6, dpi = 600, device = cairo_pdf)
+ggsave("figures/high_quality_sample_fraction_barplot.svg", quality_plot, width = 11, height = 6, dpi = 600, device = "svg")
 
 
 #######################################################
@@ -532,11 +484,13 @@ p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = Fragments_mapping_to_ex
   labs(title = "",
        x = "Dataset", y = "% fragments mapping to correct gene orientation") +
   theme_classic() +
-  theme(panel.grid.major.x = element_blank(),
+  theme(text=element_text(family="Arial"),
+        plot.margin = margin(20, 20, 20, 45),
+    panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank(),
         panel.grid.major.y = element_line(size = 0.8), 
         panel.grid.minor.y = element_blank(),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust = 0.9),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust = 0.85),
         axis.title = element_text(size = 12, face = "bold"),
         plot.title = element_text(size = 14, face = "bold"),
         legend.position = "none") +
@@ -560,7 +514,7 @@ p <- p +
   scale_fill_manual(
     name = "Library strandedness",
     values = strandedness_colors
-  ) + theme(
+  ) + theme(text=element_text(family="Arial"),
     legend.position = "top",  
     legend.title = element_text(face = "bold", size = 9),
     legend.text = element_text(size = 9),
@@ -569,10 +523,12 @@ p <- p +
     legend.margin = margin(0, 0, 0, 0)
   )
 
-p <- add_bottom_brackets(p, bracket_df, levels(table_filtered$dataset_batch.y))
 
-ggsave("fragments_mapped_expected_strand_with_strandedness_info.png", p, width = 11, height = 6, dpi = 600, device = ragg::agg_png)
-ggsave("fragments_mapped_expected_strand.pdf", p, width = 11, height = 6, dpi = 600, device = cairo_pdf)
+p <- add_bottom_brackets(p, bracket_df, levels(table_filtered$dataset_batch.y),  y_base = -0.055)
+p <- add_bottom_brackets(p, bracket_df_2, levels(table_filtered$dataset_batch.y), y_base = -0.025, col = "grey60", lwd=2)
+
+ggsave("figures/fragments_mapped_expected_strand_with_strandedness_info.png", p, width = 11, height = 6, dpi = 600, device = ragg::agg_png)
+ggsave("figures/fragments_mapped_expected_strand_with_strandedness_info.svg", p, width = 11, height = 6, dpi = 600, device = "svg")
 
 
 
@@ -595,11 +551,13 @@ p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = fragment_number, fill =
   labs(title = "",
        x = "Dataset", y = "Fragment number") +
   theme_classic() +
-  theme(        panel.grid.major.x = element_blank(),
+  theme(text=element_text(family="Arial"),
+        plot.margin = margin(20, 20, 20, 45),        
+    panel.grid.major.x = element_blank(),
                 panel.grid.minor.x = element_blank(),
                 panel.grid.major.y = element_line(size = 0.8), 
                 panel.grid.minor.y = element_blank(),
-                axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust = 0.9),
+                axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust = 0.85),
                 axis.title = element_text(size = 12, face = "bold"),
                 plot.title = element_text(size = 14, face = "bold"),
                 legend.position = "none") +
@@ -609,10 +567,11 @@ p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = fragment_number, fill =
   scale_y_continuous(labels = label_number(scale_cut = cut_short_scale())) + 
   coord_cartesian(clip = "off")
 
-p <- add_bottom_brackets(p, bracket_df, levels(table_filtered$dataset_batch.y))
+p <- add_bottom_brackets(p, bracket_df, levels(table_filtered$dataset_batch.y),  y_base = -0.055)
+p <- add_bottom_brackets(p, bracket_df_2, levels(table_filtered$dataset_batch.y), y_base = -0.025, col = "grey60", lwd=2)
 
-ggsave("fragment_number.png", p, width = 11, height = 6, dpi = 600, device = ragg::agg_png)
-ggsave("fragment_number.pdf", p, width = 11, height = 6, dpi = 600, device = cairo_pdf)
+ggsave("figures/fragment_number.png", p, width = 11, height = 6, dpi = 600, device = ragg::agg_png)
+ggsave("figures/fragment_number.svg", p, width = 11, height = 6, dpi = 600, device = "svg")
 
 
 #######################################################
@@ -653,12 +612,13 @@ p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = log_genes_80, fill = da
   labs(title = "",
        x = "Dataset", y = "NG80") +
   theme_classic() +
-  theme(base_family= "Arial",
+  theme(text=element_text(family="Arial"),
+        plot.margin = margin(20, 20, 20, 45),      
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank(),
         panel.grid.major.y = element_line(size = 0.8), 
         panel.grid.minor.y = element_blank(),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust = 0.9),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust = 0.85),
         axis.title = element_text(size = 12, face = "bold"),
         plot.title = element_text(size = 14, face = "bold"),
         legend.position = "none") +
@@ -668,16 +628,16 @@ p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = log_genes_80, fill = da
   scale_y_continuous(breaks = y_breaks, labels = y_labels) + 
   coord_cartesian(clip = "off")
 
-p <- add_bottom_brackets(p, bracket_df, levels(table_filtered$dataset_batch.y))
+p <- add_bottom_brackets(p, bracket_df, levels(table_filtered$dataset_batch.y),  y_base = -0.055)
+p <- add_bottom_brackets(p, bracket_df_2, levels(table_filtered$dataset_batch.y), y_base = -0.025, col = "grey60", lwd=2)
 
 
 ggsave("figures/ng80_non_transformed_axis.png", p, width = 11, height = 6, dpi = 600, device = ragg::agg_png)
-ggsave("figures/ng80_non_transformed_axis.pdf", p, width = 11, height = 6, dpi = 600, device = cairo_pdf)
+ggsave("figures/ng80_non_transformed_axis.svg", p, width = 11, height = 6, dpi = 600, device = "svg")
 
 #################################
 # NG80 protein coding
 ################################
-setwd("~/fl-cfRNAmeta/")
 
 ng_only_mrna <- read.delim("tables/genes_contributing_to_percentage_reads.tsv")
 
@@ -698,12 +658,13 @@ p <- ggplot(ng80_table, aes(x = dataset_batch.y, y = log_genes_80, fill = datase
   labs(title = "",
        x = "Dataset", y = "NG80 (protein coding genes)") +
   theme_classic() +
-  theme(base_family= "Arial",
+  theme(text=element_text(family="Arial"),
+        plot.margin = margin(20, 20, 20, 45),  
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank(),
         panel.grid.major.y = element_line(size = 0.8), 
         panel.grid.minor.y = element_blank(),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust = 0.9),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust = 0.85),
         axis.title = element_text(size = 12, face = "bold"),
         plot.title = element_text(size = 14, face = "bold"),
         legend.position = "none") +
@@ -713,11 +674,12 @@ p <- ggplot(ng80_table, aes(x = dataset_batch.y, y = log_genes_80, fill = datase
   scale_y_continuous(breaks = y_breaks, labels = y_labels) + 
   coord_cartesian(clip = "off")
 
-p <- add_bottom_brackets(p, bracket_df, levels(table_filtered$dataset_batch.y))
+p <- add_bottom_brackets(p, bracket_df, levels(table_filtered$dataset_batch.y),  y_base = -0.055)
+p <- add_bottom_brackets(p, bracket_df_2, levels(table_filtered$dataset_batch.y), y_base = -0.025, col = "grey60", lwd=2)
 
 
 ggsave("figures/ng80_mrna_non_transformed_axis.png", p, width = 11, height = 6, dpi = 600, device = ragg::agg_png)
-ggsave("figures/ng80_mrna_non_transformed_axis.pdf", p, width = 11, height = 6, dpi = 600, device = cairo_pdf)
+ggsave("figures/ng80_mrna_non_transformed_axis.svg", p, width = 11, height = 6, dpi = 600, device = "svg")
 
 
 ################################
@@ -732,10 +694,8 @@ y_labels <- c(100, 500, 1000, 5000, 10000, 20000)
 
 to_keep <- c("chalasani", "toden", "ibarra_buffy_coat", "ibarra_plasma_cancer", "ibarra_plasma_non_cancer", "ibarra_serum", "chen", "decruyenaere", "flomics_1", "flomics_2", "moufarrej_site_1", "moufarrej_site_2", "reggiardo_bioivt", "reggiardo_dls", "roskams_pilot", "roskams_validation", "tao", "zhu")
 
-core_order_filtered <- c( "chalasani" ,               "chen"  ,                   "decruyenaere"   ,          "flomics_1"    ,            "flomics_2"               
-,"ibarra_buffy_coat"   ,     "ibarra_plasma_cancer"  ,   "ibarra_plasma_non_cancer" ,"ibarra_serum"     ,        "moufarrej_site_1"       
-, "moufarrej_site_2"    ,                  "reggiardo_bioivt"      ,   "reggiardo_dls"    ,        "roskams_pilot"          ,  "roskams_validation"  ,                
-"tao"       ,              "toden"        ,                    "zhu" )                    
+core_order_filtered <- c("chalasani", "ibarra_buffy_coat", "ibarra_plasma_cancer", "ibarra_plasma_non_cancer", "ibarra_serum", "toden", "reggiardo_bioivt", "reggiardo_dls", "chen", "decruyenaere", "flomics_1", "flomics_2", "moufarrej_site_1", "moufarrej_site_2", "roskams_pilot", "roskams_validation", "tao", "zhu")               
+
 
 ng80_table <- ng80_table %>%
   filter(dataset_batch.y %in% to_keep) %>%
@@ -747,6 +707,12 @@ bracket_df <- data.frame(
   label = c( "Ibarra", "Moufarrej", "Reggiardo", "Roskams-Hieter")
 )
 
+bracket_df_2 <- data.frame(
+  xmin = c("chalasani", "reggiardo_bioivt" , "chen"),
+  xmax = c("toden", "reggiardo_dls" ,"zhu"),
+  label = c("Exome-based", "Whole RNA-Seq (oligo-dT pr.)", "Whole RNA-Seq (random pr.)")
+)
+
 p <- ggplot(ng80_table, aes(x = dataset_batch.y, y = ratio, fill = dataset_batch.y)) +
   geom_boxplot(alpha = 0.3, aes(color = dataset_batch.y), position = position_dodge(width = 0.75), outlier.shape = NA) +
   geom_point(aes(y = ratio, color = dataset_batch.y), 
@@ -755,12 +721,12 @@ p <- ggplot(ng80_table, aes(x = dataset_batch.y, y = ratio, fill = dataset_batch
   labs(title = "",
        x = "Dataset", y = "NP80 / NG80") +
   theme_classic() +
-  theme(base_family= "Arial",
+  theme(text=element_text(family="Arial"),
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank(),
         panel.grid.major.y = element_line(size = 0.8), 
         panel.grid.minor.y = element_blank(),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust = 0.9),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust = 0.85),
         axis.title = element_text(size = 12, face = "bold"),
         plot.title = element_text(size = 14, face = "bold"),
         legend.position = "none") +
@@ -772,7 +738,7 @@ p <- ggplot(ng80_table, aes(x = dataset_batch.y, y = ratio, fill = dataset_batch
   #scale_y_continuous(breaks = y_breaks, labels = y_labels) + 
   coord_cartesian(clip = "off")
 
-add_bottom_brackets_filtered <- function(p, bracket_df, x_levels, offset = 0.005) {
+add_bottom_brackets_filtered <- function(p, bracket_df, x_levels, offset = 0.005, y_base = -0.03, height = 0.015, col = "black", lwd = 0.95) {
   for (i in seq_len(nrow(bracket_df))) {
     x1 <- which(x_levels == bracket_df$xmin[i])
     x2 <- which(x_levels == bracket_df$xmax[i])
@@ -785,20 +751,20 @@ add_bottom_brackets_filtered <- function(p, bracket_df, x_levels, offset = 0.005
     
     bracket <- linesGrob(
       x = unit.c(unit(x_start, "npc"), unit(x_end, "npc")),
-      y = unit(c(-0.03, -0.03), "npc"),
-      gp = gpar(col = "black", lwd = 0.8)
+      y = unit(c(y_base, y_base), "npc"),
+      gp = gpar(col = col, lwd = lwd)
     )
     
     verticals <- gList(
       linesGrob(
         x = unit.c(unit(x_start, "npc"), unit(x_start, "npc")),
-        y = unit(c(-0.03, -0.045), "npc"),
-        gp = gpar(col = "black", lwd = 0.95)
+        y = unit(c(y_base, y_base - height), "npc"),
+        gp = gpar(col = col, lwd = lwd)
       ),
       linesGrob(
         x = unit.c(unit(x_end, "npc"), unit(x_end, "npc")),
-        y = unit(c(-0.03, -0.045), "npc"),
-        gp = gpar(col = "black", lwd = 0.95)
+        y = unit(c(y_base, y_base - height), "npc"),
+        gp = gpar(col = col, lwd = lwd)
       )
     )
     
@@ -808,11 +774,12 @@ add_bottom_brackets_filtered <- function(p, bracket_df, x_levels, offset = 0.005
 }
 
 
-p <- add_bottom_brackets_filtered(p, bracket_df, levels(ng80_table$dataset_batch.y))
+p <- add_bottom_brackets_filtered(p, bracket_df, levels(ng80_table$dataset_batch.y),  y_base = -0.055)
+p <- add_bottom_brackets_filtered(p, bracket_df_2, levels(ng80_table$dataset_batch.y), y_base = -0.025, col = "grey60", lwd=2)
 
 
 ggsave("figures/ng80_ratio_non_transformed_axis_filtered.png", p, width = 11, height = 6, dpi = 600, device = ragg::agg_png)
-ggsave("figures/ng80_ratio_non_transformed_axis_filtered.pdf", p, width = 11, height = 6, dpi = 600, device = cairo_pdf)
+ggsave("figures/ng80_ratio_non_transformed_axis_filtered.svg", p, width = 11, height = 6, dpi = 600, device = "svg")
 
 
 capture <- c("chalasani", "toden", "ibarra_buffy_coat", "ibarra_plasma_cancer", "ibarra_plasma_non_cancer", "ibarra_serum")
@@ -863,8 +830,8 @@ ps <- p  +  scale_y_continuous(trans=log10_trans()) +
   guides(color = guide_legend(ncol = 1))
 
 
-ggsave("~/figures/diversity_scatterplot.png", plot = ps, width = 12, height = 8, dpi = 600, device = ragg::agg_png)
-ggsave("~/figures/diversity_scatterplot.pdf", plot = ps, width = 12, height = 8,  dpi = 600, device = cairo_pdf)
+ggsave("figures/diversity_scatterplot.png", plot = ps, width = 12, height = 8, dpi = 600, device = ragg::agg_png)
+ggsave("figures/diversity_scatterplot.svg", plot = ps, width = 12, height = 8,  dpi = 600, device = "svg")
 
 
 ##################################
@@ -907,7 +874,7 @@ p_facet <- ggplot(
     color = "Dataset"
   ) +
   theme_minimal(base_size = 13) +
-  theme(
+  theme(text=element_text(family="Arial"),
     strip.text = element_text(face = "bold"),
     axis.title = element_text(face = "bold"),
     legend.text = element_text(size = 9),
@@ -954,7 +921,7 @@ p_facet <- ggplot(
 
 
 ggsave("figures/diversity_scatterplot_facet.png", p_facet, width = 20, height = 10, dpi = 600, device = ragg::agg_png)
-ggsave("figures/diversity_scatterplot_facet.pdf", p_facet, width = 20, height = 10, device = cairo_pdf)
+ggsave("figures/diversity_scatterplot_facet.svg", p_facet, width = 20, height = 10, device = "svg")
 
 
 #################################
@@ -964,11 +931,11 @@ k2_results <- read.delim("~/fl-cfRNAmeta/tables/taxa_simple_df_w_batch.tsv")
 
 # First ensure dataset_batch is available in k2_results
 # Then clean sample_name only for affected dataset_batch values
-k2_results_clean <- k2_results %>%
-  mutate(sample_name = case_when(
-    dataset_batch %in% c("flomics_2", "decruyenaere") ~ sub("_.*", "", sample_name),
-    TRUE ~ sample_name
-  ))
+# k2_results_clean <- k2_results %>%
+#   mutate(sample_name = case_when(
+#     dataset_batch %in% c("flomics_2", "decruyenaere") ~ sub("_.*", "", sample_name),
+#     TRUE ~ sample_name
+#   ))
 
 # Compute microbial reads again if not already there
 k2_results$microbial <- k2_results$fungi + k2_results$bacteria
@@ -1010,7 +977,7 @@ p_microbial <- ggplot(
   ) +
   theme_minimal(base_size = 13) +
   theme(
-    base_family= "Arial",
+    text=element_text(family="Arial"),
     panel.grid.major.x = element_blank(),
     panel.grid.minor.x = element_blank(),
     panel.grid.major.y = element_line(size = 0.8), 
@@ -1025,8 +992,8 @@ p_microbial <- ggplot(
   guides(color = guide_legend(ncol = 1))
 
 
-ggsave("~/figures/microbial_vs_mapped.png", p_microbial, width = 20, height = 10, dpi = 600, device = ragg::agg_png)
-ggsave("~/figures/microbial_vs_mapped.pdf", p_microbial, width = 20, height = 10, device = cairo_pdf)
+ggsave("figures/microbial_vs_mapped.png", p_microbial, width = 20, height = 10, dpi = 600, device = ragg::agg_png)
+ggsave("figures/microbial_vs_mapped.svg", p_microbial, width = 20, height = 10, device = "svg")
 
 
 ####################################
