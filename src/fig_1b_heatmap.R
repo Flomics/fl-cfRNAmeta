@@ -10,10 +10,13 @@ library(jsonlite)
 library(wesanderson)
 library(grid)
 library(showtext)
-font_add(family="Arial", regular = "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf")
-showtext_opts(dpi = 600)  # MUST come before showtext_auto()
-showtext_auto()
-theme_set(theme_classic(base_family = "Arial"))
+library(svglite)
+#font_add(family="Arial", regular = "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf")
+#showtext_opts(dpi = 600)  # MUST come before showtext_auto()
+#showtext_auto()
+#theme_set(theme_classic(base_family = "Arial"))
+library("extrafont")
+loadfonts()
 
 setwd("~/fl-cfRNAmeta/")
 
@@ -223,121 +226,121 @@ core_order <- colnames(metadata_matrix)  # your x-axis order
 bracket_df$xmin_idx <- match(bracket_df$xmin, core_order) 
 bracket_df$xmax_idx <- match(bracket_df$xmax, core_order) 
 
-heatmap_list <- lapply(row_order, function(var) {
-  if (is.null(palette_list[[var]])) {
-    message("Skipping ", var, ": no palette defined.")
-    return(NULL)
-  }
-  
-  values <- as.character(metadata_matrix[var, ])
-  
-  # Replace actual NA with "NA" string
-  values[is.na(values)] <- "NA"
-  
-  if (var %in% c("centrifugation_step_1", "centrifugation_step_2")) {
-    values <- factor(values, levels  = c("1000g", "1500g", "1600g", "1900g", "1940g", "2000g", "2500g", "3000g", 
-                      "3400g", "6000g", "12000g", "13000g", "15000g", "16000g",
-                      "Unspecified", "placeholder", "None"))
-    values <- as.character(values)
-  } 
-  
-  
-  if (var == "read_length") {
-    values <- factor(values, levels = c("1x50", "1x75", "2x75", "2x100", "2x150", "NA"))
-    values <- as.character(values)
-  }
-  
-  unique_vals <- unique(values)
-  color_vector <- palette_list[[var]]
-  
-  if (is.null(color_vector) || is.function(color_vector)) {
-    stop(paste("No valid palette for variable:", var))
-  }
-  color_map <- color_vector[unique_vals]
-  
-  names(color_map) <- unique_vals
-  
-  if (!"NA" %in% names(color_map)) {
-    color_map["NA"] <- "grey80"
-  }
-  color_map["Unspecified"] <- "grey20"
-  color_map["placeholder"] <- "lavenderblush1"
-  color_map["None"] <- "grey70"
-  if (var == "read_length") {
-    legend_order <- c("1x50", "1x75", "2x75", "2x100", "2x150", "NA")
-    color_map <- color_map[intersect(legend_order, names(color_map))]
-  }
-  if (var %in% c("centrifugation_step_1", "centrifugation_step_2")) {
-    legend_order <- c("1000g", "1500g", "1600g", "1900g", "1940g", "2000g", "2500g", "3000g", 
-                      "3400g", "6000g", "12000g", "13000g", "15000g", "16000g",
-                      "Unspecified", "placeholder", "None")
-    color_map <- color_map[intersect(legend_order, names(color_map))]
-  } else if (var %in% c(
-    "plasma_tubes_short_name",
-    "biomaterial",
-    "nucleic_acid_type",
-    "rna_extraction_kit_short_name",
-    "dnase",
-    "library_prep_kit_short_name",
-    "library_selection",
-    "cdna_library_type",
-    "broad_protocol_category"
-  )) {
-    # Alphabetical ordering of legend, keeping special levels last
-    special_levels <- c("Unspecified", "placeholder", "NA", "None")
-    main_levels <- setdiff(names(color_map), special_levels)
-    color_map <- color_map[c(sort(main_levels), intersect(special_levels, names(color_map)))]
-  }
-  
-  
-  # Always move special values to the end of the legend
-  special_levels <- c("Unspecified", "placeholder", "NA", "None")
-  ordered_vals <- c(
-    setdiff(names(color_map), special_levels),
-    intersect(special_levels, names(color_map))
-  )
-  color_map <- color_map[ordered_vals]
-  
-  var_pretty <- clean_names[[var]]
-  
-  ordered_pretty_names <- clean_names[row_order]
-
-  mat <- matrix(values, nrow = 1, dimnames = list(factor(var_pretty, levels = ordered_pretty_names), colnames(metadata_matrix)))
-
-  if (var == "read_length") {
-    bottom_anno <- HeatmapAnnotation(
-      spacer = anno_empty(border = FALSE, height = unit(0.08, "cm")) # this controls the whitespace between RL and BPC rows
-    )
-  } else if (var =="broad_protocol_category") {
-    bottom_anno <- HeatmapAnnotation(
-      spacer = anno_empty(border = FALSE, height = unit(0.8, "cm")) # this controls the whitespace between BPC and column names, to give space to brackets
-    )
-  }
-  
-  Heatmap(
-    mat,
-    name = var_pretty,
-    col = color_map,
-    cluster_rows = FALSE,
-    cluster_columns = FALSE,
-    show_row_names = TRUE,
-    show_column_names = TRUE,
-    column_names_rot = 45,
-    column_names_side = "bottom",
-    column_names_gp = gpar(fontsize = 12),
-    bottom_annotation = bottom_anno,  
-    row_names_side = "left",
-    height = unit(1, "cm"),
-    cell_fun = function(j, i, x, y, width, height, fill) {
-      grid.rect(
-        x = x, y = y,
-        width = width, height = height,
-        gp = gpar(fill = fill, col = "white", lwd = 0.5)
-      )
-    }
-  )
-  
-}) %>% discard(is.null)
+# heatmap_list <- lapply(row_order, function(var) {
+#   if (is.null(palette_list[[var]])) {
+#     message("Skipping ", var, ": no palette defined.")
+#     return(NULL)
+#   }
+#   
+#   values <- as.character(metadata_matrix[var, ])
+#   
+#   # Replace actual NA with "NA" string
+#   values[is.na(values)] <- "NA"
+#   
+#   if (var %in% c("centrifugation_step_1", "centrifugation_step_2")) {
+#     values <- factor(values, levels  = c("1000g", "1500g", "1600g", "1900g", "1940g", "2000g", "2500g", "3000g", 
+#                       "3400g", "6000g", "12000g", "13000g", "15000g", "16000g",
+#                       "Unspecified", "placeholder", "None"))
+#     values <- as.character(values)
+#   } 
+#   
+#   
+#   if (var == "read_length") {
+#     values <- factor(values, levels = c("1x50", "1x75", "2x75", "2x100", "2x150", "NA"))
+#     values <- as.character(values)
+#   }
+#   
+#   unique_vals <- unique(values)
+#   color_vector <- palette_list[[var]]
+#   
+#   if (is.null(color_vector) || is.function(color_vector)) {
+#     stop(paste("No valid palette for variable:", var))
+#   }
+#   color_map <- color_vector[unique_vals]
+#   
+#   names(color_map) <- unique_vals
+#   
+#   if (!"NA" %in% names(color_map)) {
+#     color_map["NA"] <- "grey80"
+#   }
+#   color_map["Unspecified"] <- "grey20"
+#   color_map["placeholder"] <- "lavenderblush1"
+#   color_map["None"] <- "grey70"
+#   if (var == "read_length") {
+#     legend_order <- c("1x50", "1x75", "2x75", "2x100", "2x150", "NA")
+#     color_map <- color_map[intersect(legend_order, names(color_map))]
+#   }
+#   if (var %in% c("centrifugation_step_1", "centrifugation_step_2")) {
+#     legend_order <- c("1000g", "1500g", "1600g", "1900g", "1940g", "2000g", "2500g", "3000g", 
+#                       "3400g", "6000g", "12000g", "13000g", "15000g", "16000g",
+#                       "Unspecified", "placeholder", "None")
+#     color_map <- color_map[intersect(legend_order, names(color_map))]
+#   } else if (var %in% c(
+#     "plasma_tubes_short_name",
+#     "biomaterial",
+#     "nucleic_acid_type",
+#     "rna_extraction_kit_short_name",
+#     "dnase",
+#     "library_prep_kit_short_name",
+#     "library_selection",
+#     "cdna_library_type",
+#     "broad_protocol_category"
+#   )) {
+#     # Alphabetical ordering of legend, keeping special levels last
+#     special_levels <- c("Unspecified", "placeholder", "NA", "None")
+#     main_levels <- setdiff(names(color_map), special_levels)
+#     color_map <- color_map[c(sort(main_levels), intersect(special_levels, names(color_map)))]
+#   }
+#   
+#   
+#   # Always move special values to the end of the legend
+#   special_levels <- c("Unspecified", "placeholder", "NA", "None")
+#   ordered_vals <- c(
+#     setdiff(names(color_map), special_levels),
+#     intersect(special_levels, names(color_map))
+#   )
+#   color_map <- color_map[ordered_vals]
+#   
+#   var_pretty <- clean_names[[var]]
+#   
+#   ordered_pretty_names <- clean_names[row_order]
+# 
+#   mat <- matrix(values, nrow = 1, dimnames = list(factor(var_pretty, levels = ordered_pretty_names), colnames(metadata_matrix)))
+# 
+#   if (var == "read_length") {
+#     bottom_anno <- HeatmapAnnotation(
+#       spacer = anno_empty(border = FALSE, height = unit(0.08, "cm")) # this controls the whitespace between RL and BPC rows
+#     )
+#   } else if (var =="broad_protocol_category") {
+#     bottom_anno <- HeatmapAnnotation(
+#       spacer = anno_empty(border = FALSE, height = unit(0.8, "cm")) # this controls the whitespace between BPC and column names, to give space to brackets
+#     )
+#   }
+#   
+#   Heatmap(
+#     mat,
+#     name = var_pretty,
+#     col = color_map,
+#     cluster_rows = FALSE,
+#     cluster_columns = FALSE,
+#     show_row_names = TRUE,
+#     show_column_names = TRUE,
+#     column_names_rot = 45,
+#     column_names_side = "bottom",
+#     column_names_gp = gpar(fontsize = 12),
+#     bottom_annotation = bottom_anno,  
+#     row_names_side = "left",
+#     height = unit(1, "cm"),
+#     cell_fun = function(j, i, x, y, width, height, fill) {
+#       grid.rect(
+#         x = x, y = y,
+#         width = width, height = height,
+#         gp = gpar(fill = fill, col = "white", lwd = 0.5)
+#       )
+#     }
+#   )
+#   
+# }) %>% discard(is.null)
 
 heatmap_list <- list()
 
@@ -409,13 +412,15 @@ for (var in row_order) {
   bottom_anno <- NULL
   if (var == "read_length") {
     bottom_anno <- HeatmapAnnotation(
-      spacer = anno_empty(border = FALSE, height = unit(0.15, "cm")) # this controls the whitespace between RL and BPC rows
+      spacer = anno_empty(border = FALSE, height = unit(0.30, "cm")) # this controls the whitespace between RL and BPC rows
     )
   } else if (var =="broad_protocol_category") {
     bottom_anno <- HeatmapAnnotation(
       spacer = anno_empty(border = FALSE, height = unit(0.8, "cm")) # this controls the whitespace between BPC and column names, to give space to brackets
     )
   }
+  
+  ht_global_opt(font = "Arial", ADD = TRUE)
   
   ht <- Heatmap(
     mat,
@@ -451,7 +456,7 @@ ht_list <- Reduce(`%v%`, heatmap_list)
 
 
 ragg::agg_png(
-  "~/figures/fig_1b_metadata_heatmap.png",
+  "figures/fig_1b_metadata_heatmap.png",
   width = 18, height = 10, units = "in", res = 600
 )
 
@@ -509,7 +514,7 @@ for (i in seq_len(nrow(bracket_df))) {
 bracket_df_2$xmin_idx <- match(bracket_df_2$xmin, core_order)
 bracket_df_2$xmax_idx <- match(bracket_df_2$xmax, core_order)
 
-y_top_in <- ht_pos[ht_pos$heatmap == "Broad protocol category", "y_min"] - unit(1.1, "in")
+y_top_in <- ht_pos[ht_pos$heatmap == "Broad protocol category", "y_min"] - unit(1, "in")
 y_top_np <- convertY(y_top_in, "npc", valueOnly = FALSE)
 
 y_bracket_1 <- y_top_np + unit(0.1, "mm")          
@@ -556,8 +561,8 @@ for (i in seq_len(nrow(bracket_df_2))) {
 dev.off()
 
 
-pdf("~/figures/fig_1b_metadata_heatmap.pdf", width = 18, height = 10)
-showtext::showtext_begin()
+svglite("figures/fig_1b_metadata_heatmap.svg", width = 18, height = 10)
+#showtext::showtext_begin()
 
 ht_drw <- draw(ht_list, heatmap_legend_side = "right")
 
@@ -613,7 +618,7 @@ for (i in seq_len(nrow(bracket_df))) {
 bracket_df_2$xmin_idx <- match(bracket_df_2$xmin, core_order)
 bracket_df_2$xmax_idx <- match(bracket_df_2$xmax, core_order)
 
-y_top_in <- ht_pos[ht_pos$heatmap == "Broad protocol category", "y_min"] - unit(1.1, "in")
+y_top_in <- ht_pos[ht_pos$heatmap == "Broad protocol category", "y_min"] - unit(1, "in")
 y_top_np <- convertY(y_top_in, "npc", valueOnly = FALSE)
 
 y_bracket_1 <- y_top_np + unit(0.1, "mm")          
@@ -656,7 +661,7 @@ for (i in seq_len(nrow(bracket_df_2))) {
   grid.draw(grobTree(h_bar, v_bars))
 }
 
-showtext::showtext_end()
+#showtext::showtext_end()
 dev.off()
 
 # variables to compare, comment out lines to play with combinations

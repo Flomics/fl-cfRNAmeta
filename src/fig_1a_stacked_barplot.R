@@ -6,13 +6,13 @@ library(jsonlite)
 library(grid)
 library(scales)
 library(svglite)
-library(showtext)
-font_add(family="Arial", regular = "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf")
-showtext_opts(dpi = 600)  # MUST come before showtext_auto()
-showtext_auto()
-theme_set(theme_classic(base_family = "Arial"))
-
-
+#library(showtext)
+#font_add(family="Arial", regular = "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf")
+#showtext_opts(dpi = 600)  # MUST come before showtext_auto()
+#showtext_auto()
+#theme_set(theme_classic(base_family = "Arial"))
+library("extrafont")
+loadfonts()
 
 setwd("~/fl-cfRNAmeta/")
 
@@ -226,6 +226,7 @@ p <- ggplot(phenotype_merged_plot_data, aes(x = dataset_batch_clean, y = count, 
   labs(x = "Dataset", y = "Number of samples") +
   theme_minimal(base_size = 20) +
   theme(
+    text=element_text(family="Arial"),
     axis.text.x = element_text(angle = 45, vjust = 0.9, hjust = 1, size = 12, color = "black"),
     axis.title.x = element_text(size = 20), 
     axis.title.y = element_text(size = 20),  

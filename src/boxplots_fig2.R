@@ -287,6 +287,41 @@ add_bottom_brackets <- function(p, bracket_df, factor_levels) {
   return(p)
 }
 
+add_bottom_brackets <- function(p, bracket_df, factor_levels, y_base = -0.03, height = 0.015, col="black", lwd=0.8) {
+  for (i in seq_len(nrow(bracket_df))) {
+    x1 <- which(factor_levels == bracket_df$xmin[i])
+    x2 <- which(factor_levels == bracket_df$xmax[i])
+    if (length(x1) == 0 || length(x2) == 0) next
+    
+    offset <- 0.005
+    x_start <- ((x1 - 1) / length(factor_levels)) + offset
+    x_end   <- (x2 / length(factor_levels)) - offset
+    
+    bracket <- linesGrob(
+      x = unit.c(unit(x_start, "npc"), unit(x_end, "npc")),
+      y = unit(c(y_base, y_base), "npc"),
+      gp = gpar(col = col, lwd = lwd)
+    )
+    
+    verticals <- gList(
+      linesGrob(
+        x = unit.c(unit(x_start, "npc"), unit(x_start, "npc")),
+        y = unit(c(y_base, y_base - height), "npc"),
+        gp = gpar(col = col, lwd = lwd)
+      ),
+      linesGrob(
+        x = unit.c(unit(x_end, "npc"), unit(x_end, "npc")),
+        y = unit(c(y_base, y_base - height), "npc"),
+        gp = gpar(col = col, lwd = lwd)
+      )
+    )
+    
+    p <- p + annotation_custom(grobTree(bracket, verticals))
+  }
+  return(p)
+}
+
+
 #####################################################
 # Stats for manuscript SPLICED READS
 ####################################################
