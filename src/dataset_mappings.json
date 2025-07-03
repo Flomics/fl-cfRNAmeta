@@ -1,6 +1,5 @@
 {
   "datasetsPalette": {
-    "flomics_1": "#9AB9D6",
     "flomics_2": "#144d6b",
     "block_150bp": "#b3b3b3",
     "block_300bp": "#7d7a7a",
@@ -29,7 +28,6 @@
     "wang": "#FE8F42"
   },
     "datasetsMarkers": {
-    "flomics_1": "P",
     "flomics_2": "^",
     "block_150bp": "P",
     "block_300bp": "^",
@@ -83,15 +81,14 @@
     "decruyenaere": "Decruyenaere",
     "reggiardo_bioivt": "Reggiardo (BioIVT)",
     "reggiardo_dls": "Reggiardo (DLS)",
-    "flomics_1": "Flomics 1",
-    "flomics_2": "Flomics 2"
+    "flomics_2": "Flomics"
   },
-  "datasetVisualOrder": ["giraldez_phospho-rna-seq", "giraldez_standard", "sun_2", "wang", "chalasani", "ibarra_buffy_coat", "ibarra_plasma_cancer", "ibarra_plasma_non_cancer", "ibarra_serum", "toden", "reggiardo_bioivt", "reggiardo_dls", "block_150bp", "block_300bp", "chen", "decruyenaere", "flomics_1", "flomics_2", "moufarrej_site_1", "moufarrej_site_2", "ngo", "roskams_pilot", "roskams_validation", "tao", "zhu", "rozowsky", "wei"],
+  "datasetVisualOrder": ["giraldez_phospho-rna-seq", "giraldez_standard", "sun_2", "wang", "chalasani", "ibarra_buffy_coat", "ibarra_plasma_cancer", "ibarra_plasma_non_cancer", "ibarra_serum", "toden", "reggiardo_bioivt", "reggiardo_dls", "block_150bp", "block_300bp", "chen", "decruyenaere", "flomics_2", "moufarrej_site_1", "moufarrej_site_2", "ngo", "roskams_pilot", "roskams_validation", "tao", "zhu", "rozowsky", "wei"],
   "datasetGroups" : {
     "cfDNA": ["wei"],
     "custom": ["giraldez_phospho-rna-seq", "giraldez_standard", "sun_2", "wang"],
     "exome_based": ["chalasani", "ibarra_buffy_coat", "ibarra_plasma_cancer", "ibarra_plasma_non_cancer", "ibarra_serum", "toden"],
     "wro": ["reggiardo_bioivt", "reggiardo_dls"],
-    "wrr": ["block_150bp", "block_300bp", "chen", "decruyenaere", "flomics_1", "flomics_2", "moufarrej_site_1", "moufarrej_site_2", "ngo", "roskams_pilot", "roskams_validation", "tao", "zhu", "rozowsky"]
+    "wrr": ["block_150bp", "block_300bp", "chen", "decruyenaere", "flomics_2", "moufarrej_site_1", "moufarrej_site_2", "ngo", "roskams_pilot", "roskams_validation", "tao", "zhu", "rozowsky"]
   }
 }
