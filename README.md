@@ -1,7 +1,7 @@
 # fl-cfRNAmeta
 
-A repository for preprocessing, harmonizing, and analyzing metadata and data from public cfRNA-seq datasets. This project provides scripts and configuration files for standardizing sample and batch metadata, and processing the data in order to obtain final outputs for manuscript "An assessment of RNA-Seq experimental workflows for plasma cell-free transcriptome profiling".
----
+This repository hosts the code used in the analysis performed as part of the manuscript "**A cross-study assessment of RNA-Seq experimental workflows for cell-free transcriptome profiling**" by Tuñí _et al_.
+
 
 ## Repository Structure
 
