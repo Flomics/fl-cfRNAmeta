@@ -154,16 +154,11 @@ merged_colors <- c(
   cancer_colors
 )
 bracket_df <- data.frame(
-  xmin = c("Block (2x75bp)", "Giráldez (phospho-RNA-seq)", "Ibarra (buffy coat)","Reggiardo (BioIVT)" , "Moufarrej (Site 1)", "Roskams-Hieter (pilot)"),
-  xmax = c("Block (2x150bp)", "Giráldez (standard)", "Ibarra (serum)","Reggiardo (DLS)" , "Moufarrej (Site 2)", "Roskams-Hieter (validation)"),
+  xmin = c("Block (2x75bp)", "Giráldez (phospho)", "Ibarra (buffy coat)","Reggiardo (BioIVT)" , "Moufarrej (Site 1)", "Roskams (pilot)"),
+  xmax = c("Block (2x150bp)", "Giráldez (standard)", "Ibarra (serum)","Reggiardo (DLS)" , "Moufarrej (Site 2)", "Roskams (validation)"),
   label = c("Block", "Giráldez", "Ibarra","Reggiardo" , "Moufarrej", "Roskams-Hieter")
 )
 
-bracket_df_2 <- data.frame(
-  xmin = c("Giráldez (phospho-RNA-seq)", "Chalasani", "Reggiardo" , "Block (2x75bp)", "Wei (cfDNA)" ),
-  xmax = c("Wang", "Toden", "Reggiardo" ,"ENCODE (bulk tissue RNA-Seq)","Wei (cfDNA)" ),
-  label = c("Custom", "Exome-based", "Whole RNA-Seq (oligo-dT pr.)", "Whole RNA-Seq (random pr.)", "cfDNA")
-)
 
 phenotype_merged_plot_data$phenotype_merged <- fct_recode(
   phenotype_merged_plot_data$phenotype_merged,
@@ -215,47 +210,6 @@ add_bottom_brackets <- function(p, bracket_df, factor_levels, y_base = -0.03, he
   return(p)
 }
 
-bpc_info <- metadata[, c("dataset_batch", "broad_protocol_category")]
-bpc_info$dataset_batch_clean <- recode(bpc_info$dataset_batch, !!!clean_dataset_names)
-
-# label_positions <- table_filtered %>%
-#   group_by(dataset_batch.y, broad_protocol_category) %>%
-#   summarise(
-#     y = max(col_name, na.rm = TRUE),
-#     .groups = "drop"
-#   ) %>%
-#   mutate(y = y + 2)  
-
-
-bpc_colors <- c(
-  "cfDNA" =  "#AECAD9",
-  "Custom" = "#D9BBAE",
-  "Exome-based (EB)" = "#BBE0BB",
-  "Whole RNA-Seq (oligo-dT pr.) (WRO)" = "#D0AED9",
-  "Whole RNA-Seq (random pr.) (WRR)" = "#D9D6AE"
-)
-
-bpc_labels <- c(
-  "Custom" = "Custom",
-  "Exome-based (EB)" = "EB",
-  "Whole RNA-Seq (oligo-dT pr.) (WRO)" = "WRO",
-  "Whole RNA-Seq (random pr.) (WRR)" = "WRR",
-  "cfDNA" = "cfDNA"
-)
-
-y_limit_min <- min(table_filtered[[col_name]], na.rm = TRUE) - 6
-y_limit_max <- max(table_filtered[[col_name]], na.rm = TRUE) + 10
-
-bpc_order <- c("Custom", "Exome-based (EB)", "Whole RNA-Seq (oligo-dT pr.) (WRO)", "Whole RNA-Seq (random pr.) (WRR)", "cfDNA")
-
-annotation_df <- phenotype_merged_plot_data %>%
-  select(dataset_batch_clean) %>%
-  distinct() %>%
-  left_join(bpc_info, by = "dataset_batch_clean") %>%
-  mutate(
-    y = -12,  # row height below 0 (stacked bars start at 0)
-    broad_protocol_category = factor(broad_protocol_category, levels = bpc_order)
-  )
 
 
 p <- ggplot(phenotype_merged_plot_data, aes(x = dataset_batch_clean, y = count, fill = phenotype_merged)) +
@@ -279,37 +233,64 @@ p <- ggplot(phenotype_merged_plot_data, aes(x = dataset_batch_clean, y = count, 
     plot.background = element_rect(fill = "white", colour = "white") 
   ) + coord_cartesian(clip = "off")#, ylim = c(-20, NA))
 
-# p <- p + new_scale_fill()
-# 
-# p <- p +
-#   geom_tile(
-#     data = annotation_df,
-#     aes(x = dataset_batch_clean, y = y, fill = broad_protocol_category),
-#     width = 0.95, height = 8,
-#     inherit.aes = FALSE
-#   ) +
-#   scale_fill_manual(
-#     name = "BPC",
-#     values = bpc_colors,
-#     labels = bpc_labels
-#   ) +
-#   theme(
-#     legend.position = "right",
-#     legend.title = element_text(face = "bold", size = 14),
-#     legend.text = element_text(size = 12),
-#     legend.key.size = unit(0.4, "cm"),
-#     legend.spacing.x = unit(0.2, "cm"),
-#     legend.margin = margin(0, 0, 0, 0)
-#   )
+
 
 
 p <- add_bottom_brackets(p, bracket_df, levels(phenotype_merged_plot_data$dataset_batch_clean), y_base = 0.03)
-
-#p <- add_bottom_brackets(p, bracket_df_2, levels(phenotype_merged_plot_data$dataset_batch_clean), y_base = -0.001, col = "grey60", lwd=2)
 
 
 ggsave("figures/fig_1a_combined_simplified_and_cancer_detail.png",
        width = 17, height = 8, dpi = 600, units = "in", bg = "white",device = ragg::agg_png)
 ggsave("figures/fig_1a_combined_simplified_and_cancer_detail.svg",
        width = 17, height = 8, dpi = 600, units = "in", bg = "white", device = "svg")
+
+
+library(ggplot2)
+library(cowplot)
+library(grid)  
+
+plot_with_legend <- ggplot(phenotype_merged_plot_data, aes(x = dataset_batch_clean, y = count, fill = phenotype_merged)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = merged_colors, name = "Donor phenotype") +
+  labs(x = "Dataset", y = "Number of samples") +
+  theme_minimal(base_size = 6) +
+  theme(
+    text = element_text(family = "Arial", size = 6),
+    axis.text.x = element_text(angle = 45, vjust = 1.05, hjust = 1, size = 6, color = "black"),
+    axis.title.x = element_blank(),
+    legend.key.size = unit(0.3, "cm"),  # or smaller, e.g., 0.25
+    axis.title.y = element_text(size = 6),
+    legend.title = element_text(size = 6, face = "bold"),
+    legend.text = element_text(size = 6),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_line(size = 0.3),
+    panel.grid.minor.y = element_blank(),
+    plot.margin = margin(5, 5, 5, 32),
+    plot.background = element_rect(fill = "white", colour = "white")
+  ) +
+  coord_cartesian(clip = "off")
+
+plot_with_legend <- add_bottom_brackets(plot_with_legend, bracket_df, levels(phenotype_merged_plot_data$dataset_batch_clean), y_base = 0.03)
+
+
+legend <- cowplot::get_legend(plot_with_legend)
+
+plot_no_legend <- plot_with_legend + theme(legend.position = "none")
+
+final_plot <- cowplot::plot_grid(
+  plot_no_legend,
+  legend,
+  rel_widths = c(3.5, 1.3), 
+  rel_heights = c(1,1),
+  nrow = 1
+)
+
+ggsave("figures/fig_1a_combined_simplified_and_cancer_detail_2.png",
+       plot = final_plot,
+       width = 5.8, height = 1.7, dpi = 600, units = "in", bg = "white", device = ragg::agg_png)
+
+ggsave("figures/fig_1a_combined_simplified_and_cancer_detail_2.svg",
+       plot = final_plot,
+       width = 5.8, height = 1.7, dpi = 600, units = "in", bg = "white", device = "svg")
 
