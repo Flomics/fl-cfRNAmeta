@@ -45,6 +45,7 @@ dataset_column_list = [
     'Library prep kit',
     'Library prep kit (short name)',
     'cDNA library type',
+    'Broad protocol category'
     ]
 dataset_column_list = simplify_column_names(dataset_column_list)
 
@@ -54,7 +55,7 @@ def merge_sample_with_dataset_metadata(df, dataset_metadata, keep_sample_cols=[]
     # are not present in the dataset_metadata table.
     df.columns = simplify_column_names(df.columns)
     cols_common = (set(df.columns).intersection(set(dataset_column_list))
-                   - {'dataset_short_name'}
+                   - {'dataset_short_name', 'Broad protocol category'}
                    - set(keep_sample_cols))
     if len(cols_common) > 0:
         raise RuntimeError(f"The following columns are present in the sample-level metadata dataframe and also in the dataset-level dataframe: {cols_common}")
@@ -437,9 +438,6 @@ def preprocess_block(dataset_metadata):
 
     df = merge_sample_with_dataset_metadata(
         df, dataset_metadata, keep_sample_cols=["biomaterial"])
-    
-    # Collection center harmonization
-    df['collection_center'] = df['collection_center'].replace("CH,NJ", "CH, NJ")
 
     df.to_csv("../sra_metadata/block_metadata_preprocessed.csv", index=False)
 
@@ -924,9 +922,7 @@ def preprocess_decruyenaere(dataset_metadata):
     df["disease"]            = df["phenotype"]
     df["read_length"]        = "2x100"
     df["centrifugation_step_1"] = "1900g"
-    df["centrifugation_step_2"] = "None"
-    df["assay_type"] = "RNA-seq"
-    df["organism"] = "Homo sapiens" 
+    df["centrifugation_step_2"] = "None" 
 
     # Exclude FFPE samples
     n1 = len(df)
@@ -982,59 +978,57 @@ def preprocess_reggiardo(dataset_metadata):
     return df
 
 
-def preprocess_flomics_1(dataset_metadata):
-    print("### Dataset: flomics_1")
-    csv_path = "../sra_metadata/flomics_1_metadata.tsv"
-    df = pd.read_csv(csv_path, sep='\t')
-    df.columns = simplify_column_names(df.columns)
+# def preprocess_flomics_1(dataset_metadata):
+#     print("### Dataset: flomics_1")
+#     csv_path = "../sra_metadata/flomics_1_metadata.tsv"
+#     df = pd.read_csv(csv_path, sep='\t')
+#     df.columns = simplify_column_names(df.columns)
 
-    # Improve compatibility with snakeDA (reserved var: ['sequencing_batch'])
-    # => 'sequencing_batch' is defined in metadata file
-    df = df.rename(columns={'sequencing_batch':'sequencing_batch_other'})
+#     # Improve compatibility with snakeDA (reserved var: ['sequencing_batch'])
+#     # => 'sequencing_batch' is defined in metadata file
+#     df = df.rename(columns={'sequencing_batch':'sequencing_batch_other'})
 
-    df["dataset_short_name"] = "flomics_1"
-    df["dataset_batch"] = "flomics_1"
-    df["read_length"] = "2x150"
-    df["centrifugation_step_1"] = "2000g"
-    df["centrifugation_step_2"] = "None"
-    df["assay_type"] = "RNA-seq"
-    df["organism"] = "Homo sapiens"
+#     df["dataset_short_name"] = "flomics_1"
+#     df["dataset_batch"] = "flomics_1"
+#     df["read_length"] = "2x150"
+#     df["centrifugation_step_1"] = "2000g"
+#     df["centrifugation_step_2"] = "None" 
     
-    #df["run"] = df["sample_name"]
-    df["run"] = df["sample_display_name"]
-    #df["run"] = df["sample_analysis_run_id"].apply(lambda x: x.split('_')[0])
+#     #df["run"] = df["sample_name"]
+#     df["run"] = df["sample_display_name"]
+#     #df["run"] = df["sample_analysis_run_id"].apply(lambda x: x.split('_')[0])
 
-    # exclude samples
-    samples_to_remove_rna_extraction = [
-        # Different RNA extraction protocols
-        "SAMP016_EXP089_FL089minusA1", "SAMP017_EXP089_FL089minusB1",
-    ]
-    n1 = len(df)
-    df = df[~df["run"].isin(samples_to_remove_rna_extraction)]
-    n2 = len(df)
-    print(f"Exclude samples with different RNA isolation protocol. N = {n1 - n2}")
-    samples_to_remove_centrifugation = [
-        # Different centrifugation protocols
-        "SAMP008_EXP094_FL094_C1", "SAMP009_EXP094_FL094_D1",
-    ]
-    n1 = len(df)
-    df = df[~df["run"].isin(samples_to_remove_centrifugation)]
-    n2 = len(df)
-    print(f"Exclude samples with different centrifugation protocols. N = {n1 - n2}")
+#     # exclude samples
+#     samples_to_remove_rna_extraction = [
+#         # Different RNA extraction protocols
+#         "SAMP016_EXP089_FL089minusA1", "SAMP017_EXP089_FL089minusB1",
+#     ]
+#     n1 = len(df)
+#     df = df[~df["run"].isin(samples_to_remove_rna_extraction)]
+#     n2 = len(df)
+#     print(f"Exclude samples with different RNA isolation protocol. N = {n1 - n2}")
+#     samples_to_remove_centrifugation = [
+#         # Different centrifugation protocols
+#         "SAMP008_EXP094_FL094_C1", "SAMP009_EXP094_FL094_D1",
+#     ]
+#     n1 = len(df)
+#     df = df[~df["run"].isin(samples_to_remove_centrifugation)]
+#     n2 = len(df)
+#     print(f"Exclude samples with different centrifugation protocols. N = {n1 - n2}")
 
-    reserved_cols = set(df.columns).intersection(reserved_vars_samplesheet)
-    if reserved_cols:
-        df = df.drop(reserved_cols, axis=1)
+#     reserved_cols = set(df.columns).intersection(reserved_vars_samplesheet)
+#     if reserved_cols:
+#         df = df.drop(reserved_cols, axis=1)
 
-    df = merge_sample_with_dataset_metadata(df, dataset_metadata)
+#     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
 
-    df.to_csv("../sra_metadata/flomics_1_metadata_preprocessed.csv", index=False)
+#     df.to_csv("../sra_metadata/flomics_1_metadata_preprocessed.csv", index=False)
 
-    return df
+#     return df
 
 
 def preprocess_flomics_2(dataset_metadata):
-    print("### Dataset: flomics_2")
+    print("### Dataset: flomics")
     csv_path = "../sra_metadata/flomics_2_metadata.tsv"
     df = pd.read_csv(csv_path, sep='\t')
     df.columns = simplify_column_names(df.columns)
@@ -1047,9 +1041,7 @@ def preprocess_flomics_2(dataset_metadata):
     df["dataset_batch"] = "flomics_2"
     df["read_length"] = "2x150"
     df["centrifugation_step_1"] = "1500g"
-    df["centrifugation_step_2"] = "2500g"
-    df["assay_type"] = "RNA-seq"
-    df["organism"] = "Homo sapiens" 
+    df["centrifugation_step_2"] = "2500g" 
 
     #df["run"] = df["sample_name"]
     df["run"] = df["sample_display_name"]
@@ -1133,10 +1125,9 @@ def main():
     sun = preprocess_sun(dataset_metadata)
     decruyenaere = preprocess_decruyenaere(dataset_metadata)
     reggiardo = preprocess_reggiardo(dataset_metadata)
-    flomics_1 = preprocess_flomics_1(dataset_metadata)
     flomics_2 = preprocess_flomics_2(dataset_metadata)
 
-    dfs = [chen, zhu, roskams, ngo, ibarra, toden, chalasani, block, rozowsky, tao, wei, moufarrej, wang, giraldez, sun, decruyenaere, reggiardo, flomics_1, flomics_2]
+    dfs = [chen, zhu, roskams, ngo, ibarra, toden, chalasani, block, rozowsky, tao, wei, moufarrej, wang, giraldez, sun, decruyenaere, reggiardo, flomics_2]
 
     sample_metadata = pd.concat(dfs, axis=0, join="outer", ignore_index=True)
 
