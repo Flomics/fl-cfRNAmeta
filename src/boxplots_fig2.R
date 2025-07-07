@@ -8,25 +8,23 @@ library(grid)
 library(jsonlite)
 library(colorspace)
 library(showtext)
-font_add(family="Arial", regular = "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf")
-showtext_opts(dpi = 600)  # MUST come before showtext_auto()
-showtext_auto()
-theme_set(theme_classic(base_family = "Arial"))
+library(svglite)
+library("extrafont")
 
 
 # Read column names from text file
 setwd("~/fl-cfRNAmeta/")
 column_names <- c("read_number",
-                  "avg_input_read_length",
-                  "percentage_of_uniquely_mapped_reads",
+                  #"avg_input_read_length",
+                  #"percentage_of_uniquely_mapped_reads",
                   "avg_mapped_read_length",
                   "mapped_percentage",
                   "exonic_percentage",                  
-                  "intronic_percentage",
+                  #"intronic_percentage",
                   "percentage_of_spliced_reads",
-                  "X.known_splice_junctions",           
-                  "read_coverage_uniformity_score",
-                  "junction_saturation_slope",
+                  #"X.known_splice_junctions",           
+                  #"read_coverage_uniformity_score",
+                  #"junction_saturation_slope",
                   "median_insert_size",
                   "genes_contributing_to_80._of_reads",
                   "reads_mapping_sense_percentage",
@@ -35,24 +33,12 @@ column_names <- c("read_number",
                   "total_reads",
                   "number_of_uniquely_mapped_reads",
                   "spike_in_pct")
-                  #"mt_rna_pct", "mt_rrna_pct", "mt_trna_pct", "misc_rna_pct", "protein_coding_pct", "lncrna_pct", "snrna_pct", "snorna_pct", "spike_in_pct", "other_rna_biotypes_pct")
+#"mt_rna_pct", "mt_rrna_pct", "mt_trna_pct", "misc_rna_pct", "protein_coding_pct", "lncrna_pct", "snrna_pct", "snorna_pct", "spike_in_pct", "other_rna_biotypes_pct")
 
 data <- read.delim("tables/sampleinfo_all-batches.tsv", header = TRUE, sep = "\t", fileEncoding = "UTF-8")
 
 # Load metadata
 metadata <- read.delim("tables/cfRNA-meta_per_sample_metadata.tsv", header = TRUE, sep = "\t", fill = TRUE)
-
-# Strip decruyenaere samples of the "_*" in their sample_id
-#data$sample_id[data$sequencing_batch == "decruyenaere"] <- 
-  #sub("_.*", "", data$sample_id[data$sequencing_batch == "decruyenaere"])
-
-# MOdify flomics_2 sample ids from FL-SAMP-ID TO SAMPID
-#data$sequencing_batch[grepl("^FL", data$sequencing_batch)] <- "flomics_2"
-#data$sample_id[data$sequencing_batch == "flomics_2"] <- 
-  #gsub("_.*", "", data$sample_id[data$sequencing_batch == "flomics_2"])
-
-
-
 
 
 # Step 1: Filter merged_df to keep only samples that appear in metadata
@@ -94,7 +80,7 @@ filtered_df$exonic_reads_minus_spike_ins <- (filtered_df$exonic_reads_minus_spik
 
 # Keep specified columns
 selected_columns <- NULL
-selected_columns <- c( "sample_id", "sequencing_batch", "status", "spike_in_pct", "protein_coding_pct", "percentage_of_spliced_reads", "dataset_batch.y", column_names)
+selected_columns <- c( "sample_id", "sample_name", "sequencing_batch", "status", "dataset_batch.y", column_names)
 filtered_data <- filtered_df[ ,selected_columns]
 
 filtered_data$percent_of_reads_mapping_to_spike_ins <- biotype_data$percent_of_reads_mapping_to_spike_ins
@@ -155,6 +141,65 @@ table_filtered$percent_of_multimapped_reads_total_reads_mapped <- (table_filtere
 column_names <- c(column_names, "percent_of_multimapped_reads_total_reads_mapped")
 
 #write.table(table_filtered, file="Qc_table_filtered.tsv", row.names = FALSE)
+table_filtered$spike_in_pct <- table_filtered$spike_in_pct * 100
+
+add_bottom_brackets <- function(p, bracket_df, factor_levels, y_base = -0.03, height = 0.015, col="black", lwd=0.8) {
+  for (i in seq_len(nrow(bracket_df))) {
+    x1 <- which(factor_levels == bracket_df$xmin[i])
+    x2 <- which(factor_levels == bracket_df$xmax[i])
+    if (length(x1) == 0 || length(x2) == 0) next
+    
+    offset <- 0.005
+    x_start <- ((x1 - 1) / length(factor_levels)) + offset
+    x_end   <- (x2 / length(factor_levels)) - offset
+    
+    bracket <- linesGrob(
+      x = unit.c(unit(x_start, "npc"), unit(x_end, "npc")),
+      y = unit(c(y_base, y_base), "npc"),
+      gp = gpar(col = col, lwd = lwd)
+    )
+    
+    verticals <- gList(
+      linesGrob(
+        x = unit.c(unit(x_start, "npc"), unit(x_start, "npc")),
+        y = unit(c(y_base, y_base - height), "npc"),
+        gp = gpar(col = col, lwd = lwd)
+      ),
+      linesGrob(
+        x = unit.c(unit(x_end, "npc"), unit(x_end, "npc")),
+        y = unit(c(y_base, y_base - height), "npc"),
+        gp = gpar(col = col, lwd = lwd)
+      )
+    )
+    
+    p <- p + annotation_custom(grobTree(bracket, verticals))
+  }
+  return(p)
+}
+
+
+bpc_colors <- c(
+  "cfDNA" =  "#AECAD9",
+  "Custom" = "#D9BBAE",
+  "Exome-based (EB)" = "#BBE0BB",
+  "Whole RNA-Seq (oligo-dT pr.) (WRO)" = "#D0AED9",
+  "Whole RNA-Seq (random pr.) (WRR)" = "#D9D6AE"
+)
+
+bpc_labels <- c(
+  "Custom" = "Custom",
+  "Exome-based (EB)" = "EB",
+  "Whole RNA-Seq (oligo-dT pr.) (WRO)" = "WRO",
+  "Whole RNA-Seq (random pr.) (WRR)" = "WRR",
+  "cfDNA" = "cfDNA"
+)
+
+bpc_order <- c("Custom", "Exome-based (EB)", "Whole RNA-Seq (oligo-dT pr.) (WRO)", "Whole RNA-Seq (random pr.) (WRR)", "cfDNA")
+
+
+#######
+# Main loop
+#######
 
 ggplot_objects <- lapply(column_names, function(col_name) {
   yvals <- table_filtered[[col_name]]
@@ -174,12 +219,41 @@ ggplot_objects <- lapply(column_names, function(col_name) {
   label_block <- if (col_name == "mapped_percentage") {
     labs(title = NULL, x = "Dataset", y = "% reads mapped to reference human genome")
   } else if (col_name == "exonic_reads_minus_spike_ins") {
-    labs(title = NULL, x = "Dataset", y =  "% reads mapping to exons")
+    labs(title = NULL, x = "Dataset", y =  "Fraction of exonic reads (FER)")
   } else if (col_name == "avg_mapped_read_length") {
     labs(title = NULL, x = "Dataset", y =  "Effective fragment length\n(average mapped length)")
+  } else if (col_name == "spike_in_pct") {
+    labs(title = NULL, x = "Dataset", y =  "Fraction of reads mapping to ERCC spike-ins")
+  } else if (col_name == "percentage_of_spliced_reads") {
+    labs(title = NULL, x = "Dataset", y =  "Fraction of spliced reads (FSR)")
   } else {
     labs(title = NULL, x = "Dataset", y = clean_label(col_name))
   }
+  
+  
+  bpc_info <- metadata[, c("run", "broad_protocol_category")]
+  table_filtered <- table_filtered %>%
+    left_join(bpc_info, by = c("sample_id" = "run"))
+  
+  
+  y_min <- min(table_filtered[[col_name]], na.rm = TRUE)
+  y_max <- max(table_filtered[[col_name]], na.rm = TRUE)
+  y_range <- y_max - y_min
+  
+  annotation_y <- 0 - 0.05 * y_range
+  annotation_height <- 0.03 * y_range
+  
+  y_limit_min <- min(annotation_y - annotation_height, y_min - 0.02 * y_range)
+  y_limit_max <- y_max + 0.1 * y_range
+  
+  annotation_df <- table_filtered %>%
+    select(dataset_batch.y, broad_protocol_category) %>%
+    distinct() %>%
+    mutate(
+      y = annotation_y,
+      broad_protocol_category = factor(broad_protocol_category, levels = bpc_order)
+    )
+  
   
   
   p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = .data[[col_name]], fill = dataset_batch.y)) +
@@ -203,22 +277,10 @@ ggplot_objects <- lapply(column_names, function(col_name) {
           plot.title = element_blank(),
           legend.position = "none") +
     scale_x_discrete(labels = datasetsLabels) +
-    scale_fill_manual(values = datasetsPalette, labels = datasetsLabels) +
-    scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels)
-  
-  for (i in seq_len(nrow(bracket_df))) {
-    x1 <- which(levels(table_filtered$dataset_batch.y) == bracket_df$xmin[i])
-    x2 <- which(levels(table_filtered$dataset_batch.y) == bracket_df$xmax[i])
-    if (length(x1) == 0 || length(x2) == 0) next
-    
-    offset <- 0.005 #spacing
-    x_start <- ((x1 - 1) / length(core_order)) + offset  # LEFT tick
-    x_end   <- (x2 / length(core_order)) - offset        # RIGHT tick
-    
-    bracket <- linesGrob(
-      x = unit.c(unit(x_start, "npc"), unit(x_end, "npc")),
-      y = unit(c(-0.03, -0.03), "npc"),
-      gp = gpar(col = "black", lwd = 0.8)
+    scale_fill_manual(values = datasetsPalette, labels = datasetsLabels, guide = "none") +
+    scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels, guide= "none") +
+    scale_y_continuous(
+      limits = c(y_limit_min, y_limit_max)  
     )
   
   p <- p + new_scale_fill()  # VERY IMPORTANT, native ggplot does not like having two cals of scale_fill or scale_color, so ggnewscale is needed
@@ -240,16 +302,14 @@ ggplot_objects <- lapply(column_names, function(col_name) {
               legend.spacing.x = unit(0.2, "cm"),
               legend.margin = margin(0, 0, 0, 0)
     )
-    
-    p <- p + annotation_custom(grobTree(bracket, verticals))
-  }
   
+  
+  p <- add_bottom_brackets(p, bracket_df, levels(table_filtered$dataset_batch.y),  y_base = 0.03)
   
   return(p)
 })
 
-
-setwd("~/cfRNA-meta/full_comparison_2025_06_16/")
+setwd("figures/")
 
 for (i in 1:length(ggplot_objects)) {
   col_name <- column_names[i]
@@ -258,6 +318,12 @@ for (i in 1:length(ggplot_objects)) {
   output_file <- paste0(gsub(" ", "_", tolower(col_name)), "_annotation_row_2.svg")
   ggsave(output_file, ggplot_objects[[i]], width = 4.7, height = 2.56, dpi = 600, device = "svg", scaling = 0.5)
 }
+#####################################################
+# Stats for manuscript SPLICED READS
+####################################################
+x <- table_filtered$percentage_of_spliced_reads[table_filtered$dataset_batch.y == "wei"]
+median_value <- median(x, na.rm = TRUE)
+sd_value <- sd(x, na.rm = TRUE)
 
 cat("Median ± SD:", sprintf("%.2f ± %.2f", median_value, sd_value), "\n")
 
@@ -441,7 +507,7 @@ quality_plot <- ggplot(quality_summary, aes(x = dataset_batch.y, y = percent_hig
   ) +
   theme_classic() +
   coord_cartesian(clip = "off", ylim = c(y_limit_min, y_limit_max)) +
-theme(text=element_text(family="Arial"),
+  theme(text=element_text(family="Arial"),
         line = element_blank(),
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank(),
@@ -504,15 +570,6 @@ strandedness_info <- metadata[, c("run", "cdna_library_type")]
 table_filtered <- table_filtered %>%
   left_join(strandedness_info, by = c("sample_id" = "run"))
 
-label_positions <- table_filtered %>%
-  group_by(dataset_batch.y, cdna_library_type) %>%
-  summarise(
-    y = max(Fragments_mapping_to_expected_strand_pct, na.rm = TRUE),
-    .groups = "drop"
-  ) %>%
-  mutate(y = y + 2)  
-
-
 strandedness_colors <- c(
   "Reverse" = "#8DD3C7",
   "Unstranded" = "#BEBADA"
@@ -523,12 +580,23 @@ annotation_df <- table_filtered %>%
   distinct() %>%
   mutate(y = 105) 
 
+y_vals <- table_filtered$Fragments_mapping_to_expected_strand_pct
+y_min <- min(y_vals, na.rm = TRUE)
+y_max <- max(y_vals, na.rm = TRUE)
+y_range <- y_max - y_min
 
-label_positions <- label_positions %>%
-  mutate(cdna_library_type = recode(cdna_library_type,
-                                    "Reverse" = "R",
-                                    "Unstranded" = "U"))
+bottom_annotation_y <- 0 - 0.05 * y_range
+bottom_annotation_height <- 0.03 * y_range
 
+
+bottom_annotation_df <- table_filtered %>%
+  select(dataset_batch.y) %>%
+  distinct() %>%
+  left_join(bpc_info, by = "dataset_batch.y") %>%
+  mutate(
+    y = bottom_annotation_y,
+    broad_protocol_category = factor(broad_protocol_category, levels = bpc_order)
+  )
 
 
 p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = Fragments_mapping_to_expected_strand_pct, fill = dataset_batch.y)) +
@@ -536,15 +604,18 @@ p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = Fragments_mapping_to_ex
   geom_point(aes(y = Fragments_mapping_to_expected_strand_pct, color = dataset_batch.y), 
              position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.8), 
              shape = 21, size = 1.5, stroke = 0.2, alpha = 0.6) +
-  #geom_hline(yintercept=100, linetype='dashed', col = 'lightgrey') +
   labs(title = "",
        x = "Dataset", y = "% fragments mapping to correct gene orientation") +
   theme_classic() +
-  theme(panel.grid.major.x = element_blank(),
+  theme(text=element_text(family="Arial"),
+        line = element_blank(),
+        axis.title.x = element_blank(),
+        plot.margin = margin(20, 20, 20, 45),
+        panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank(),
         panel.grid.major.y = element_line(size = 0.8), 
         panel.grid.minor.y = element_blank(),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust = 0.9),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust = 1.1),
         axis.title = element_text(size = 12, face = "bold"),
         plot.title = element_text(size = 14, face = "bold"),
         legend.position = "none") +
@@ -552,13 +623,14 @@ p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = Fragments_mapping_to_ex
   scale_fill_manual(values = datasetsPalette, labels = datasetsLabels, guide = "none") +
   scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels, guide = "none") +
   scale_y_continuous(
-    limits = c(0, 110),  # extend a bit for annotations
+    #limits = c(-10, 110),  # extend a bit for annotations
     breaks = c(0, 25, 50, 75, 100),
     labels = function(x) paste0(x, "%")
   ) +
-  coord_cartesian(clip = "off")
+  coord_cartesian(clip = "off", ylim = c(bottom_annotation_y - bottom_annotation_height, 110))
 
-p <- p + new_scale_fill()  # VERY IMPORTANT, native ggplot does not like having two cals of scale_fill or scale_color, so ggnewscale is needed
+
+p <- p + new_scale_fill()  
 
 p <- p +
   geom_tile(data = annotation_df,
@@ -566,18 +638,18 @@ p <- p +
             width = 0.8, height = 4,
             inherit.aes = FALSE) +
   scale_fill_manual(
-    name = "Strandedness",
+    name = "Library strandedness",
     values = strandedness_colors
-  ) + theme(
-    legend.position = "top",  
-    legend.title = element_text(face = "bold", size = 9),
-    legend.text = element_text(size = 9),
-    legend.key.size = unit(0.4, "cm"),
-    legend.spacing.x = unit(0.2, "cm"),
-    legend.margin = margin(0, 0, 0, 0)
+  ) + theme(text=element_text(family="Arial"),
+            legend.position = "top",  
+            legend.title = element_text(face = "bold", size = 9),
+            legend.text = element_text(size = 9),
+            legend.key.size = unit(0.4, "cm"),
+            legend.spacing.x = unit(0.2, "cm"),
+            legend.margin = margin(0, 0, 0, 0)
   )
 
-p <- add_bottom_brackets(p, bracket_df, levels(table_filtered$dataset_batch.y))
+p <- p + new_scale_fill()
 
 p <- p +
   geom_tile(
@@ -620,6 +692,25 @@ table_filtered <- table_filtered %>%
     read_number / 2        # Paired-end: divide by 2
   ))
 
+
+y_vals <- table_filtered$fragment_number
+y_min <- min(y_vals, na.rm = TRUE)
+y_max <- max(y_vals, na.rm = TRUE)
+y_range <- y_max - y_min
+
+bottom_annotation_y <- 0 - 0.05 * y_range
+bottom_annotation_height <- 0.03 * y_range
+
+
+bottom_annotation_df <- table_filtered %>%
+  select(dataset_batch.y) %>%
+  distinct() %>%
+  left_join(bpc_info, by = "dataset_batch.y") %>%
+  mutate(
+    y = bottom_annotation_y,
+    broad_protocol_category = factor(broad_protocol_category, levels = bpc_order)
+  )
+
 p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = fragment_number, fill = dataset_batch.y)) +
   geom_boxplot(alpha = 0.3, aes(color = dataset_batch.y), position = position_dodge(width = 0.75), outlier.shape = NA) +
   geom_point(aes(y = fragment_number, color = dataset_batch.y), 
@@ -628,21 +719,24 @@ p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = fragment_number, fill =
   labs(title = "",
        x = "Dataset", y = "Fragment number") +
   theme_classic() +
-  theme(        panel.grid.major.x = element_blank(),
-                panel.grid.minor.x = element_blank(),
-                panel.grid.major.y = element_line(size = 0.8), 
-                panel.grid.minor.y = element_blank(),
-                axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust = 0.9),
-                axis.title = element_text(size = 12, face = "bold"),
-                plot.title = element_text(size = 14, face = "bold"),
-                legend.position = "none") +
+  theme(text=element_text(family="Arial"),
+        line = element_blank(),
+        axis.title.x = element_blank(),
+        plot.margin = margin(20, 20, 20, 45),        
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.y = element_line(size = 0.8), 
+        panel.grid.minor.y = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust = 1.1),
+        axis.title = element_text(size = 12, face = "bold"),
+        plot.title = element_text(size = 14, face = "bold"),
+        legend.position = "none") +
   scale_x_discrete(labels = datasetsLabels) +
-  scale_fill_manual(values = datasetsPalette, labels = datasetsLabels) +
-  scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels) +
+  scale_fill_manual(values = datasetsPalette, labels = datasetsLabels, guide = "none") +
+  scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels, guide = "none") +
   scale_y_continuous(labels = label_number(scale_cut = cut_short_scale())) + 
-  coord_cartesian(clip = "off")
+  coord_cartesian(clip = "off", ylim = c(bottom_annotation_y - bottom_annotation_height, NA))
 
-p <- add_bottom_brackets(p, bracket_df, levels(table_filtered$dataset_batch.y))
 
 p <- p + new_scale_fill()
 
@@ -680,6 +774,29 @@ ggsave("figures/fragment_number_2.svg", p, width = 11, height = 6, dpi = 600, de
 #######################################################
 table_filtered$log_genes_80 <- log(table_filtered$number_of_genes_contributing_to_80._of_reads)
 
+
+y_breaks <- log(c(100, 500, 1000, 5000, 10000, 20000))
+
+y_labels <- c(100, 500, 1000, 5000, 10000, 20000)
+
+y_vals <- table_filtered$log_genes_80
+y_min <- min(y_vals, na.rm = TRUE)
+y_max <- max(y_vals, na.rm = TRUE)
+y_range <- y_max - y_min
+
+bottom_annotation_y <- y_min - 0.05 * y_range
+bottom_annotation_height <- 0.03 * y_range
+
+
+bottom_annotation_df <- table_filtered %>%
+  select(dataset_batch.y) %>%
+  distinct() %>%
+  left_join(bpc_info, by = "dataset_batch.y") %>%
+  mutate(
+    y = bottom_annotation_y,
+    broad_protocol_category = factor(broad_protocol_category, levels = bpc_order)
+  )
+
 p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = log_genes_80, fill = dataset_batch.y)) +
   geom_boxplot(alpha = 0.3, aes(color = dataset_batch.y), position = position_dodge(width = 0.75), outlier.shape = NA) +
   geom_point(aes(y = log_genes_80, color = dataset_batch.y), 
@@ -688,13 +805,23 @@ p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = log_genes_80, fill = da
   labs(title = "",
        x = "Dataset", y = "NG80") +
   theme_classic() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
-        axis.title = element_text(size = 12, face = "bold"),
-        plot.title = element_text(size = 14, face = "bold"),
-        legend.position = "none") +
+  theme( line = element_blank(),
+         axis.title.x = element_blank(),
+         text=element_text(family="Arial"),
+         plot.margin = margin(20, 20, 20, 45),      
+         panel.grid.major.x = element_blank(),
+         panel.grid.minor.x = element_blank(),
+         panel.grid.major.y = element_line(size = 0.8), 
+         panel.grid.minor.y = element_blank(),
+         axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust = 1.1),
+         axis.title = element_text(size = 12, face = "bold"),
+         plot.title = element_text(size = 14, face = "bold"),
+         legend.position = "none") +
   scale_x_discrete(labels = datasetsLabels) +
-  scale_fill_manual(values = datasetsPalette, labels = datasetsLabels) +
-  scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels)
+  scale_fill_manual(values = datasetsPalette, labels = datasetsLabels, guide = "none") +
+  scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels, guide = "none") +
+  scale_y_continuous(breaks = y_breaks, labels = y_labels) + 
+  coord_cartesian(clip = "off", ylim = c(bottom_annotation_y - bottom_annotation_height, NA))
 
 p <- p + new_scale_fill()
 
@@ -737,30 +864,51 @@ ng80_table <- table_filtered %>%
   left_join(ng_only_mrna, by = c("sample_name" = "Sample"))
 
 ng80_table$log_genes_80_pc <- log(ng80_table$number_of_genes_contributing_to_80._of_reads)
+
 y_breaks <- log(c(100, 500, 1000, 5000, 10000, 20000))
 
 y_labels <- c(100, 500, 1000, 5000, 10000, 20000)
 
-p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = log_genes_80, fill = dataset_batch.y)) +
+y_vals <- ng80_table$log_genes_80
+y_min <- min(y_vals, na.rm = TRUE)
+y_max <- max(y_vals, na.rm = TRUE)
+y_range <- y_max - y_min
+
+bottom_annotation_y <- y_min - 0.05 * y_range
+bottom_annotation_height <- 0.03 * y_range
+
+bottom_annotation_df <- ng80_table %>%
+  select(dataset_batch.y) %>%
+  distinct() %>%
+  left_join(bpc_info, by = "dataset_batch.y") %>%
+  mutate(
+    y = bottom_annotation_y,
+    broad_protocol_category = factor(broad_protocol_category, levels = bpc_order)
+  )
+
+p <- ggplot(ng80_table, aes(x = dataset_batch.y, y = log_genes_80, fill = dataset_batch.y)) +
   geom_boxplot(alpha = 0.3, aes(color = dataset_batch.y), position = position_dodge(width = 0.75), outlier.shape = NA) +
   geom_point(aes(y = log_genes_80, color = dataset_batch.y), 
              position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.8), 
              shape = 21, size = 1.5, stroke = 0.2, alpha = 0.6) +
   labs(title = "",
-       x = "Dataset", y = "NG80") +
+       x = "Dataset", y = "NG80 (protein coding genes)") +
   theme_classic() +
-  theme(base_family= "Arial",
-        panel.grid.major.x = element_blank(),
-        panel.grid.minor.x = element_blank(),
-        panel.grid.major.y = element_line(size = 0.8), 
-        panel.grid.minor.y = element_blank(),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust = 0.9),
-        axis.title = element_text(size = 12, face = "bold"),
-        plot.title = element_text(size = 14, face = "bold"),
-        legend.position = "none") +
+  theme( line = element_blank(),
+         axis.title.x = element_blank(),
+         text=element_text(family="Arial"),
+         plot.margin = margin(20, 20, 20, 45),  
+         panel.grid.major.x = element_blank(),
+         panel.grid.minor.x = element_blank(),
+         panel.grid.major.y = element_line(size = 0.8), 
+         panel.grid.minor.y = element_blank(),
+         axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust = 1.1),
+         axis.title = element_text(size = 12, face = "bold"),
+         plot.title = element_text(size = 14, face = "bold"),
+         legend.position = "none") +
   scale_x_discrete(labels = datasetsLabels) +
-  scale_fill_manual(values = datasetsPalette, labels = datasetsLabels) +
-  scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels) +
+  scale_fill_manual(values = datasetsPalette, labels = datasetsLabels, guide = "none") +
+  scale_color_manual(values = datasetsOutlinePalette, labels = datasetsLabels, guide = "none") +
   scale_y_continuous(breaks = y_breaks, labels = y_labels) + 
   coord_cartesian(clip = "off", ylim = c(bottom_annotation_y - bottom_annotation_height, y_max + 0.05 * y_range))
 
@@ -888,7 +1036,7 @@ p <- ggplot(ng80_table, aes(x = dataset_batch.y, y = ratio, fill = dataset_batch
   theme_classic() +
   theme(line = element_blank(),
         axis.title.x = element_blank(),
-    text=element_text(family="Arial", size = 6),
+        text=element_text(family="Arial", size = 6),
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank(),
         panel.grid.major.y = element_line(size = 0.8), 
@@ -908,25 +1056,21 @@ p <- ggplot(ng80_table, aes(x = dataset_batch.y, y = ratio, fill = dataset_batch
   ) +
   coord_cartesian(clip = "off")
 
-p <- add_bottom_brackets(p, bracket_df, levels(table_filtered$dataset_batch.y))
+p <- p + new_scale_fill()
 
-
-ggsave("ng80_non_transformed_axis.png", p, width = 11, height = 6, dpi = 600, device = ragg::agg_png)
-ggsave("ng80_non_transformed_axis.pdf", p, width = 11, height = 6, dpi = 600, device = cairo_pdf)
-
-
-
-#################################
-########### Diversity scatterplot
-#################################
-p <- ggplot(data = table_filtered, aes(x = percentage_of_spliced_reads, y = genes_contributing_to_80._of_reads, color = dataset_batch.y)) +
-  geom_point(size = 2, alpha = 0.7) + 
-  geom_density_2d(aes(color = dataset_batch.y), alpha = 0.5, size = 0.8) +
-  labs(title = "",
-       x = "Percentage of spliced reads",
-       y = "NG80",
-       color = "")+
-  theme_minimal(base_size = 14) + 
+p <- p +
+  geom_tile(
+    data = bottom_annotation_df,
+    aes(x = dataset_batch.y, y = y, fill = broad_protocol_category),
+    width = 0.95,
+    height = bottom_annotation_height,
+    inherit.aes = FALSE
+  ) +
+  scale_fill_manual(
+    name = "Broad Protocol Category (BPC)",
+    values = bpc_colors,
+    labels = bpc_labels
+  ) +
   theme(
     legend.position = "bottom",
     legend.title = element_text(face = "bold", size = 6),
@@ -936,9 +1080,8 @@ p <- ggplot(data = table_filtered, aes(x = percentage_of_spliced_reads, y = gene
     legend.margin = margin(0, 0, 0, 0)
   )
 
-ggsave("~/figures/diversity_scatterplot.png", plot = ps, width = 12, height = 8, dpi = 600, device = ragg::agg_png)
-ggsave("~/figures/diversity_scatterplot.pdf", plot = ps, width = 12, height = 8,  dpi = 600, device = cairo_pdf)
 
+p <- add_bottom_brackets_filtered(p, bracket_df, levels(ng80_table$dataset_batch.y),  y_base = 0.03)
 
 ggsave("figures/ng80_ratio_non_transformed_axis_filtered_2_no_spikein.png", p, width = 3, height = 1.63, units = "in", dpi = 600, device = ragg::agg_png, scaling = 0.5)
 ggsave("figures/ng80_ratio_non_transformed_axis_filtered_2_no_spikein.svg", p, width = 3, height = 1.63, units = "in", dpi = 600, device = "svg", scaling = 0.5)
@@ -969,8 +1112,6 @@ table_filtered$dataset_batch.y <- factor(table_filtered$dataset_batch.y, levels 
 adjusted_palette <- adjusted_palette[core_order]
 
 
-
-# Set proper order and labels
 table_filtered$dataset_batch.y <- factor(
   table_filtered$dataset_batch.y,
   levels = core_order,
@@ -981,32 +1122,30 @@ adjusted_palette <- adjusted_palette[core_order]
 names(adjusted_palette) <- datasetsLabels[core_order]  # to match new factor labels
 
 
-
-
 p_facet <- ggplot(
   data = table_filtered,
   aes(x = percentage_of_spliced_reads,
       y = number_of_genes_contributing_to_80._of_reads,
       color = dataset_batch.y)) +
   geom_point(size = 2, alpha = 0.8) +
-  facet_wrap(~ dataset_batch.y, scales = "free") +
+  facet_wrap(~ dataset_batch.y, scales = "fixed") +
   scale_color_manual(
     values = adjusted_palette,
     drop = FALSE
   ) +
   labs(
-    x = "Percentage of spliced reads",
+    x = "Fraction of spliced reads (FSR)",
     y = "NG80",
     color = "Dataset"
   ) +
   theme_minimal(base_size = 13) +
-  theme(
-    strip.text = element_text(face = "bold"),
-    axis.title = element_text(face = "bold"),
-    legend.text = element_text(size = 9),
-    legend.title = element_text(face = "bold"),
-    legend.key.height = unit(0.5, "lines"),
-    plot.background = element_rect(fill = "white", colour = "white")
+  theme(text=element_text(family="Arial"),
+        strip.text = element_text(face = "bold"),
+        axis.title = element_text(face = "bold"),
+        legend.text = element_text(size = 9),
+        legend.title = element_text(face = "bold"),
+        legend.key.height = unit(0.5, "lines"),
+        plot.background = element_rect(fill = "white", colour = "white")
   ) +
   guides(color = guide_legend(ncol = 1)) +
   scale_y_continuous(trans = log10_trans())
@@ -1054,20 +1193,10 @@ ggsave("figures/diversity_scatterplot_facet_2_no_spikeins.svg", p_facet, width =
 ################################
 k2_results <- read.delim("~/fl-cfRNAmeta/tables/taxa_simple_df_w_batch.tsv")
 
-# First ensure dataset_batch is available in k2_results
-# Then clean sample_name only for affected dataset_batch values
-k2_results_clean <- k2_results %>%
-  mutate(sample_name = case_when(
-    dataset_batch %in% c("flomics_2", "decruyenaere") ~ sub("_.*", "", sample_name),
-    TRUE ~ sample_name
-  ))
+k2_results$microbial <- k2_results$fungi + k2_results$bacteria
 
-# Compute microbial reads again if not already there
-k2_results_clean$microbial <- k2_results_clean$fungi + k2_results_clean$bacteria
-
-# Merge into table_filtered using cleaned sample names
 table_filtered <- table_filtered %>%
-  left_join(k2_results_clean %>% select(sample_name, microbial),
+  left_join(k2_results %>% select(sample_name, microbial),
             by = c("sample_id" = "sample_name"))
 
 
@@ -1102,7 +1231,7 @@ p_microbial <- ggplot(
   ) +
   theme_minimal(base_size = 13) +
   theme(
-    base_family= "Arial",
+    text=element_text(family="Arial"),
     panel.grid.major.x = element_blank(),
     panel.grid.minor.x = element_blank(),
     panel.grid.major.y = element_line(size = 0.8), 
@@ -1116,3 +1245,6 @@ p_microbial <- ggplot(
   ) +
   guides(color = guide_legend(ncol = 1))
 
+
+ggsave("figures/microbial_vs_mapped_2.png", p_microbial, width = 20, height = 10, dpi = 600, device = ragg::agg_png)
+ggsave("figures/microbial_vs_mapped_2.svg", p_microbial, width = 20, height = 10, device = "svg")
