@@ -153,8 +153,8 @@ merged_colors <- c(
   cancer_colors
 )
 bracket_df <- data.frame(
-  xmin = c("Block (2x75bp)", "Giráldez (phospho-RNA-seq)", "Ibarra (buffy coat)","Reggiardo (BioIVT)" , "Moufarrej (Site 1)", "Roskams-Hieter (pilot)"),
-  xmax = c("Block (2x150bp)", "Giráldez (standard)", "Ibarra (serum)","Reggiardo (DLS)" , "Moufarrej (Site 2)", "Roskams-Hieter (validation)"),
+  xmin = c("Block (2x75bp)", "Giráldez (phospho)", "Ibarra (buffy coat)","Reggiardo (BioIVT)" , "Moufarrej (Site 1)", "Roskams (pilot)"),
+  xmax = c("Block (2x150bp)", "Giráldez (standard)", "Ibarra (serum)","Reggiardo (DLS)" , "Moufarrej (Site 2)", "Roskams (validation)"),
   label = c("Block", "Giráldez", "Ibarra","Reggiardo" , "Moufarrej", "Roskams-Hieter")
 )
 
@@ -212,8 +212,6 @@ add_bottom_brackets <- function(p, bracket_df, factor_levels) {
 
 
 
-
-
 p <- ggplot(phenotype_merged_plot_data, aes(x = dataset_batch_clean, y = count, fill = phenotype_merged)) +
   geom_bar(stat = "identity") +
   scale_fill_manual(values = merged_colors, name = "Donor phenotype") +
@@ -233,10 +231,65 @@ p <- ggplot(phenotype_merged_plot_data, aes(x = dataset_batch_clean, y = count, 
     plot.background = element_rect(fill = "white", colour = "white") 
   ) + coord_cartesian(clip = "off")
 
-p <- add_bottom_brackets(p, bracket_df, levels(phenotype_merged_plot_data$dataset_batch_clean))
 
-ggsave("~/figures/fig_1a_combined_simplified_and_cancer_detail.png",
+
+
+
+p <- add_bottom_brackets(p, bracket_df, levels(phenotype_merged_plot_data$dataset_batch_clean), y_base = 0.03)
+
+
+ggsave("figures/fig_1a_combined_simplified_and_cancer_detail.png",
        width = 17, height = 8, dpi = 600, units = "in", bg = "white",device = ragg::agg_png)
 ggsave("~/figures/fig_1a_combined_simplified_and_cancer_detail.pdf",
        width = 17, height = 8, dpi = 600, units = "in", bg = "white", device = cairo_pdf)
+
+
+library(ggplot2)
+library(cowplot)
+library(grid)  
+
+plot_with_legend <- ggplot(phenotype_merged_plot_data, aes(x = dataset_batch_clean, y = count, fill = phenotype_merged)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = merged_colors, name = "Donor phenotype") +
+  labs(x = "Dataset", y = "Number of samples") +
+  theme_minimal(base_size = 6) +
+  theme(
+    text = element_text(family = "Arial", size = 6),
+    axis.text.x = element_text(angle = 45, vjust = 1.05, hjust = 1, size = 6, color = "black"),
+    axis.title.x = element_blank(),
+    legend.key.size = unit(0.3, "cm"),  # or smaller, e.g., 0.25
+    axis.title.y = element_text(size = 6),
+    legend.title = element_text(size = 6, face = "bold"),
+    legend.text = element_text(size = 6),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_line(size = 0.3),
+    panel.grid.minor.y = element_blank(),
+    plot.margin = margin(5, 5, 5, 32),
+    plot.background = element_rect(fill = "white", colour = "white")
+  ) +
+  coord_cartesian(clip = "off")
+
+plot_with_legend <- add_bottom_brackets(plot_with_legend, bracket_df, levels(phenotype_merged_plot_data$dataset_batch_clean), y_base = 0.03)
+
+
+legend <- cowplot::get_legend(plot_with_legend)
+
+plot_no_legend <- plot_with_legend + theme(legend.position = "none")
+
+final_plot <- cowplot::plot_grid(
+  plot_no_legend,
+  legend,
+  rel_widths = c(3.5, 1.3), 
+  rel_heights = c(1,1),
+  nrow = 1
+)
+
+ggsave("figures/fig_1a_combined_simplified_and_cancer_detail_2.png",
+       plot = final_plot,
+       width = 5.8, height = 1.7, dpi = 600, units = "in", bg = "white", device = ragg::agg_png)
+
+ggsave("figures/fig_1a_combined_simplified_and_cancer_detail_2.svg",
+       plot = final_plot,
+       width = 5.8, height = 1.7, dpi = 600, units = "in", bg = "white", device = "svg")
 
