@@ -95,7 +95,7 @@ print(result)
 #   filter(percent_of_reads_mapping_to_spike_ins <= 5)
 table_filtered <- filtered_data # NOT removing high spike-in samples
 
-table_filtered$log_genes_80 <- log(table_filtered$genes_contributing_to_80._of_reads)
+#table_filtered$log_genes_80 <- log(table_filtered$genes_contributing_to_80._of_reads)
 
 
 num_datasets <- length(unique(table_filtered$dataset_batch.y))
@@ -149,7 +149,7 @@ add_bottom_brackets <- function(p, bracket_df, factor_levels, y_base = -0.03, he
     x2 <- which(factor_levels == bracket_df$xmax[i])
     if (length(x1) == 0 || length(x2) == 0) next
     
-    offset <- 0.005
+    offset <- 0.004
     x_start <- ((x1 - 1) / length(factor_levels)) + offset
     x_end   <- (x2 / length(factor_levels)) - offset
     
@@ -196,7 +196,14 @@ bpc_labels <- c(
 
 bpc_order <- c("Custom", "Exome-based (EB)", "Whole RNA-Seq (oligo-dT pr.) (WRO)", "Whole RNA-Seq (random pr.) (WRR)", "cfDNA")
 
+ng_no_spike_ins <- read.delim("tables/genes_contributing_to_percentage_reads_no_spike_ins.tsv")
 
+ng_no_spike_ins_table <- table_filtered %>%
+  left_join(ng_no_spike_ins, by = c("sample_name" = "Sample"))
+
+wid <- 5.03
+hei <- 3
+scl <- 0.66
 #######
 # Main loop
 #######
@@ -264,15 +271,15 @@ ggplot_objects <- lapply(column_names, function(col_name) {
     label_block +
     theme_classic() +
     coord_cartesian(clip = "off") +
-    theme(text=element_text(family="Arial", size = 6),
+    theme(text=element_text(family="Arial", size = 12),
           line = element_blank(),
           panel.grid.major.x = element_blank(),
           panel.grid.minor.x = element_blank(),
           panel.grid.major.y = element_line(size = 0.8), 
           panel.grid.minor.y = element_blank(),
-          #plot.margin = margin(20, 20, 20, 50),
-          axis.text.x = element_text(angle = 45, hjust = 1, size = 6, vjust=1.1),
-          axis.title = element_text(size = 6, face = "bold"),
+          plot.margin = margin(0, 0, 0, 28),
+          axis.text.x = element_text(angle = 45, hjust = 1, vjust=1.1, size = 12),
+          axis.title = element_text(face = "bold", size = 12),
           axis.title.x = element_blank(),
           plot.title = element_blank(),
           legend.position = "none") +
@@ -295,9 +302,9 @@ ggplot_objects <- lapply(column_names, function(col_name) {
       values = bpc_colors,
       labels = bpc_labels
     ) + theme(text=element_text(family="Arial"),
-              legend.position = "right",  
-              legend.title = element_text(face = "bold", size = 6),
-              legend.text = element_text(size = 6),
+              legend.position = "bottom",  
+              legend.title = element_text(face = "bold", size = 12),
+              legend.text = element_text(size = 12),
               legend.key.size = unit(0.4, "cm"),
               legend.spacing.x = unit(0.2, "cm"),
               legend.margin = margin(0, 0, 0, 0)
@@ -313,10 +320,10 @@ setwd("figures/")
 
 for (i in 1:length(ggplot_objects)) {
   col_name <- column_names[i]
-  output_file <- paste0(gsub(" ", "_", tolower(col_name)), "_annotation_row_2.png")
-  ggsave(output_file, ggplot_objects[[i]], width = 4.7, height = 2.56, dpi = 600, device = ragg::agg_png, scaling = 0.5)
-  output_file <- paste0(gsub(" ", "_", tolower(col_name)), "_annotation_row_2.svg")
-  ggsave(output_file, ggplot_objects[[i]], width = 4.7, height = 2.56, dpi = 600, device = "svg", scaling = 0.5)
+  output_file <- paste0(gsub(" ", "_", tolower(col_name)), "_annotation_row_2_scaled.png")
+  ggsave(output_file, ggplot_objects[[i]], width = 3.35, height = 3.35*(3/5), dpi = 600, device = ragg::agg_png, scaling=5/12)
+  output_file <- paste0(gsub(" ", "_", tolower(col_name)), "_annotation_row_2_scaled.svg")
+  ggsave(output_file, ggplot_objects[[i]], width = 3.35, height = 3.35*(3/5), dpi = 600, device = "svg", scaling=5/12)
 }
 #####################################################
 # Stats for manuscript SPLICED READS
@@ -395,13 +402,11 @@ cat(sprintf("Mean FSR: %.1f%% for Pilot vs %.1f%% for Validation, MWW test p=%.2
 #####################################################
 # Stats for manuscript ng80
 ####################################################
-ng_no_spike_ins <- read.delim("tables/genes_contributing_to_percentage_reads_no_spike_ins.tsv")
 
-ng_no_spike_ins_table <- table_filtered %>%
-  left_join(ng_no_spike_ins, by = c("sample_name" = "Sample"))
 
-table_filtered <- table_filtered %>%
-  left_join(ng_no_spike_ins, by = c("sample_name" = "Sample"))
+
+
+
 
 x <- ng_no_spike_ins_table$number_of_genes_contributing_to_80._of_reads[ng_no_spike_ins_table$dataset_batch.y == "rozowsky"]
 median_value <- median(x, na.rm = TRUE)
@@ -460,7 +465,7 @@ setwd("~/fl-cfRNAmeta/")
 quality_summary <- table_filtered %>%
   mutate(
     high_quality = genes_contributing_to_80._of_reads > 1000 &
-      (percentage_of_spliced_reads > 10 | exonic_reads_minus_spike_ins > 75)
+      (percentage_of_spliced_reads > 20 | exonic_reads_minus_spike_ins > 75)
   ) %>%
   group_by(dataset_batch.y) %>%
   summarise(
@@ -502,7 +507,7 @@ quality_plot <- ggplot(quality_summary, aes(x = dataset_batch.y, y = percent_hig
   geom_text(aes(label = paste0("N=", high_quality)), vjust = -0.5, size = 3) +
   labs(
     x = "Dataset",
-    y = "Fraction of samples with NG80>1,000 and FSR>10% OR FER>75%",
+    y = "Fraction of samples with NG80>1,000 and FSR>20% OR FER>75%",
     title = "High-Quality Samples per Dataset"
   ) +
   theme_classic() +
@@ -772,14 +777,17 @@ ggsave("figures/fragment_number_2.svg", p, width = 11, height = 6, dpi = 600, de
 #######################################################
 # NG80
 #######################################################
-table_filtered$log_genes_80 <- log(table_filtered$number_of_genes_contributing_to_80._of_reads)
+
+table_filtered_ng80 <- table_filtered %>%
+  left_join(ng_no_spike_ins, by = c("sample_name" = "Sample"))
+table_filtered_ng80$log_genes_80 <- log(table_filtered_ng80$number_of_genes_contributing_to_80._of_reads)
 
 
 y_breaks <- log(c(100, 500, 1000, 5000, 10000, 20000))
 
 y_labels <- c(100, 500, 1000, 5000, 10000, 20000)
 
-y_vals <- table_filtered$log_genes_80
+y_vals <- table_filtered_ng80$log_genes_80
 y_min <- min(y_vals, na.rm = TRUE)
 y_max <- max(y_vals, na.rm = TRUE)
 y_range <- y_max - y_min
@@ -788,7 +796,7 @@ bottom_annotation_y <- y_min - 0.05 * y_range
 bottom_annotation_height <- 0.03 * y_range
 
 
-bottom_annotation_df <- table_filtered %>%
+bottom_annotation_df <- table_filtered_ng80 %>%
   select(dataset_batch.y) %>%
   distinct() %>%
   left_join(bpc_info, by = "dataset_batch.y") %>%
@@ -797,25 +805,25 @@ bottom_annotation_df <- table_filtered %>%
     broad_protocol_category = factor(broad_protocol_category, levels = bpc_order)
   )
 
-p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = log_genes_80, fill = dataset_batch.y)) +
+p <- ggplot(table_filtered_ng80, aes(x = dataset_batch.y, y = log_genes_80, fill = dataset_batch.y)) +
   geom_boxplot(alpha = 0.3, aes(color = dataset_batch.y), position = position_dodge(width = 0.75), outlier.shape = NA) +
   geom_point(aes(y = log_genes_80, color = dataset_batch.y), 
              position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.8), 
-             shape = 21, size = 1.5, stroke = 0.2, alpha = 0.6) +
+             shape = 21, size =0.85, stroke = 0.2, alpha = 0.6) +
   labs(title = "",
        x = "Dataset", y = "NG80") +
   theme_classic() +
   theme( line = element_blank(),
          axis.title.x = element_blank(),
-         text=element_text(family="Arial"),
-         plot.margin = margin(20, 20, 20, 45),      
+         text=element_text(family="Arial", size =12),
+         plot.margin = margin(0, 0, 0, 12),      
          panel.grid.major.x = element_blank(),
          panel.grid.minor.x = element_blank(),
          panel.grid.major.y = element_line(size = 0.8), 
          panel.grid.minor.y = element_blank(),
-         axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust = 1.1),
-         axis.title = element_text(size = 12, face = "bold"),
-         plot.title = element_text(size = 14, face = "bold"),
+         axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1.1, size=12),
+         axis.title = element_text(face = "bold", size = 12),
+         plot.title = element_text(face = "bold", size = 12),
          legend.position = "none") +
   scale_x_discrete(labels = datasetsLabels) +
   scale_fill_manual(values = datasetsPalette, labels = datasetsLabels, guide = "none") +
@@ -840,19 +848,20 @@ p <- p +
   ) +
   theme(
     legend.position = "bottom",
-    legend.title = element_text(face = "bold", size = 9),
-    legend.text = element_text(size = 9),
+    legend.title = element_text(face = "bold", size = 12),
+    legend.text = element_text(size = 12),
     legend.key.size = unit(0.4, "cm"),
     legend.spacing.x = unit(0.2, "cm"),
+    legend.spacing.y = unit(0.5, "cm"),
     legend.margin = margin(0, 0, 0, 0)
   )
 
 
-p <- add_bottom_brackets(p, bracket_df, levels(table_filtered$dataset_batch.y),  y_base = 0.03)
+p <- add_bottom_brackets(p, bracket_df, levels(table_filtered_ng80$dataset_batch.y),  y_base = 0.03)
 
 
-ggsave("figures/ng80_non_transformed_axis_2_no_spikeins.png", p, width = 11, height = 6, dpi = 600, device = ragg::agg_png)
-ggsave("figures/ng80_non_transformed_axis_2_no_spikeins.svg", p, width = 11, height = 6, dpi = 600, device = "svg")
+ggsave("figures/ng80_non_transformed_axis_2_no_spikeins_scaled_2.png", p, width = 3.35, height = 3.35*(3/5), dpi = 600, device = ragg::agg_png, scaling =5/12, units = "in")
+ggsave("figures/ng80_non_transformed_axis_2_no_spikeins_scaled_2.svg", p, width = 3.35, height = 3.35*(3/5), dpi = 600, device = "svg", scaling = 5/12, units = "in")
 
 #################################
 # NG80 protein coding
@@ -1036,14 +1045,14 @@ p <- ggplot(ng80_table, aes(x = dataset_batch.y, y = ratio, fill = dataset_batch
   theme_classic() +
   theme(line = element_blank(),
         axis.title.x = element_blank(),
-        text=element_text(family="Arial", size = 6),
+        text=element_text(family="Arial", size = 12),
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank(),
         panel.grid.major.y = element_line(size = 0.8), 
         panel.grid.minor.y = element_blank(),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 6, vjust = 1.1),
-        axis.title = element_text(size = 6, face = "bold"),
-        plot.title = element_text(size = 6, face = "bold"),
+        axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1.1, size = 12),
+        axis.title = element_text(face = "bold", size = 12),
+        plot.title = element_text(face = "bold", size = 12),
         legend.position = "none") +
   ylim(c(bottom_annotation_y - bottom_annotation_height,2.5))+
   geom_hline(yintercept=1, linetype='dashed', col = 'darkgrey') +
@@ -1063,7 +1072,7 @@ p <- p +
     data = bottom_annotation_df,
     aes(x = dataset_batch.y, y = y, fill = broad_protocol_category),
     width = 0.95,
-    height = bottom_annotation_height,
+    height = bottom_annotation_height/1.4,
     inherit.aes = FALSE
   ) +
   scale_fill_manual(
@@ -1073,8 +1082,8 @@ p <- p +
   ) +
   theme(
     legend.position = "bottom",
-    legend.title = element_text(face = "bold", size = 6),
-    legend.text = element_text(size = 6),
+    legend.title = element_text(face = "bold", size = 12),
+    legend.text = element_text(size = 12),
     legend.key.size = unit(0.4, "cm"),
     legend.spacing.x = unit(0.2, "cm"),
     legend.margin = margin(0, 0, 0, 0)
@@ -1083,8 +1092,8 @@ p <- p +
 
 p <- add_bottom_brackets_filtered(p, bracket_df, levels(ng80_table$dataset_batch.y),  y_base = 0.03)
 
-ggsave("figures/ng80_ratio_non_transformed_axis_filtered_2_no_spikein.png", p, width = 3, height = 1.63, units = "in", dpi = 600, device = ragg::agg_png, scaling = 0.5)
-ggsave("figures/ng80_ratio_non_transformed_axis_filtered_2_no_spikein.svg", p, width = 3, height = 1.63, units = "in", dpi = 600, device = "svg", scaling = 0.5)
+ggsave("figures/ng80_ratio_non_transformed_axis_filtered_2_no_spikein.png", width = 2.235, height = 3.35*(3/5), dpi = 600, device = ragg::agg_png, scaling =5/12, units = "in")
+ggsave("figures/ng80_ratio_non_transformed_axis_filtered_2_no_spikein.svg", p, width = 2.235, height = 3.35*(3/5), units = "in", dpi = 600, scaling =5/12, device = "svg")
 
 
 capture <- c("chalasani", "toden", "ibarra_buffy_coat", "ibarra_plasma_cancer", "ibarra_plasma_non_cancer", "ibarra_serum")
