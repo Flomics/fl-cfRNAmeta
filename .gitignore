@@ -10,4 +10,7 @@ src/__pycache__
 .RData
 
 tables/.~lock*
+tables/cfRNA-meta_per_sample_metadata.tsv.gz
+tables/genes_contributing_to_percentage_reads_no_spike_ins.tsv
+tables/stacked-barplot_biotype_pct_gene_tpm_norm_before_group.tsv
 figures/
