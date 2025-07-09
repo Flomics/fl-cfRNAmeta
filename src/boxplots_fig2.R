@@ -10,7 +10,7 @@ library(colorspace)
 library(showtext)
 library(svglite)
 library("extrafont")
-
+loadfonts()
 
 # Read column names from text file
 setwd("~/fl-cfRNAmeta/")
@@ -224,7 +224,7 @@ ggplot_objects <- lapply(column_names, function(col_name) {
     )
   
   label_block <- if (col_name == "mapped_percentage") {
-    labs(title = NULL, x = "Dataset", y = "% reads mapped to reference human genome")
+    labs(title = NULL, x = "Dataset", y = "% reads mapped to reference\nhuman genome")
   } else if (col_name == "exonic_reads_minus_spike_ins") {
     labs(title = NULL, x = "Dataset", y =  "Fraction of exonic reads (FER)")
   } else if (col_name == "avg_mapped_read_length") {
@@ -235,6 +235,12 @@ ggplot_objects <- lapply(column_names, function(col_name) {
     labs(title = NULL, x = "Dataset", y =  "Fraction of spliced reads (FSR)")
   } else {
     labs(title = NULL, x = "Dataset", y = clean_label(col_name))
+  }
+  
+  padding_block <- if (col_name == "mapped_percentage") {
+    theme(plot.margin = margin(0, 0, 0, 15))
+  } else {
+    theme(plot.margin = margin(0, 0, 0, 28))
   }
   
   
@@ -271,13 +277,14 @@ ggplot_objects <- lapply(column_names, function(col_name) {
     label_block +
     theme_classic() +
     coord_cartesian(clip = "off") +
+    padding_block +
     theme(text=element_text(family="Arial", size = 12),
           line = element_blank(),
           panel.grid.major.x = element_blank(),
           panel.grid.minor.x = element_blank(),
           panel.grid.major.y = element_line(size = 0.8), 
           panel.grid.minor.y = element_blank(),
-          plot.margin = margin(0, 0, 0, 28),
+          #plot.margin = margin(0, 0, 0, 28),
           axis.text.x = element_text(angle = 45, hjust = 1, vjust=1.1, size = 12),
           axis.title = element_text(face = "bold", size = 12),
           axis.title.x = element_blank(),
@@ -504,10 +511,10 @@ annotation_df <- quality_summary %>%
 
 quality_plot <- ggplot(quality_summary, aes(x = dataset_batch.y, y = percent_high_quality, fill = dataset_batch.y)) +
   geom_bar(stat = "identity", alpha = 0.8) +
-  geom_text(aes(label = paste0("N=", high_quality)), vjust = -0.5, size = 3) +
+  geom_text(aes(label = paste0("N=", high_quality)), vjust = -0.5, size = 2.5) +
   labs(
     x = "Dataset",
-    y = "Fraction of samples with NG80>1,000 and FSR>20% OR FER>75%",
+    y = "Fraction of samples with NG80>1,000\nand FSR>20% OR FER>75%",
     title = "High-Quality Samples per Dataset"
   ) +
   theme_classic() +
@@ -518,11 +525,11 @@ quality_plot <- ggplot(quality_summary, aes(x = dataset_batch.y, y = percent_hig
         panel.grid.minor.x = element_blank(),
         panel.grid.major.y = element_line(size = 0.8), 
         panel.grid.minor.y = element_blank(),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust=1.1),
-        axis.title = element_text(size = 10, face = "bold"),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 12, vjust=1.1),
+        axis.title = element_text(size = 12, face = "bold"),
         axis.title.x = element_blank(),
         plot.title = element_blank(),
-        plot.margin = margin(20, 20, 20, 45),
+        plot.margin = margin(0, 0, 0, 11),
         legend = "none") +
   scale_x_discrete(labels = datasetsLabels) +
   scale_fill_manual(values = datasetsPalette, labels = datasetsLabels, guide = "none") +
@@ -550,8 +557,8 @@ quality_plot <- quality_plot +
   ) +
   theme(
     legend.position = "bottom",
-    legend.title = element_text(face = "bold", size = 10),
-    legend.text = element_text(size = 9),
+    legend.title = element_text(face = "bold", size = 12),
+    legend.text = element_text(size = 12),
     legend.key.size = unit(0.4, "cm"),
     legend.spacing.x = unit(0.2, "cm"),
     legend.margin = margin(0, 0, 0, 0)
@@ -561,8 +568,8 @@ quality_plot <- quality_plot +
 quality_plot <- add_bottom_brackets(quality_plot, bracket_df, levels(table_filtered$dataset_batch.y),  y_base = 0.03)
 
 
-ggsave("figures/high_quality_sample_fraction_barplot_2.png", quality_plot, width = 11, height = 6, dpi = 600, device = ragg::agg_png)
-ggsave("figures/high_quality_sample_fraction_barplot_2.svg", quality_plot, width = 11, height = 6, dpi = 600, device = "svg")
+ggsave("figures/high_quality_sample_fraction_barplot_2.png", quality_plot, width = 3.35, height = 3.35*(3/5), dpi = 600, device = ragg::agg_png, scaling = 5/12)
+ggsave("figures/high_quality_sample_fraction_barplot_2.svg", quality_plot, width = 3.35, height = 3.35*(3/5), dpi = 600, device = "svg", scaling =5/12)
 
 
 #######################################################
