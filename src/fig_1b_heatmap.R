@@ -10,10 +10,9 @@ library(jsonlite)
 library(wesanderson)
 library(grid)
 library(showtext)
-font_add(family="Arial", regular = "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf")
-showtext_opts(dpi = 600)  # MUST come before showtext_auto()
-showtext_auto()
-theme_set(theme_classic(base_family = "Arial"))
+library(svglite)
+library("extrafont")
+loadfonts()
 
 setwd("~/fl-cfRNAmeta/")
 
@@ -130,8 +129,6 @@ mappings <- fromJSON("src/dataset_mappings.json")
 clean_dataset_names <- unlist(mappings$datasetsLabels)
 core_order <- unlist(mappings$datasetVisualOrder)
 
-
-# all names alphabetically except "rozowsky" and "wei" last
 ordered_datasets <- c(clean_dataset_names[core_order])
 
 
@@ -158,7 +155,8 @@ palette_list <- list(
   read_length = get_palette_with_na("read_length", "Greens"),
   "centrifugation_step_1" = get_palette_with_na("centrifugation_step_1", "Reds") ,
   "centrifugation_step_2" = get_palette_with_na("centrifugation_step_2", "Oranges"),
-  plasma_tubes_short_name = get_palette_with_na("plasma_tubes_short_name", "GrandBudapest2")
+  plasma_tubes_short_name = get_palette_with_na("plasma_tubes_short_name", "GrandBudapest2"),
+  broad_protocol_category = get_palette_with_na("broad_protocol_category", "Cavalcanti1")
 )
 
 # I could not include into the function the special handling of smarter kits, changing their colours manually
@@ -166,6 +164,11 @@ palette_list$library_prep_kit_short_name[6] <- "#FDBE85"
 palette_list$library_prep_kit_short_name[7] <- "#FD8D3C"
 palette_list$library_prep_kit_short_name[8] <- "#E6550D"
 
+palette_list$broad_protocol_category[1] <- "#AECAD9"
+palette_list$broad_protocol_category[2] <- "#D9BBAE"
+palette_list$broad_protocol_category[3] <- "#BBE0BB"
+palette_list$broad_protocol_category[4] <- "#D0AED9"
+palette_list$broad_protocol_category[5] <- "#D9D6AE"
 
 clean_names <- c(
   biomaterial = "Biomaterial",
@@ -193,17 +196,19 @@ row_order <- c(
   "library_prep_kit_short_name",
   "library_selection",
   "cdna_library_type",
-  "read_length"
+  "read_length",
+  "broad_protocol_category"
 )
 
 #Hacky way to transform Reggiardo dataset into a single batch, in terms of protocol
 metadata_matrix$`Reggiardo (BioIVT)` <- NULL
-colnames(metadata_matrix)[17] <- "Reggiardo"
+colnames(metadata_matrix)[11] <- "Reggiardo"
 
 bracket_df <- data.frame(
   xmin = c("Block (2x75bp)", "Giráldez (phospho)", "Ibarra (buffy coat)", "Moufarrej (Site 1)", "Roskams (pilot)"),
   xmax = c("Block (2x150bp)", "Giráldez (standard)", "Ibarra (serum)", "Moufarrej (Site 2)", "Roskams (validation)"),
-  label = c("Block", "Giráldez", "Ibarra", "Moufarrej", "Roskams"))
+  label = c("Block", "Giráldez", "Ibarra", "Moufarrej", "Roskams")
+)
 
 core_order <- colnames(metadata_matrix)  # your x-axis order
 
@@ -229,20 +234,20 @@ make_centrifugation_legend1 <- function(title, range = c(1000, 12000), colors = 
     col_fun = col_fun,
     title = title,
     at = c(1000, 12000),
-    title_gp = gpar(fontsize = 6, fontface = "bold"),
-    labels_gp = gpar(fontsize = 5),
+    title_gp = gpar(fontsize = 12, fontface = "bold"),
+    labels_gp = gpar(fontsize = 12),
     grid_height = unit(0.02, "cm"),
-    grid_width = unit(0.25, "cm"),
-    legend_height = unit(1.2, "cm")
+    grid_width = unit(0.50, "cm"),
+    legend_height = unit(1.5, "cm")
   )
   
   discrete_lgd <- Legend(
     labels = names(fallback_colors),
     legend_gp = gpar(fill = fallback_colors),
     title = NULL,
-    labels_gp = gpar(fontsize = 5),
+    labels_gp = gpar(fontsize = 12),
     grid_height = unit(0.02, "cm"),
-    grid_width = unit(0.25, "cm"),
+    grid_width = unit(0.50, "cm"),
     direction = "vertical"
   )
   
@@ -256,20 +261,20 @@ make_centrifugation_legend2 <- function(title, range = c(1940, 16000), colors = 
     col_fun = col_fun,
     title = title,
     at = c(1940, 16000),
-    title_gp = gpar(fontsize = 6, fontface = "bold"),
-    labels_gp = gpar(fontsize = 5),
+    title_gp = gpar(fontsize = 12, fontface = "bold"),
+    labels_gp = gpar(fontsize = 12),
     grid_height = unit(0.02, "cm"),
-    grid_width = unit(0.25, "cm"),
-    legend_height = unit(1.2, "cm")
+    grid_width = unit(0.50, "cm"),
+    legend_height = unit(1.5, "cm")
   )
   
   discrete_lgd <- Legend(
     labels = names(fallback_colors),
     legend_gp = gpar(fill = fallback_colors),
     title = NULL,
-    labels_gp = gpar(fontsize = 5),
+    labels_gp = gpar(fontsize = 12),
     grid_height = unit(0.02, "cm"),
-    grid_width = unit(0.25, "cm"),
+    grid_width = unit(0.50, "cm"),
     direction = "vertical"
   )
   
@@ -281,43 +286,36 @@ heatmap_list <- list()
 
 for (var in row_order) {
   
-
+  
   if (is.null(palette_list[[var]])) next
   
   values <- as.character(metadata_matrix[var, ])
-  
-  # Replace actual NA with "NA" string
   values[is.na(values)] <- "NA"
   
   if (var %in% c("centrifugation_step_1", "centrifugation_step_2")) {
-    values <- factor(values, levels  = c("1000g", "1500g", "1600g", "1900g", "1940g", "2000g", "2500g", "3000g", 
-                      "3400g", "6000g", "12000g", "13000g", "15000g", "16000g",
-                      "Unspecified", "placeholder", "None"))
+    values <- factor(values, levels = c("1000g", "1500g", "1600g", "1900g", "1940g", "2000g", "2500g", "3000g", 
+                                        "3400g", "6000g", "12000g", "13000g", "15000g", "16000g",
+                                        "Unspecified", "placeholder", "None"))
     values <- as.character(values)
   } 
-  
-  
   if (var == "read_length") {
     values <- factor(values, levels = c("1x50", "1x75", "2x75", "2x100", "2x150", "NA"))
     values <- as.character(values)
   }
   
+  color_map <- palette_list[[var]]
+  if (is.null(color_map) || is.function(color_map)) next
+  
   unique_vals <- unique(values)
-  color_vector <- palette_list[[var]]
-  
-  if (is.null(color_vector) || is.function(color_vector)) {
-    stop(paste("No valid palette for variable:", var))
-  }
-  color_map <- color_vector[unique_vals]
-  
+  color_map <- color_map[unique_vals]
   names(color_map) <- unique_vals
   
-  if (!"NA" %in% names(color_map)) {
-    color_map["NA"] <- "grey80"
-  }
+  # Ensure specials
+  if (!"NA" %in% names(color_map)) color_map["NA"] <- "grey80"
   color_map["Unspecified"] <- "grey20"
   color_map["placeholder"] <- "lavenderblush1"
   color_map["None"] <- "grey70"
+  
   if (var == "read_length") {
     legend_order <- c("1x50", "1x75", "2x75", "2x100", "2x150", "NA")
     color_map <- color_map[intersect(legend_order, names(color_map))]
@@ -328,23 +326,15 @@ for (var in row_order) {
                       "Unspecified", "placeholder", "None")
     color_map <- color_map[intersect(legend_order, names(color_map))]
   } else if (var %in% c(
-    "plasma_tubes_short_name",
-    "biomaterial",
-    "nucleic_acid_type",
-    "rna_extraction_kit_short_name",
-    "dnase",
-    "library_prep_kit_short_name",
-    "library_selection",
-    "cdna_library_type"
+    "plasma_tubes_short_name", "biomaterial", "nucleic_acid_type",
+    "rna_extraction_kit_short_name", "dnase", "library_prep_kit_short_name",
+    "library_selection", "cdna_library_type", "broad_protocol_category"
   )) {
-    # Alphabetical ordering of legend, keeping special levels last
     special_levels <- c("Unspecified", "placeholder", "NA", "None")
     main_levels <- setdiff(names(color_map), special_levels)
     color_map <- color_map[c(sort(main_levels), intersect(special_levels, names(color_map)))]
   }
   
-  
-  # Always move special values to the end of the legend
   special_levels <- c("Unspecified", "placeholder", "NA", "None")
   ordered_vals <- c(
     setdiff(names(color_map), special_levels),
@@ -353,11 +343,11 @@ for (var in row_order) {
   color_map <- color_map[ordered_vals]
   
   var_pretty <- clean_names[[var]]
-  
   ordered_pretty_names <- clean_names[row_order]
-
-  mat <- matrix(values, nrow = 1, dimnames = list(factor(var_pretty, levels = ordered_pretty_names), colnames(metadata_matrix)))
-
+  
+  mat <- matrix(values, nrow = 1,
+                dimnames = list(factor(var_pretty, levels = ordered_pretty_names),
+                                colnames(metadata_matrix)))
   
   bottom_anno <- NULL
   if (var == "read_length") {
@@ -372,10 +362,10 @@ for (var in row_order) {
   
   ht_global_opt(font = "Arial", ADD = TRUE)
   ht_global_opt(
-    heatmap_column_names_gp = gpar(fontsize = 6),
-    heatmap_row_names_gp = gpar(fontsize = 6),
-    legend_title_gp = gpar(fontsize = 6),
-    legend_labels_gp = gpar(fontsize = 5)
+    heatmap_column_names_gp = gpar(fontsize = 12),
+    heatmap_row_names_gp = gpar(fontsize = 12),
+    legend_title_gp = gpar(fontsize = 12),
+    legend_labels_gp = gpar(fontsize = 12)
   )
   
   ht <- Heatmap(
@@ -388,24 +378,28 @@ for (var in row_order) {
     show_column_names = TRUE,
     column_names_rot = 45,
     column_names_side = "bottom",
-    column_names_gp = gpar(fontsize = 6),
+    column_names_gp = gpar(fontsize = 12),
     row_names_side = "left",
     bottom_annotation = bottom_anno,
-    height = unit(0.32, "cm"), #controls the height of the heatmap "squares"
+    #height = unit(0.32, "cm"), #controls the height of the heatmap "squares", this one is for the legend
+    height = unit(0.70, "cm"), #controls the height of the heatmap "squares", and this one for the figure
     cell_fun = function(j, i, x, y, width, height, fill) {
       grid.rect(x = x, y = y, width = width, height = height,
                 gp = gpar(fill = fill, col = "white", lwd = 0.5))
-    },
-    heatmap_legend_param = list(
-      grid_height = unit(0.02, "cm"),
-      grid_width = unit(0.25, "cm"),
-      gap = unit(0.1, "cm"),
-      row_gap = unit(0.01, "cm"),
-      title_gp = gpar(fontsize = 6, fontface = "bold"),
-      labels_gp = gpar(fontsize = 5))
+    },heatmap_legend_param = NULL
+    # heatmap_legend_param = list(
+    #   grid_height = unit(0.02, "cm"),
+    #   grid_width = unit(0.50, "cm"), # controls the shape of the legend squares
+    #   gap = unit(0.1, "cm"),
+    #   row_gap = unit(0.01, "cm"),
+    #   title_gp = gpar(fontsize = 12, fontface = "bold"),
+    #   labels_gp = gpar(fontsize = 12))
   )
   
-} %>% discard(is.null)
+  heatmap_list[[var]] <- ht
+}
+
+
 
 names(heatmap_list) <- row_order
 
@@ -415,9 +409,14 @@ ht_list <- Reduce(`%v%`, heatmap_list)
 
 
 
+# ragg::agg_png(
+#   "figures/fig_1b_metadata_heatmap_for_legend.png",
+#   width = 6.9, height = 4.6*0.766667, units = "in", res = 600, scaling = 5/12
+# )
+
 ragg::agg_png(
-  "figures/fig_1b_metadata_heatmap_2.png",
-  width = 9, height = 4.6, units = "in", res = 600
+  "figures/fig_1b_metadata_heatmap_for_figure.png",
+  width = 3.7, height = 2.5, units = "in", res = 600, scaling = 5/12
 )
 
 ht_opt(legend_gap = unit(0.4, "mm"), ADD = TRUE) #reduce space between different legends
@@ -425,26 +424,30 @@ ht_opt(legend_gap = unit(0.4, "mm"), ADD = TRUE) #reduce space between different
 
 
 ht_drw <- draw(ht_list,
-               heatmap_legend_side = "right",
-               annotation_legend_side = "right",
+               # heatmap_legend_side = "right",
+               # annotation_legend_side = "right",
+               show_heatmap_legend = FALSE,
+               show_annotation_legend = FALSE,
                gap = unit(0.2, "mm"))  # reduce from the default
 
 
-ht_drw <- draw(
-  ht_list,
-  heatmap_legend_side = "right",
-  annotation_legend_side = "right",
-  gap = unit(0.2, "mm"),
-  heatmap_legend_list = list(
-    "Centrifugation, step 1" = make_centrifugation_legend1("Centrifugation, step 1"),
-    "Centrifugation, step 2" = make_centrifugation_legend2("Centrifugation, step 2")
-  )
-)
+# ht_drw <- draw(
+#   ht_list,
+#   heatmap_legend_side = "right",
+#   annotation_legend_side = "right",
+#   gap = unit(0.2, "mm"),
+#   heatmap_legend_list = list(
+#     "Centrifugation, step 1" = make_centrifugation_legend1("Centrifugation, step 1"),
+#     "Centrifugation, step 2" = make_centrifugation_legend2("Centrifugation, step 2")
+#   )
+# )
 
 
 ht_pos <- htPositionsOnDevice(ht_drw)
 
-y_top_in <- ht_pos[ht_pos$heatmap == "Broad protocol\ncategory (BPC)", "y_min"] - unit(0.45, "in") #this addition or subtraction here controls the position of the brackets. I could not find a better way to do it
+#y_top_in <- ht_pos[ht_pos$heatmap == "Broad protocol\ncategory (BPC)", "y_min"] - unit(0.45, "in") #this addition or subtraction here controls the position of the brackets. I could not find a better way to do it, for legend
+y_top_in <- ht_pos[ht_pos$heatmap == "Broad protocol\ncategory (BPC)", "y_min"] - unit(0.3, "in") #for figure
+
 y_top_np <- convertY(y_top_in, "npc", valueOnly = FALSE)
 
 y_bracket <- y_top_np + unit(0.1, "mm")          
@@ -469,7 +472,7 @@ for (i in seq_len(nrow(bracket_df))) {
   offset <- 0.005
   x_start_np <- (x_min_np + (x1 - 1) / n_cols * dx_np) + offset
   x_end_np   <- (x_min_np + x2       / n_cols * dx_np) - offset
-
+  
   x_start_u  <- unit(x_start_np, "npc") 
   x_end_u    <- unit(x_end_np,   "npc") 
   
@@ -496,29 +499,34 @@ for (i in seq_len(nrow(bracket_df))) {
 dev.off()
 
 
-svglite("figures/fig_1b_metadata_heatmap_2.svg", width = 9, height = 5)
+#svglite("figures/fig_1b_metadata_heatmap_for_legend.svg", width = 6.9, height = 4.6*0.766667, scaling = 5/12)
+svglite("figures/fig_1b_metadata_heatmap_for_figure.svg",
+         width = 3.7, height = 2.5, scaling = 5/12)
 #showtext::showtext_begin()
 
-
 ht_drw <- draw(ht_list,
-               heatmap_legend_side = "right",
-               annotation_legend_side = "right",
+               # heatmap_legend_side = "right",
+               # annotation_legend_side = "right",
+               show_heatmap_legend = FALSE,
+               show_annotation_legend = FALSE,
                gap = unit(0.2, "mm"))  # reduce from the default
 
-ht_drw <- draw(
-  ht_list,
-  heatmap_legend_side = "right",
-  annotation_legend_side = "right",
-  gap = unit(0.2, "mm"),
-  heatmap_legend_list = list(
-    "Centrifugation, step 1" = make_centrifugation_legend1("Centrifugation, step 1"),
-    "Centrifugation, step 2" = make_centrifugation_legend2("Centrifugation, step 2")
-  )
-)
+# ht_drw <- draw(
+#   ht_list,
+#   heatmap_legend_side = "right",
+#   annotation_legend_side = "right",
+#   gap = unit(0.2, "mm"),
+#   heatmap_legend_list = list(
+#     "Centrifugation, step 1" = make_centrifugation_legend1("Centrifugation, step 1"),
+#     "Centrifugation, step 2" = make_centrifugation_legend2("Centrifugation, step 2")
+#   )
+# )
 
 ht_pos <- htPositionsOnDevice(ht_drw)
 
-y_top_in <- ht_pos[ht_pos$heatmap == "Broad protocol\ncategory (BPC)", "y_min"] - unit(0.5, "in") #this addition or subtraction here controls the position of the brackets. I could not find a better way to do it
+#y_top_in <- ht_pos[ht_pos$heatmap == "Broad protocol\ncategory (BPC)", "y_min"] - unit(0.5, "in") #this addition or subtraction here controls the position of the brackets. I could not find a better way to do it
+y_top_in <- ht_pos[ht_pos$heatmap == "Broad protocol\ncategory (BPC)", "y_min"] - unit(0.3, "in") #for figure
+
 y_top_np <- convertY(y_top_in, "npc", valueOnly = FALSE)
 
 y_bracket <- y_top_np + unit(0.1, "mm")          
@@ -540,10 +548,12 @@ for (i in seq_len(nrow(bracket_df))) {
   x2 <- bracket_df$xmax_idx[i]
   if (is.na(x1) || is.na(x2)) next
   
-  x_start_np <- x_min_np + (x1 - 1) / n_cols * dx_np
-  x_end_np   <- x_min_np + x2       / n_cols * dx_np
-  x_start_u  <- unit(x_start_np, "npc")
-  x_end_u    <- unit(x_end_np,   "npc")
+  offset <- 0.005
+  x_start_np <- (x_min_np + (x1 - 1) / n_cols * dx_np) + offset
+  x_end_np   <- (x_min_np + x2       / n_cols * dx_np) - offset
+  
+  x_start_u  <- unit(x_start_np, "npc") 
+  x_end_u    <- unit(x_end_np,   "npc") 
   
   h_bar <- linesGrob(
     x = unit.c(x_start_u, x_end_u),

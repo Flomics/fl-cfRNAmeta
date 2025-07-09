@@ -5,13 +5,14 @@ library(forcats)
 library(jsonlite)
 library(grid)
 library(scales)
-library(showtext)
-font_add(family="Arial", regular = "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf")
-showtext_opts(dpi = 600)  # MUST come before showtext_auto()
-showtext_auto()
-theme_set(theme_classic(base_family = "Arial"))
-
-
+library(svglite)
+#library(showtext)
+#font_add(family="Arial", regular = "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf")
+#showtext_opts(dpi = 600)  # MUST come before showtext_auto()
+#showtext_auto()
+#theme_set(theme_classic(base_family = "Arial"))
+library("extrafont")
+loadfonts()
 
 setwd("~/fl-cfRNAmeta/")
 
@@ -175,7 +176,7 @@ phenotype_merged_plot_data$phenotype_merged <- factor(phenotype_merged_plot_data
 
 merged_colors <- merged_colors[legend_order]
 
-add_bottom_brackets <- function(p, bracket_df, factor_levels) {
+add_bottom_brackets <- function(p, bracket_df, factor_levels, y_base = -0.03, height = 0.015, col="black", lwd=0.8) {
   for (i in seq_len(nrow(bracket_df))) {
     x1 <- which(factor_levels == bracket_df$xmin[i])
     x2 <- which(factor_levels == bracket_df$xmax[i])
@@ -187,20 +188,20 @@ add_bottom_brackets <- function(p, bracket_df, factor_levels) {
     
     bracket <- linesGrob(
       x = unit.c(unit(x_start, "npc"), unit(x_end, "npc")),
-      y = unit(c(-0.03, -0.03), "npc"),
-      gp = gpar(col = "black", lwd = 0.8)
+      y = unit(c(y_base, y_base), "npc"),
+      gp = gpar(col = col, lwd = lwd)
     )
     
     verticals <- gList(
       linesGrob(
         x = unit.c(unit(x_start, "npc"), unit(x_start, "npc")),
-        y = unit(c(-0.03, -0.045), "npc"),
-        gp = gpar(col = "black", lwd = 0.95)
+        y = unit(c(y_base, y_base - height), "npc"),
+        gp = gpar(col = col, lwd = lwd)
       ),
       linesGrob(
         x = unit.c(unit(x_end, "npc"), unit(x_end, "npc")),
-        y = unit(c(-0.03, -0.045), "npc"),
-        gp = gpar(col = "black", lwd = 0.95)
+        y = unit(c(y_base, y_base - height), "npc"),
+        gp = gpar(col = col, lwd = lwd)
       )
     )
     
@@ -211,26 +212,26 @@ add_bottom_brackets <- function(p, bracket_df, factor_levels) {
 
 
 
-
 p <- ggplot(phenotype_merged_plot_data, aes(x = dataset_batch_clean, y = count, fill = phenotype_merged)) +
   geom_bar(stat = "identity") +
   scale_fill_manual(values = merged_colors, name = "Donor phenotype") +
   labs(x = "Dataset", y = "Number of samples") +
   theme_minimal(base_size = 20) +
   theme(
-    axis.text.x = element_text(angle = 45, vjust = 0.9, hjust = 1, size = 12, color = "black"),
-    axis.title.x = element_text(size = 20), 
-    axis.title.y = element_text(size = 20),  
+    text=element_text(family="Arial"),
+    axis.text.x = element_text(angle = 45, vjust = 1.1, hjust = 1, size = 12, color = "black"),
+    axis.title.x = element_blank(), 
+    axis.title.y = element_text(size = 20), 
+    legend.position = "right",
     legend.title = element_text(size = 18, face = "bold"),  
     legend.text = element_text(size = 14),  
     panel.grid.major.x = element_blank(),
     panel.grid.minor.x = element_blank(),
     panel.grid.major.y = element_line(size = 0.8), 
     panel.grid.minor.y = element_blank(),
-    plot.margin = margin(20, 20, 20, 20),
+    plot.margin = margin(20, 20, 20, 40),
     plot.background = element_rect(fill = "white", colour = "white") 
-  ) + coord_cartesian(clip = "off")
-
+  ) + coord_cartesian(clip = "off")#, ylim = c(-20, NA))
 
 
 
@@ -240,8 +241,8 @@ p <- add_bottom_brackets(p, bracket_df, levels(phenotype_merged_plot_data$datase
 
 ggsave("figures/fig_1a_combined_simplified_and_cancer_detail.png",
        width = 17, height = 8, dpi = 600, units = "in", bg = "white",device = ragg::agg_png)
-ggsave("~/figures/fig_1a_combined_simplified_and_cancer_detail.pdf",
-       width = 17, height = 8, dpi = 600, units = "in", bg = "white", device = cairo_pdf)
+ggsave("figures/fig_1a_combined_simplified_and_cancer_detail.svg",
+       width = 17, height = 8, dpi = 600, units = "in", bg = "white", device = "svg")
 
 
 library(ggplot2)
@@ -292,4 +293,3 @@ ggsave("figures/fig_1a_combined_simplified_and_cancer_detail_2.png",
 ggsave("figures/fig_1a_combined_simplified_and_cancer_detail_2.svg",
        plot = final_plot,
        width = 5.8, height = 1.7, dpi = 600, units = "in", bg = "white", device = "svg")
-
