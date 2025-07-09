@@ -58,6 +58,27 @@ metadata_matrix <- metadata_long %>%
   pivot_wider(names_from = dataset_batch, values_from = value) %>%
   column_to_rownames("variable")
 
+label_replacements <- c(
+  "PAXgene blood ccfDNA" = "PAXgene blood\nccfDNA",
+  "Maxwell (plasma and serum)" = "Maxwell (plasma and\nserum)",
+  "Qiagen miRNeasy Plasma" = "Qiagen miRNeasy\nPlasma",
+  "Qiagen RNeasy Plasma" = "Qiagen RNeasy\nPlasma",
+  "Qiagen RNeasy Tissue" = "Qiagen RNeasy\nTissue",
+  "DNase I + HL-dsDNase" = "DNase I +\nHL-dsDNase",
+  "Illumina TruSeq small RNA" = "Illumina TruSeq small\nRNA",
+  "PNK-treated Illumina TruSeq small RNA" = "PNK-treated Illumina\nTruSeq small RNA",
+  "Whole-Exome Capture" = "Whole-Exome\nCapture",
+  "Whole-Transcriptome < 80 nt" = "Whole-Transcriptome\n< 80 nt",
+  "Whole-Transcriptome > 200 nt" = "Whole-Transcriptome\n> 200 nt",
+  "Whole RNA-Seq (oligo-dT pr.) (WRO)" = "Whole RNA-Seq\n(oligo-dT pr.) (WRO)",
+  "Whole RNA-Seq (random pr.) (WRR)" = "Whole RNA-Seq\n(random pr.) (WRR)"
+)
+
+for (old_label in names(label_replacements)) {
+  metadata_matrix[metadata_matrix == old_label] <- label_replacements[[old_label]]
+}
+
+
 n_values <- apply(metadata_matrix, 1, function(x) length(unique(x)))
 
 
@@ -365,7 +386,7 @@ for (var in row_order) {
     heatmap_column_names_gp = gpar(fontsize = 12),
     heatmap_row_names_gp = gpar(fontsize = 12),
     legend_title_gp = gpar(fontsize = 12),
-    legend_labels_gp = gpar(fontsize = 12)
+    legend_labels_gp = gpar(fontsize = 12, lineheight = 0.8)
   )
   
   ht <- Heatmap(
@@ -381,19 +402,19 @@ for (var in row_order) {
     column_names_gp = gpar(fontsize = 12),
     row_names_side = "left",
     bottom_annotation = bottom_anno,
-    #height = unit(0.32, "cm"), #controls the height of the heatmap "squares", this one is for the legend
-    height = unit(0.70, "cm"), #controls the height of the heatmap "squares", and this one for the figure
+    height = unit(0.32, "cm"), #controls the height of the heatmap "squares", this one is for the legend
+    #height = unit(0.70, "cm"), #controls the height of the heatmap "squares", and this one for the figure
     cell_fun = function(j, i, x, y, width, height, fill) {
       grid.rect(x = x, y = y, width = width, height = height,
                 gp = gpar(fill = fill, col = "white", lwd = 0.5))
-    },heatmap_legend_param = NULL
-    # heatmap_legend_param = list(
-    #   grid_height = unit(0.02, "cm"),
-    #   grid_width = unit(0.50, "cm"), # controls the shape of the legend squares
-    #   gap = unit(0.1, "cm"),
-    #   row_gap = unit(0.01, "cm"),
-    #   title_gp = gpar(fontsize = 12, fontface = "bold"),
-    #   labels_gp = gpar(fontsize = 12))
+    },
+    heatmap_legend_param = list(
+      grid_height = unit(0.02, "cm"),
+      grid_width = unit(0.50, "cm"), # controls the shape of the legend squares
+      gap = unit(0.1, "cm"),
+      row_gap = unit(0.01, "cm"),
+      title_gp = gpar(fontsize = 12, fontface = "bold"),
+      labels_gp = gpar(fontsize = 12))
   )
   
   heatmap_list[[var]] <- ht
@@ -409,44 +430,44 @@ ht_list <- Reduce(`%v%`, heatmap_list)
 
 
 
-# ragg::agg_png(
-#   "figures/fig_1b_metadata_heatmap_for_legend.png",
-#   width = 6.9, height = 4.6*0.766667, units = "in", res = 600, scaling = 5/12
-# )
-
 ragg::agg_png(
-  "figures/fig_1b_metadata_heatmap_for_figure.png",
-  width = 3.7, height = 2.5, units = "in", res = 600, scaling = 5/12
+  "figures/fig_1b_metadata_heatmap_for_legend.png",
+  width = 6.9, height = 4.6*0.766667, units = "in", res = 600, scaling = 5/12
 )
+
+# ragg::agg_png(
+#   "figures/fig_1b_metadata_heatmap_for_figure.png",
+#   width = 3.7, height = 2.5, units = "in", res = 600, scaling = 5/12
+# )
 
 ht_opt(legend_gap = unit(0.4, "mm"), ADD = TRUE) #reduce space between different legends
 
 
 
-ht_drw <- draw(ht_list,
-               # heatmap_legend_side = "right",
-               # annotation_legend_side = "right",
-               show_heatmap_legend = FALSE,
-               show_annotation_legend = FALSE,
-               gap = unit(0.2, "mm"))  # reduce from the default
+# ht_drw <- draw(ht_list,
+#                # heatmap_legend_side = "right",
+#                # annotation_legend_side = "right",
+#                show_heatmap_legend = FALSE,
+#                show_annotation_legend = FALSE,
+#                gap = unit(0.2, "mm"))  # reduce from the default
 
 
-# ht_drw <- draw(
-#   ht_list,
-#   heatmap_legend_side = "right",
-#   annotation_legend_side = "right",
-#   gap = unit(0.2, "mm"),
-#   heatmap_legend_list = list(
-#     "Centrifugation, step 1" = make_centrifugation_legend1("Centrifugation, step 1"),
-#     "Centrifugation, step 2" = make_centrifugation_legend2("Centrifugation, step 2")
-#   )
-# )
+ht_drw <- draw(
+  ht_list,
+  heatmap_legend_side = "right",
+  annotation_legend_side = "right",
+  gap = unit(0.2, "mm"),
+  heatmap_legend_list = list(
+    "Centrifugation, step 1" = make_centrifugation_legend1("Centrifugation, step 1"),
+    "Centrifugation, step 2" = make_centrifugation_legend2("Centrifugation, step 2")
+  )
+)
 
 
 ht_pos <- htPositionsOnDevice(ht_drw)
 
-#y_top_in <- ht_pos[ht_pos$heatmap == "Broad protocol\ncategory (BPC)", "y_min"] - unit(0.45, "in") #this addition or subtraction here controls the position of the brackets. I could not find a better way to do it, for legend
-y_top_in <- ht_pos[ht_pos$heatmap == "Broad protocol\ncategory (BPC)", "y_min"] - unit(0.3, "in") #for figure
+y_top_in <- ht_pos[ht_pos$heatmap == "Broad protocol\ncategory (BPC)", "y_min"] - unit(0.45, "in") #this addition or subtraction here controls the position of the brackets. I could not find a better way to do it, for legend
+#y_top_in <- ht_pos[ht_pos$heatmap == "Broad protocol\ncategory (BPC)", "y_min"] - unit(0.3, "in") #for figure
 
 y_top_np <- convertY(y_top_in, "npc", valueOnly = FALSE)
 
@@ -499,33 +520,33 @@ for (i in seq_len(nrow(bracket_df))) {
 dev.off()
 
 
-#svglite("figures/fig_1b_metadata_heatmap_for_legend.svg", width = 6.9, height = 4.6*0.766667, scaling = 5/12)
-svglite("figures/fig_1b_metadata_heatmap_for_figure.svg",
-         width = 3.7, height = 2.5, scaling = 5/12)
+svglite("figures/fig_1b_metadata_heatmap_for_legend.svg", width = 6.9, height = 4.6*0.766667, scaling = 5/12)
+# svglite("figures/fig_1b_metadata_heatmap_for_figure.svg",
+#          width = 3.7, height = 2.5, scaling = 5/12)
 #showtext::showtext_begin()
 
-ht_drw <- draw(ht_list,
-               # heatmap_legend_side = "right",
-               # annotation_legend_side = "right",
-               show_heatmap_legend = FALSE,
-               show_annotation_legend = FALSE,
-               gap = unit(0.2, "mm"))  # reduce from the default
+# ht_drw <- draw(ht_list,
+#                # heatmap_legend_side = "right",
+#                # annotation_legend_side = "right",
+#                show_heatmap_legend = FALSE,
+#                show_annotation_legend = FALSE,
+#                gap = unit(0.2, "mm"))  # reduce from the default
 
-# ht_drw <- draw(
-#   ht_list,
-#   heatmap_legend_side = "right",
-#   annotation_legend_side = "right",
-#   gap = unit(0.2, "mm"),
-#   heatmap_legend_list = list(
-#     "Centrifugation, step 1" = make_centrifugation_legend1("Centrifugation, step 1"),
-#     "Centrifugation, step 2" = make_centrifugation_legend2("Centrifugation, step 2")
-#   )
-# )
+ht_drw <- draw(
+  ht_list,
+  heatmap_legend_side = "right",
+  annotation_legend_side = "right",
+  gap = unit(0.2, "mm"),
+  heatmap_legend_list = list(
+    "Centrifugation, step 1" = make_centrifugation_legend1("Centrifugation, step 1"),
+    "Centrifugation, step 2" = make_centrifugation_legend2("Centrifugation, step 2")
+  )
+)
 
 ht_pos <- htPositionsOnDevice(ht_drw)
 
-#y_top_in <- ht_pos[ht_pos$heatmap == "Broad protocol\ncategory (BPC)", "y_min"] - unit(0.5, "in") #this addition or subtraction here controls the position of the brackets. I could not find a better way to do it
-y_top_in <- ht_pos[ht_pos$heatmap == "Broad protocol\ncategory (BPC)", "y_min"] - unit(0.3, "in") #for figure
+y_top_in <- ht_pos[ht_pos$heatmap == "Broad protocol\ncategory (BPC)", "y_min"] - unit(0.5, "in") #this addition or subtraction here controls the position of the brackets. I could not find a better way to do it
+#y_top_in <- ht_pos[ht_pos$heatmap == "Broad protocol\ncategory (BPC)", "y_min"] - unit(0.3, "in") #for figure
 
 y_top_np <- convertY(y_top_in, "npc", valueOnly = FALSE)
 

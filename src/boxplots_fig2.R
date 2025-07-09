@@ -335,7 +335,17 @@ for (i in 1:length(ggplot_objects)) {
 #####################################################
 # Stats for manuscript SPLICED READS
 ####################################################
-x <- table_filtered$percentage_of_spliced_reads[table_filtered$dataset_batch.y == "wei"]
+
+for (dataset in names(table(table_filtered$dataset_batch.y))) {
+  x <- table_filtered$percentage_of_spliced_reads[table_filtered$dataset_batch.y == dataset]
+  median_value <- median(x, na.rm = TRUE)
+  sd_value <- sd(x, na.rm = TRUE)
+  cat(dataset, " FSR:")
+  cat("Median ± SD:", sprintf("%.2f ± %.2f", median_value, sd_value), "\n")
+}
+capture <- c("chalasani", "toden", "ibarra_buffy_coat", "ibarra_plasma_cancer", "ibarra_plasma_non_cancer", "ibarra_serum")
+
+x <- table_filtered$percentage_of_spliced_reads[table_filtered$dataset_batch.y %in% capture]
 median_value <- median(x, na.rm = TRUE)
 sd_value <- sd(x, na.rm = TRUE)
 
@@ -349,24 +359,7 @@ sd_value <- sd(x, na.rm = TRUE)
 
 cat("Median ± SD:", sprintf("%.2f ± %.2f", median_value, sd_value), "\n")
 
-x <- table_filtered$percentage_of_spliced_reads[table_filtered$dataset_batch.y == "flomics_2"]
-median_value <- median(x, na.rm = TRUE)
-sd_value <- sd(x, na.rm = TRUE)
 
-cat("Median ± SD:", sprintf("%.2f ± %.2f", median_value, sd_value), "\n")
-
-x <- table_filtered$percentage_of_spliced_reads[table_filtered$dataset_batch.y == "reggiardo_bioivt"]
-median_value <- median(x, na.rm = TRUE)
-sd_value <- sd(x, na.rm = TRUE)
-
-cat("Median ± SD:", sprintf("%.2f ± %.2f", median_value, sd_value), "\n")
-
-
-x <- table_filtered$percentage_of_spliced_reads[table_filtered$dataset_batch.y == "reggiardo_dls"]
-median_value <- median(x, na.rm = TRUE)
-sd_value <- sd(x, na.rm = TRUE)
-
-cat("Median ± SD:", sprintf("%.2f ± %.2f", median_value, sd_value), "\n")
 
 x_bioivt <- table_filtered$percentage_of_spliced_reads[table_filtered$dataset_batch.y == "reggiardo_bioivt"]
 x_dls <- table_filtered$percentage_of_spliced_reads[table_filtered$dataset_batch.y == "reggiardo_dls"]
@@ -374,24 +367,11 @@ x_dls <- table_filtered$percentage_of_spliced_reads[table_filtered$dataset_batch
 mean_bioivt <- mean(x_bioivt, na.rm = TRUE)
 mean_dls <- mean(x_dls, na.rm = TRUE)
 
-# Mann-Whitney-Wilcoxon test (aka Wilcoxon rank-sum test)
 mww_test <- wilcox.test(x_bioivt, x_dls)
 
 cat(sprintf("Mean FSR: %.1f%% for BioIVT vs %.1f%% for DLS, MWW test p=%.2g\n",
             mean_bioivt, mean_dls, mww_test$p.value))
 
-
-x <- table_filtered$percentage_of_spliced_reads[table_filtered$dataset_batch.y == "roskams_pilot"]
-median_value <- median(x, na.rm = TRUE)
-sd_value <- sd(x, na.rm = TRUE)
-
-cat("Median ± SD:", sprintf("%.2f ± %.2f", median_value, sd_value), "\n")
-
-x <- table_filtered$percentage_of_spliced_reads[table_filtered$dataset_batch.y == "roskams_validation"]
-median_value <- median(x, na.rm = TRUE)
-sd_value <- sd(x, na.rm = TRUE)
-
-cat("Median ± SD:", sprintf("%.2f ± %.2f", median_value, sd_value), "\n")
 
 x_pilot <- table_filtered$percentage_of_spliced_reads[table_filtered$dataset_batch.y == "roskams_pilot"]
 x_validation <- table_filtered$percentage_of_spliced_reads[table_filtered$dataset_batch.y == "roskams_validation"]
@@ -399,7 +379,6 @@ x_validation <- table_filtered$percentage_of_spliced_reads[table_filtered$datase
 mean_pilot <- mean(x_pilot, na.rm = TRUE)
 mean_validation <- mean(x_validation, na.rm = TRUE)
 
-# Mann-Whitney-Wilcoxon test (aka Wilcoxon rank-sum test)
 mww_test <- wilcox.test(x_pilot, x_validation)
 
 cat(sprintf("Mean FSR: %.1f%% for Pilot vs %.1f%% for Validation, MWW test p=%.2g\n",
