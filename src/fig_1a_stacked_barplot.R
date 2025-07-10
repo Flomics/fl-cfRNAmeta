@@ -255,18 +255,18 @@ plot_with_legend <- ggplot(phenotype_merged_plot_data, aes(x = dataset_batch_cle
   labs(x = "Dataset", y = "Number of samples") +
   theme_minimal(base_size = 6) +
   theme(
-    text = element_text(family = "Arial", size = 6),
-    axis.text.x = element_text(angle = 45, vjust = 1.05, hjust = 1, size = 6, color = "black"),
+    text = element_text(family = "Arial", size = 12),
+    axis.text.x = element_text(angle = 45, vjust = 1.05, hjust = 1, size = 12, color = "black"),
     axis.title.x = element_blank(),
-    legend.key.size = unit(0.3, "cm"),  # or smaller, e.g., 0.25
-    axis.title.y = element_text(size = 6),
-    legend.title = element_text(size = 6, face = "bold"),
-    legend.text = element_text(size = 6),
+    legend.key.size = unit(0.5, "cm"),  # or smaller, e.g., 0.25
+    axis.title.y = element_text(size = 12),
+    legend.title = element_text(size = 12, face = "bold"),
+    legend.text = element_text(size = 12),
     panel.grid.major.x = element_blank(),
     panel.grid.minor.x = element_blank(),
     panel.grid.major.y = element_line(size = 0.3),
     panel.grid.minor.y = element_blank(),
-    plot.margin = margin(5, 5, 5, 32),
+    plot.margin = margin(0, 0, 0, 27),
     plot.background = element_rect(fill = "white", colour = "white")
   ) +
   coord_cartesian(clip = "off")
@@ -277,6 +277,19 @@ plot_with_legend <- add_bottom_brackets(plot_with_legend, bracket_df, levels(phe
 legend <- cowplot::get_legend(plot_with_legend)
 
 plot_no_legend <- plot_with_legend + theme(legend.position = "none")
+ggsave("figures/fig_1a_combined_simplified_and_cancer_detail_no_legend.png",
+       plot = plot_no_legend,
+       width = 3.35, height = 1.7, dpi = 600, units = "in", bg = "white", device = ragg::agg_png, scaling= 5/12)
+ggsave("figures/fig_1a_combined_simplified_and_cancer_detail_legend_only.png",
+       plot = legend,
+       width = 1.3, height = 1.7, dpi = 600, units = "in", bg = "white", device = ragg::agg_png, scaling= 5/12)
+ggsave("figures/fig_1a_combined_simplified_and_cancer_detail_no_legend.svg",
+       plot = plot_no_legend,
+       width = 3.35, height = 1.7, dpi = 600, units = "in", bg = "white", device = "svg", scaling= 5/12)
+ggsave("figures/fig_1a_combined_simplified_and_cancer_detail_legend_only.svg",
+       plot = legend,
+       width = 1.3, height = 1.7, dpi = 600, units = "in", bg = "white", device = "svg", scaling= 5/12)
+
 
 final_plot <- cowplot::plot_grid(
   plot_no_legend,
@@ -288,7 +301,7 @@ final_plot <- cowplot::plot_grid(
 
 ggsave("figures/fig_1a_combined_simplified_and_cancer_detail_2.png",
        plot = final_plot,
-       width = 5.8, height = 1.7, dpi = 600, units = "in", bg = "white", device = ragg::agg_png)
+       width = 5.8, height = 1.7, dpi = 600, units = "in", bg = "white", device = ragg::agg_png, scaling = 5/12)
 
 ggsave("figures/fig_1a_combined_simplified_and_cancer_detail_2.svg",
        plot = final_plot,
