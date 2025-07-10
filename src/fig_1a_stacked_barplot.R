@@ -19,7 +19,7 @@ setwd("~/fl-cfRNAmeta/")
 data <- read.delim("tables/cfRNA-meta_per_sample_metadata.tsv", header = TRUE, sep = "\t", fill = TRUE)
 
 #Assign healthy phenotype to Flomics_1 and flomics_2
-data$phenotype[data$dataset_batch %in% c("flomics_1", "flomics_2", "giraldez_standard", "giraldez_phospho-rna-seq")] <- "healthy"
+#data$phenotype[data$dataset_batch %in% c("flomics_1", "flomics_2", "giraldez_standard", "giraldez_phospho-rna-seq")] <- "healthy"
 
 data_barplot <- data
 data_barplot$simple_phenotype <- NA
@@ -294,15 +294,15 @@ ggsave("figures/fig_1a_combined_simplified_and_cancer_detail_legend_only.svg",
 final_plot <- cowplot::plot_grid(
   plot_no_legend,
   legend,
-  rel_widths = c(3.5, 1.3), 
+  rel_widths = c(3.35, 1.3), 
   rel_heights = c(1,1),
   nrow = 1
 )
 
 ggsave("figures/fig_1a_combined_simplified_and_cancer_detail_2.png",
        plot = final_plot,
-       width = 5.8, height = 1.7, dpi = 600, units = "in", bg = "white", device = ragg::agg_png, scaling = 5/12)
+       width = 4.65, height = 1.7, dpi = 600, units = "in", bg = "white", device = ragg::agg_png, scaling = 5/12)
 
 ggsave("figures/fig_1a_combined_simplified_and_cancer_detail_2.svg",
        plot = final_plot,
-       width = 5.8, height = 1.7, dpi = 600, units = "in", bg = "white", device = "svg")
+       width = 4.65, height = 1.7, dpi = 600, units = "in", bg = "white", device = "svg", scaling = 5/12)
