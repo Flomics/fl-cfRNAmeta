@@ -438,6 +438,9 @@ def preprocess_block(dataset_metadata):
 
     df = merge_sample_with_dataset_metadata(
         df, dataset_metadata, keep_sample_cols=["biomaterial"])
+    
+    # Collection center harmonization
+    df['collection_center'] = df['collection_center'].replace("CH,NJ", "CH, NJ")
 
     df.to_csv("../sra_metadata/block_metadata_preprocessed.csv", index=False)
 
