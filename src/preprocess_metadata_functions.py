@@ -438,9 +438,6 @@ def preprocess_block(dataset_metadata):
 
     df = merge_sample_with_dataset_metadata(
         df, dataset_metadata, keep_sample_cols=["biomaterial"])
-    
-    # Collection center harmonization
-    df['collection_center'] = df['collection_center'].replace("CH,NJ", "CH, NJ")
 
     df.to_csv("../sra_metadata/block_metadata_preprocessed.csv", index=False)
 
@@ -754,6 +751,7 @@ def preprocess_giraldez(dataset_metadata):
     index = df[df['treatment'].isin(['none', 'Untreated'])].index
     df.loc[index, "library_prep_kit"] = "Illumina TruSeq small RNA"
     df.loc[index, "library_prep_kit_short"] = "Illumina TruSeq small RNA"
+    df.loc[index, "phenotype"] = "Healthy"
     df.loc[index, "assay_name"] = "RNA-seq"
     df.loc[index, "dataset_batch"] = "giraldez_standard"
     df.loc[index, "centrifugation_step_1"] = "3400g"
@@ -763,6 +761,7 @@ def preprocess_giraldez(dataset_metadata):
     index = df[df['treatment'].isin(['T4PNK', 'PNK'])].index
     df.loc[index, "library_prep_kit"] = "polynucleotide kinase (PNK) treated, Illumina TruSeq small RNA"
     df.loc[index, "library_prep_kit_short"] = "PNK-treated Illumina TruSeq small RNA"
+    df.loc[index, "phenotype"] = "Healthy"
     df.loc[index, "assay_name"] = "phospho-RNA-seq"
     df.loc[index, "dataset_batch"] = "giraldez_phospho-rna-seq"
     df.loc[index, "centrifugation_step_1"] = "3400g"
@@ -1034,6 +1033,7 @@ def preprocess_flomics_2(dataset_metadata):
     print("### Dataset: flomics")
     csv_path = "../sra_metadata/flomics_2_metadata.tsv"
     df = pd.read_csv(csv_path, sep='\t')
+    df["status_subtype"] = df["status_subtype"].str.capitalize()
     df.columns = simplify_column_names(df.columns)
 
     # Improve compatibility with snakeDA (reserved var: ['sequencing_batch'])
