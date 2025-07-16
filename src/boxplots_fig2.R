@@ -53,7 +53,7 @@ print(removed_samples$sample_id)
 
 
 cat("Original merged_df rows:", nrow(data), "\n") #should be 2458 
-cat("Filtered to samples in metadata:", nrow(filtered_df), "\n") # should be 2360, if it's not, make sure you have NOT removed all Flomics_1 samples due to a mismatch between the metadata names and the sampleinfo from snakeda names :)
+cat("Filtered to samples in metadata:", nrow(filtered_df), "\n") # should be 2356, if it's not, make sure you have NOT removed all Flomics_1 samples due to a mismatch between the metadata names and the sampleinfo from snakeda names :)
 
 
 
