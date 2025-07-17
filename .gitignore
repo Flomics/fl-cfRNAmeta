@@ -3,6 +3,7 @@ sra_metadata/GSE192902*
 sra_metadata/moufarrej_geo*
 
 src/__pycache__
+src/.ipynb_checkpoints/
 
 .Rproj.user
 *.Rproj
