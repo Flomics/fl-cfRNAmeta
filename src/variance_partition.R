@@ -1,3 +1,6 @@
+library(dplyr)
+library(tidyr)
+
 ######################################################
 # Variance Partition Analysis
 # Needs to run after the boxplots_fig2.R script
@@ -10,12 +13,12 @@ suppressMessages(library("edgeR"))
 VP_NUMERIC <- c(
   "genes_contributing_to_80._of_reads",   # NG80
   "percentage_of_spliced_reads",           # FSR
-  "exonic_reads_minus_spike_ins"           # FER (optional, remove if not needed)
+  "exonic_reads_minus_spike_ins"           # FER 
 )
 
 VP_CATEGORICAL <- c(
-  "dataset_batch.y",      # dataset of origin — likely major driver
-  "status"                # phenotype (case/control)
+  "dataset_batch.y",      # dataset
+  "status"                # phenotype 
 )
 
 # ─── Prepare sampleinfo ──────────────────────────────────────────────────────
@@ -115,7 +118,6 @@ vp_long$Variable <- recode(vp_long$Variable,
                            "percentage_of_spliced_reads"        = "FSR",
                            "exonic_reads_minus_spike_ins"       = "FER",
                            "dataset_batch.y"                    = "Dataset",
-                           "sequencing_batch"                   = "Seq. batch",
                            "status"                             = "Phenotype",
                            "Residuals"                          = "Residuals"
 )
