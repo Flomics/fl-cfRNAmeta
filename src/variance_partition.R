@@ -19,6 +19,17 @@ filtered_df <- filtered_df %>%
     by = "sample_name"
   )
 
+# ─── Datasets to include in the analysis ─────────────────────────────────────
+DATASETS_TO_INCLUDE <- c(
+  # Fill with values from dataset_batch.y to include
+)
+
+filtered_df <- filtered_df %>%
+  filter(dataset_batch.y %in% DATASETS_TO_INCLUDE)
+
+cat("Datasets included:", paste(DATASETS_TO_INCLUDE, collapse = ", "), "\n")
+cat("Samples after dataset filter:", nrow(filtered_df), "\n")
+
 # ─── Variables to test ───────────────────────────────────────────────────────
 VP_NUMERIC <- c(
   "genes_contributing_to_80._of_reads",   # NG80
@@ -40,7 +51,6 @@ VP_NUMERIC <- c(
 )
 
 VP_CATEGORICAL <- c(
-  "dataset_batch.y",    # dataset
   "status"            # phenotype
 )
 
@@ -183,9 +193,9 @@ p_vp <- ggplot(vp_long, aes(x = Variable, y = VarianceExplained, fill = Variable
     plot.background    = element_rect(fill = "white", colour = "white")
   )
 
-ggsave("figures/variance_partition_violin.png", p_vp,
+ggsave("figures/variance_partition_violin_no_dataset.png", p_vp,
        width = 8, height = 5, dpi = 600, device = ragg::agg_png)
-ggsave("figures/variance_partition_violin.svg", p_vp,
+ggsave("figures/variance_partition_violin_no_dataset.svg", p_vp,
        width = 8, height = 5, device = "svg")
 
 # Save the variance partition table

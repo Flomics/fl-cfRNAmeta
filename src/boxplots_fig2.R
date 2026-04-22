@@ -630,7 +630,7 @@ ggsave("figures/sensitivity_ng80_threshold.svg", p_sens_ng80,
 p_sens_fsr <- make_threshold_plot(
   data       = table_filtered,
   metric_col = "percentage_of_spliced_reads",
-  thresholds = seq(0, 100, by = 5),
+  thresholds = seq(0, 55, by = 5),
   x_label    = "FSR threshold (%)"
 )
 

@@ -253,9 +253,16 @@ names(adjusted_palette) <- core_order          # must match factor levels, i.e. 
 # )
 
 # ─── Helper to build each scatterplot ────────────────────────────────────────
+# raw_cor_x / raw_cor_y: column names whose *untransformed* values are used for
+# the Pearson R annotation. Use these when an axis is log-scaled but you still
+# want R computed on the original scale (e.g. NG80). When NULL, the plotted
+# column is used directly (so stat_cor would also work on transformed values).
 make_scatter <- function(data, x_var, y_var, x_label, y_label,
-                         log_x = FALSE, log_y = FALSE, show_trend = TRUE, show_cor = TRUE) {
-  
+                         log_x = FALSE, log_y = FALSE,
+                         show_trend = TRUE, show_cor = TRUE,
+                         raw_cor_x = NULL, raw_cor_y = NULL,
+                         cor_label_y = "top") {
+
   p <- ggplot(data,
               aes(x = .data[[x_var]],
                   y = .data[[y_var]],
@@ -283,15 +290,37 @@ make_scatter <- function(data, x_var, y_var, x_label, y_label,
       plot.background  = element_rect(fill = "white", colour = "white")
     ) +
     guides(color = guide_legend(ncol = 1))
-  
+
   if (show_trend) p <- p + geom_smooth(method = "lm", se = FALSE, linewidth = 0.6,
                                        color = "grey50", alpha = 0.6)
-  if (show_cor)   p <- p + stat_cor(method = "pearson", label.x.npc = "left",
-                                    label.y.npc = "top", size = 3,
-                                    aes(label = after_stat(r.label)), color = "black")
+
+  if (show_cor) {
+    use_raw <- !is.null(raw_cor_x) || !is.null(raw_cor_y)
+    if (use_raw) {
+      # Pre-compute Pearson R on the untransformed columns so that log-scaled
+      # axes do not affect the reported correlation.
+      cx <- data[[if (!is.null(raw_cor_x)) raw_cor_x else x_var]]
+      cy <- data[[if (!is.null(raw_cor_y)) raw_cor_y else y_var]]
+      ok <- complete.cases(cx, cy)
+      r_val  <- cor(cx[ok], cy[ok], method = "pearson")
+      p_val  <- cor.test(cx[ok], cy[ok], method = "pearson")$p.value
+      p_lab  <- if (p_val < 0.001) "p < 0.001" else sprintf("p = %.3f", p_val)
+      cor_label <- sprintf("R = %.2f, %s", r_val, p_lab)
+      p <- p + annotate("text",
+                        x = -Inf, y = Inf,
+                        label = cor_label,
+                        hjust = -0.1, vjust = 1.5,
+                        size = 3, color = "black")
+    } else {
+      p <- p + stat_cor(method = "pearson", label.x.npc = "left",
+                        label.y.npc = cor_label_y, size = 3,
+                        aes(label = after_stat(r.label)), color = "black")
+    }
+  }
+
   if (log_x) p <- p + scale_x_continuous(trans = log10_trans())
   if (log_y) p <- p + scale_y_continuous(trans = log10_trans())
-  
+
   return(p)
 }
 
@@ -350,12 +379,13 @@ p_ng80_shannon_vegan_nat <- make_scatter(
   y_var   = "genes_contributing_to_80._of_reads",
   x_label = "Shannon entropy (natural logarithm)",
   y_label = "NG80",
-  log_y   = TRUE
+  log_y   = FALSE,
+  show_trend = FALSE
 )
 
-ggsave("figures/ng80_vs_shannon_vegan_nat.png", p_ng80_shannon,
+ggsave("figures/ng80_vs_shannon_vegan_nat_non_log_Y.png", p_ng80_shannon_vegan_nat,
        width = 10, height = 6, dpi = 600, device = ragg::agg_png)
-ggsave("figures/ng80_vs_shannon_vegan_nat.svg", p_ng80_shannon,
+ggsave("figures/ng80_vs_shannon_vegan_nat.svg", p_ng80_shannon_vegan_nat,
        width = 10, height = 6, device = "svg")
 
 # ─── Plot 2: NG80 vs Gini ─────────────────────────────────────────────────────
@@ -365,12 +395,13 @@ p_ng80_gini <- make_scatter(
   y_var   = "genes_contributing_to_80._of_reads",
   x_label = "Gini index",
   y_label = "NG80",
-  log_y   = TRUE,
+  log_y   = FALSE,
   show_trend = FALSE,
-  show_cor = FALSE
+  show_cor   = TRUE,
+  cor_label_y = 0.85
 )
 
-ggsave("figures/ng80_vs_gini_ineq.png", p_ng80_gini,
+ggsave("figures/ng80_vs_gini_ineq_no_log_Y.png", p_ng80_gini,
        width = 10, height = 6, dpi = 600, device = ragg::agg_png)
 ggsave("figures/ng80_vs_gini_ineq.svg", p_ng80_gini,
        width = 10, height = 6, device = "svg")
@@ -383,11 +414,34 @@ p_shannon_gini <- make_scatter(
   x_label = "Shannon entropy (natural logarithm)",
   y_label = "Gini index",
   show_trend = FALSE,
-  show_cor = FALSE
+  show_cor   = TRUE,
+  log_y = TRUE,
+  log_x = TRUE
 )
 
 ggsave("figures/shannon_vegan_nat_vs_gini_ineq.png", p_shannon_gini,
        width = 10, height = 6, dpi = 600, device = ragg::agg_png)
 ggsave("figures/shannon_vegan_nat_vs_gini_ineq.svg", p_shannon_gini,
+       width = 10, height = 6, device = "svg")
+
+# ─── Plot 4: Shannon vs NG80 (untransformed NG80) ────────────────────────────
+# NG80 is kept on a linear scale; R is computed on the raw (untransformed)
+# NG80 values as requested.
+p_shannon_vs_ng80_untransformed <- make_scatter(
+  data    = table_filtered,
+  x_var   = "shannon_vegan_nat",
+  y_var   = "genes_contributing_to_80._of_reads",
+  x_label = "Shannon entropy (natural logarithm)",
+  y_label = "NG80",
+  log_x   = FALSE,
+  log_y   = FALSE,
+  show_trend = TRUE,
+  show_cor   = TRUE
+  # raw_cor_y not needed here: log_y = FALSE so R is already on untransformed NG80
+)
+
+ggsave("figures/shannon_vs_ng80_untransformed.png", p_shannon_vs_ng80_untransformed,
+       width = 10, height = 6, dpi = 600, device = ragg::agg_png)
+ggsave("figures/shannon_vs_ng80_untransformed.svg", p_shannon_vs_ng80_untransformed,
        width = 10, height = 6, device = "svg")
 
