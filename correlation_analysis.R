@@ -70,14 +70,16 @@ walk(common_samples, function(s_id) {
   cat("Sample:", s_id, "| Pearson R:", round(r_val, 4), "\n")
   
   # Create plot
-  p <- ggplot(sample_data, aes(x = counts_all, y = counts_hg)) +
+  p <- ggplot(sample_data, aes(x = counts_all + 1, y = counts_hg + 1)) +
     geom_point(alpha = 0.2, size = 0.5) +
+    scale_x_log10() +
+    scale_y_log10() +
     geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +
     labs(
       title = paste("Gene Count Correlation -", s_id),
       subtitle = paste0("Pearson R = ", round(r_val, 4), " (n = ", nrow(sample_data), " genes)"),
-      x = "Raw Counts (All Reads)",
-      y = "Raw Counts (HG Reads)"
+      x = "Raw Counts + 1 (All Reads, log10)",
+      y = "Raw Counts + 1 (HG Reads, log10)"
     ) +
     theme_minimal() +
     theme(plot.title = element_text(hjust = 0.5),
