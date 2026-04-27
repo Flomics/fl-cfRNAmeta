@@ -13,6 +13,18 @@ suppressPackageStartupMessages({
   library(scales)
 })
 
+# --- Verification Test ---
+# Ensure regex correctly extracts dataset name (everything until the last underscore)
+test_ids <- c("flomics_2_144", "block_1", "SRR10822577")
+expected_names <- c("flomics_2", "block", "SRR10822577")
+actual_names <- sub("_[^_]*$", "", test_ids)
+if (!all(actual_names == expected_names)) {
+  stop("Dataset name extraction regex test failed!\n",
+       "Expected: ", paste(expected_names, collapse=", "), "\n",
+       "Actual:   ", paste(actual_names, collapse=", "))
+}
+# -------------------------
+
 # File paths (assumes running from project root)
 all_reads_file <- "gene_raw_counts_all_reads.tsv"
 hg_reads_file <- "gene_raw_counts_hg_reads.tsv"
