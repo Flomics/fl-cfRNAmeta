@@ -13,28 +13,6 @@ suppressPackageStartupMessages({
   library(scales)
 })
 
-# --- Verification Test ---
-# Ensure regex correctly extracts dataset name (everything until the last underscore)
-# Rule: String MUST contain at least one underscore.
-test_ids <- c("flomics_2_144", "block_1")
-expected_names <- c("flomics_2", "block")
-
-# 1. Check regex behavior
-actual_names <- sub("_[^_]*$", "", test_ids)
-if (!all(actual_names == expected_names)) {
-  stop("Dataset name extraction regex test failed (incorrect extraction)!\n",
-       "Expected: ", paste(expected_names, collapse=", "), "\n",
-       "Actual:   ", paste(actual_names, collapse=", "))
-}
-
-# 2. Verify that strings without underscores are caught if they appear
-bad_id <- "SRR10822577"
-if (!grepl("_", bad_id)) {
-  # This matches the user requirement that such IDs should be considered invalid for this naming scheme
-  cat("Note: ID '", bad_id, "' correctly identified as missing an underscore.\n", sep="")
-}
-# -------------------------
-
 # File paths (assumes running from project root)
 all_reads_file <- "gene_raw_counts_all_reads.tsv"
 hg_reads_file <- "gene_raw_counts_hg_reads.tsv"
@@ -44,6 +22,7 @@ if (!dir.exists(output_dir)) {
   dir.create(output_dir, recursive = TRUE)
 }
 
+# 1. Read the data
 cat("Reading matrices...\n")
 # read_tsv is generally faster and more tidyverse-idiomatic
 df_all <- read_tsv(all_reads_file, show_col_types = FALSE)
@@ -60,6 +39,17 @@ if (length(common_samples) == 0) {
   cat("Samples in HG Reads (first 3): ", paste(head(hg_samples, 3), collapse=", "), "\n")
   quit(save = "no", status = 1)
 }
+
+# --- Verification Test on Input Data ---
+# Ensure all common sample IDs contain at least one underscore for dataset extraction.
+cat("Verifying sample ID formats...\n")
+ids_without_underscore <- common_samples[!grepl("_", common_samples)]
+if (length(ids_without_underscore) > 0) {
+  stop("Dataset extraction regex test failed! The following common sample IDs do not contain an underscore:\n",
+       paste(head(ids_without_underscore, 10), collapse=", "), 
+       if(length(ids_without_underscore) > 10) " ..." else "")
+}
+# ---------------------------------------
 
 cat("Processing", length(common_samples), "common samples...\n")
 
@@ -132,22 +122,12 @@ correlation_results <- map_dfr(common_samples, function(s_id) {
 if (nrow(correlation_results) > 0) {
   cat("\nGenerating summary boxplot...\n")
   
-  # Ensure all samples have an underscore for dataset extraction
-  invalid_samples <- correlation_results %>% filter(!grepl("_", sample_id))
-  if (nrow(invalid_samples) > 0) {
-    cat("Warning: Skipping", nrow(invalid_samples), "samples that do not contain an underscore (e.g.,", 
-        invalid_samples$sample_id[1], ")\n")
-  }
-
   # Extract dataset name (everything until the last underscore)
+  # All IDs guaranteed to have an underscore by the test at start
   correlation_results <- correlation_results %>%
-    filter(grepl("_", sample_id)) %>%
     mutate(dataset = sub("_[^_]*$", "", sample_id))
   
-  if (nrow(correlation_results) == 0) {
-    cat("No valid samples with underscores found for summary plot.\n")
-  } else {
-    p_summary <- ggplot(correlation_results, aes(x = dataset, y = pearson_r, fill = dataset)) +
+  p_summary <- ggplot(correlation_results, aes(x = dataset, y = pearson_r, fill = dataset)) +
     geom_boxplot(alpha = 0.7, outlier.shape = NA) +
     geom_jitter(width = 0.2, alpha = 0.5, size = 1) +
     labs(
