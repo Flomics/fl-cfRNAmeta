@@ -65,10 +65,14 @@ walk(common_samples, function(s_id) {
     return()
   }
   
-  # Calculate Pearson correlation
-  r_val <- cor(sample_data$counts_all, sample_data$counts_hg, method = "pearson")
+  # Calculate correlations on log-transformed counts
+  log_all <- log10(sample_data$counts_all + 1)
+  log_hg <- log10(sample_data$counts_hg + 1)
   
-  cat("Sample:", s_id, "| Pearson R:", round(r_val, 4), "\n")
+  r_pearson  <- cor(log_all, log_hg, method = "pearson")
+  r_spearman <- cor(sample_data$counts_all, sample_data$counts_hg, method = "spearman")
+  
+  cat("Sample:", s_id, "| Pearson R (log10):", round(r_pearson, 4), "| Spearman Rho:", round(r_spearman, 4), "\n")
   
   # Create plot
   p <- ggplot(sample_data, aes(x = counts_all + 1, y = counts_hg + 1)) +
@@ -78,7 +82,9 @@ walk(common_samples, function(s_id) {
     geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +
     labs(
       title = paste("Gene Count Correlation -", s_id),
-      subtitle = paste0("Pearson R = ", round(r_val, 4), " (n = ", nrow(sample_data), " genes)"),
+      subtitle = paste0("Pearson R (log10) = ", round(r_pearson, 4), 
+                        "\nSpearman Rho = ", round(r_spearman, 4),
+                        "\n(n = ", nrow(sample_data), " genes)"),
       x = "Raw Counts + 1 (All Reads, log10)",
       y = "Raw Counts + 1 (HG Reads, log10)"
     ) +
