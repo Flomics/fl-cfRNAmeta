@@ -110,9 +110,9 @@ correlation_results <- map_dfr(common_samples, function(s_id) {
 if (nrow(correlation_results) > 0) {
   cat("\nGenerating summary boxplot...\n")
   
-  # Extract dataset prefix (everything before the first underscore)
+  # Extract dataset name (everything until the last underscore)
   correlation_results <- correlation_results %>%
-    mutate(dataset = sub("_.*", "", sample_id))
+    mutate(dataset = sub("_[^_]*$", "", sample_id))
   
   p_summary <- ggplot(correlation_results, aes(x = dataset, y = pearson_r, fill = dataset)) +
     geom_boxplot(alpha = 0.7, outlier.shape = NA) +
