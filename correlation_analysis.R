@@ -10,6 +10,7 @@ suppressPackageStartupMessages({
   library(ggplot2)
   library(readr)
   library(purrr)
+  library(scales)
 })
 
 # File paths (assumes running from project root)
@@ -72,8 +73,8 @@ walk(common_samples, function(s_id) {
   # Create plot
   p <- ggplot(sample_data, aes(x = counts_all + 1, y = counts_hg + 1)) +
     geom_point(alpha = 0.2, size = 0.5) +
-    scale_x_log10() +
-    scale_y_log10() +
+    scale_x_log10(labels = label_scientific()) +
+    scale_y_log10(labels = label_scientific()) +
     geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +
     labs(
       title = paste("Gene Count Correlation -", s_id),
