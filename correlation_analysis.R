@@ -54,15 +54,16 @@ df_hg_long <- df_hg %>%
 # Join the two datasets
 df_combined <- inner_join(df_all_long, df_hg_long, by = c("gene_id", "sample_id"))
 
-# Process each sample
-walk(common_samples, function(s_id) {
+# Process each sample and collect results
+cat("Processing individual samples and generating plots...\n")
+correlation_results <- map_dfr(common_samples, function(s_id) {
   sample_data <- df_combined %>%
     filter(sample_id == s_id) %>%
     filter(!is.na(counts_all), !is.na(counts_hg))
   
   if (nrow(sample_data) < 2) {
     cat("Skipping sample", s_id, ": insufficient data.\n")
-    return()
+    return(NULL)
   }
   
   # Calculate correlations on log-transformed counts
@@ -74,7 +75,7 @@ walk(common_samples, function(s_id) {
   
   cat("Sample:", s_id, "| Pearson R (log10):", round(r_pearson, 4), "| Spearman Rho:", round(r_spearman, 4), "\n")
   
-  # Create plot
+  # Create individual plot
   p <- ggplot(sample_data, aes(x = counts_all + 1, y = counts_hg + 1)) +
     geom_point(alpha = 0.2, size = 0.5) +
     scale_x_log10(labels = label_scientific()) +
@@ -95,7 +96,45 @@ walk(common_samples, function(s_id) {
   # Save as PNG
   file_name <- file.path(output_dir, paste0(s_id, "_correlation.png"))
   ggsave(file_name, plot = p, width = 7, height = 7, dpi = 150)
+  
+  # Return data for summary plot
+  return(data.frame(
+    sample_id = s_id,
+    pearson_r = r_pearson,
+    spearman_rho = r_spearman,
+    stringsAsFactors = FALSE
+  ))
 })
+
+# Generate Summary Boxplot
+if (nrow(correlation_results) > 0) {
+  cat("\nGenerating summary boxplot...\n")
+  
+  # Extract dataset prefix (everything before the first underscore)
+  correlation_results <- correlation_results %>%
+    mutate(dataset = sub("_.*", "", sample_id))
+  
+  p_summary <- ggplot(correlation_results, aes(x = dataset, y = pearson_r, fill = dataset)) +
+    geom_boxplot(alpha = 0.7, outlier.shape = NA) +
+    geom_jitter(width = 0.2, alpha = 0.5, size = 1) +
+    labs(
+      title = "Pearson Correlation Summary by Dataset",
+      subtitle = "Correlations calculated on log10(counts + 1)",
+      x = "Dataset",
+      y = "Pearson R (log10 counts)"
+    ) +
+    theme_minimal() +
+    theme(
+      legend.position = "none",
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      plot.title = element_text(hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5)
+    )
+  
+  summary_file <- file.path(output_dir, "dataset_pearson_summary.png")
+  ggsave(summary_file, plot = p_summary, width = 10, height = 7, dpi = 150)
+  cat("Summary plot saved to:", summary_file, "\n")
+}
 
 cat("\nAll plots have been saved to:", output_dir, "\n")
 cat("Done.\n")
