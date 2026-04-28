@@ -155,6 +155,7 @@ if (nrow(correlation_results) > 0) {
   p_summary <- ggplot(correlation_results, aes(x = dataset, y = pearson_r, fill = dataset)) +
     geom_boxplot(alpha = 0.7, outlier.shape = NA) +
     geom_jitter(width = 0.2, alpha = 0.5, size = 1) +
+    scale_y_continuous(limits = c(0, 1)) +
     labs(
       title = "Pearson Correlation Summary by Dataset",
       subtitle = "Correlations calculated on log10(counts + 1)",
