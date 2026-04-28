@@ -16,6 +16,7 @@ suppressPackageStartupMessages({
 # File paths (assumes running from project root)
 all_reads_file <- "gene_raw_counts_all_reads.tsv"
 hg_reads_file <- "gene_raw_counts_hg_reads.tsv"
+mapping_file <- "sample_name_to_dataset_batch.tsv"
 output_dir <- "output_plots"
 
 if (!dir.exists(output_dir)) {
@@ -27,6 +28,7 @@ cat("Reading matrices...\n")
 # read_tsv is generally faster and more tidyverse-idiomatic
 df_all <- read_tsv(all_reads_file, show_col_types = FALSE)
 df_hg <- read_tsv(hg_reads_file, show_col_types = FALSE)
+df_mapping <- read_tsv(mapping_file, show_col_types = FALSE)
 
 # --- Filter Spike-ins ---
 # Ignore records where gene_id starts with "ERCC-" or "SIRV"
@@ -64,17 +66,6 @@ if (length(common_samples) == 0) {
   quit(save = "no", status = 1)
 }
 # -------------------------------
-
-# --- Verification Test on Input Data ---
-# Ensure all common sample IDs contain at least one underscore for dataset extraction.
-cat("Verifying sample ID formats...\n")
-ids_without_underscore <- common_samples[!grepl("_", common_samples)]
-if (length(ids_without_underscore) > 0) {
-  stop("Dataset extraction regex test failed! The following common sample IDs do not contain an underscore:\n",
-       paste(head(ids_without_underscore, 10), collapse=", "), 
-       if(length(ids_without_underscore) > 10) " ..." else "")
-}
-# ---------------------------------------
 
 cat("Processing", length(common_samples), "common samples...\n")
 
@@ -147,10 +138,10 @@ correlation_results <- map_dfr(common_samples, function(s_id) {
 if (nrow(correlation_results) > 0) {
   cat("\nGenerating summary boxplot...\n")
   
-  # Extract dataset name (everything until the last underscore)
-  # All IDs guaranteed to have an underscore by the test at start
+  # Map sample names to dataset names using df_mapping
   correlation_results <- correlation_results %>%
-    mutate(dataset = sub("_[^_]*$", "", sample_id))
+    left_join(df_mapping, by = c("sample_id" = "sample_name")) %>%
+    rename(dataset = dataset_batch)
   
   p_summary <- ggplot(correlation_results, aes(x = dataset, y = pearson_r, fill = dataset)) +
     geom_boxplot(alpha = 0.7, outlier.shape = NA) +
