@@ -153,27 +153,42 @@ if (nrow(correlation_results) > 0) {
     left_join(df_mapping, by = c("sample_id" = "sample_name")) %>%
     rename(dataset = dataset_batch)
   
-  p_summary <- ggplot(correlation_results, aes(x = dataset, y = pearson_r, fill = dataset)) +
-    geom_boxplot(alpha = 0.7, outlier.shape = NA) +
-    geom_jitter(width = 0.2, alpha = 0.5, size = 1) +
-    scale_y_continuous(limits = c(0, 1)) +
-    labs(
-      title = "Pearson Correlation Summary by Dataset",
-      subtitle = "Correlations calculated on log10(counts + 1)",
-      x = "Dataset",
-      y = "Pearson R (log10 counts)"
-    ) +
-    theme_minimal() +
-    theme(
-      legend.position = "none",
-      axis.text.x = element_text(angle = 45, hjust = 1),
-      plot.title = element_text(hjust = 0.5),
-      plot.subtitle = element_text(hjust = 0.5)
-    )
+  # Identify and warn about samples with empty dataset information
+  samples_with_na_dataset <- correlation_results %>%
+    filter(is.na(dataset) | dataset == "")
   
-  summary_file <- file.path(output_dir, "dataset_pearson_summary.png")
-  ggsave(summary_file, plot = p_summary, width = 10, height = 7, dpi = 150)
-  cat("Summary plot saved to:", summary_file, "\n")
+  if (nrow(samples_with_na_dataset) > 0) {
+    cat("WARNING: The following samples have no dataset mapping and will be excluded from the summary plot:\n")
+    cat(paste(samples_with_na_dataset$sample_id, collapse = ", "), "\n")
+    correlation_results <- correlation_results %>%
+      filter(!is.na(dataset), dataset != "")
+  }
+
+  if (nrow(correlation_results) > 0) {
+    p_summary <- ggplot(correlation_results, aes(x = dataset, y = pearson_r, fill = dataset)) +
+      geom_boxplot(alpha = 0.7, outlier.shape = NA) +
+      geom_jitter(width = 0.2, alpha = 0.5, size = 1) +
+      scale_y_continuous(limits = c(0, 1)) +
+      labs(
+        title = "Pearson Correlation Summary by Dataset",
+        subtitle = "Correlations calculated on log10(counts + 1)",
+        x = "Dataset",
+        y = "Pearson R (log10 counts)"
+      ) +
+      theme_minimal() +
+      theme(
+        legend.position = "none",
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5)
+      )
+    
+    summary_file <- file.path(output_dir, "dataset_pearson_summary.png")
+    ggsave(summary_file, plot = p_summary, width = 10, height = 7, dpi = 150)
+    cat("Summary plot saved to:", summary_file, "\n")
+  } else {
+    cat("WARNING: No samples with valid dataset mapping remaining. Skipping summary plot.\n")
+  }
 }
 
 cat("\nAll plots have been saved to:", output_dir, "\n")
