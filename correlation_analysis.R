@@ -47,6 +47,24 @@ if (length(common_samples) == 0) {
   quit(save = "no", status = 1)
 }
 
+# --- Filter Samples by Depth ---
+# Filter out samples where total read count is less than 2 million in hg_reads_file
+cat("Filtering samples by total read count in HG reads (min 2M)...\n")
+sample_sums_hg <- colSums(df_hg %>% select(all_of(common_samples)), na.rm = TRUE)
+samples_to_keep <- names(sample_sums_hg[sample_sums_hg >= 2e6])
+
+if (length(samples_to_keep) < length(common_samples)) {
+  n_removed <- length(common_samples) - length(samples_to_keep)
+  cat("Removed", n_removed, "samples with < 2M reads in HG matrix.\n")
+  common_samples <- samples_to_keep
+}
+
+if (length(common_samples) == 0) {
+  cat("ERROR: No samples remaining after filtering for minimum depth (2M).\n")
+  quit(save = "no", status = 1)
+}
+# -------------------------------
+
 # --- Verification Test on Input Data ---
 # Ensure all common sample IDs contain at least one underscore for dataset extraction.
 cat("Verifying sample ID formats...\n")
