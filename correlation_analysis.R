@@ -67,6 +67,16 @@ if (length(common_samples) == 0) {
 }
 # -------------------------------
 
+# --- Check Mapping Presence ---
+cat("Checking if all samples have mapping information...\n")
+missing_metadata <- setdiff(common_samples, df_mapping$sample_name)
+if (length(missing_metadata) > 0) {
+  cat("ERROR: The following samples are missing from the mapping file:", mapping_file, "\n")
+  cat(paste(missing_metadata, collapse = ", "), "\n")
+  quit(save = "no", status = 1)
+}
+# ------------------------------
+
 cat("Processing", length(common_samples), "common samples...\n")
 
 # Reshape to long format for easier joining and per-sample processing
