@@ -28,6 +28,13 @@ cat("Reading matrices...\n")
 df_all <- read_tsv(all_reads_file, show_col_types = FALSE)
 df_hg <- read_tsv(hg_reads_file, show_col_types = FALSE)
 
+# --- Filter Spike-ins ---
+# Ignore records where gene_id starts with "ERCC-" or "SIRV"
+cat("Filtering out ERCC and SIRV records...\n")
+df_all <- df_all %>% filter(!grepl("^(ERCC-|SIRV)", gene_id))
+df_hg <- df_hg %>% filter(!grepl("^(ERCC-|SIRV)", gene_id))
+# ------------------------
+
 # Identify common samples (columns 3 onwards)
 all_samples <- colnames(df_all)[-(1:2)]
 hg_samples <- colnames(df_hg)[-(1:2)]
