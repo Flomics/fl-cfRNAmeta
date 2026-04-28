@@ -17,6 +17,7 @@ suppressPackageStartupMessages({
 all_reads_file <- "gene_raw_counts_all_reads.tsv"
 hg_reads_file <- "gene_raw_counts_hg_reads.tsv"
 mapping_file <- "sample_name_to_dataset_batch.tsv"
+correlations_file <- "correlations.tsv"
 output_dir <- "output_plots"
 
 if (!dir.exists(output_dir)) {
@@ -111,8 +112,6 @@ correlation_results <- map_dfr(common_samples, function(s_id) {
   r_pearson  <- cor(log_all, log_hg, method = "pearson")
   r_spearman <- cor(sample_data$counts_all, sample_data$counts_hg, method = "spearman")
   
-  cat("Sample:", s_id, "| Pearson R (log10):", round(r_pearson, 4), "| Spearman Rho:", round(r_spearman, 4), "\n")
-  
   # Create individual plot
   p <- ggplot(sample_data, aes(x = counts_all + 1, y = counts_hg + 1)) +
     geom_point(alpha = 0.2, size = 0.5) +
@@ -143,6 +142,10 @@ correlation_results <- map_dfr(common_samples, function(s_id) {
     stringsAsFactors = FALSE
   ))
 })
+
+# Save correlations to TSV
+cat("Saving correlation results to:", correlations_file, "\n")
+write_tsv(correlation_results, correlations_file)
 
 # Generate Summary Boxplot
 if (nrow(correlation_results) > 0) {
