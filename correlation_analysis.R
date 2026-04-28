@@ -13,12 +13,19 @@ suppressPackageStartupMessages({
   library(scales)
 })
 
-# File paths (assumes running from project root)
-all_reads_file <- "gene_raw_counts_all_reads.tsv"
-hg_reads_file <- "gene_raw_counts_hg_reads.tsv"
-mapping_file <- "sample_name_to_dataset_batch.tsv"
-correlations_file <- "correlations.tsv"
-output_dir <- "output_plots"
+# Get command-line arguments
+args <- commandArgs(trailingOnly = TRUE)
+
+if (length(args) != 4) {
+  cat("Usage: correlation_analysis.R <all_reads_file> <hg_reads_file> <mapping_file> <output_dir>\n")
+  quit(save = "no", status = 1)
+}
+
+all_reads_file <- args[1]
+hg_reads_file  <- args[2]
+mapping_file   <- args[3]
+output_dir     <- args[4]
+correlations_file <- file.path(output_dir, "correlations.tsv")
 
 if (!dir.exists(output_dir)) {
   dir.create(output_dir, recursive = TRUE)
