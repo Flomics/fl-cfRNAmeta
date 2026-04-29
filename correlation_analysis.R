@@ -16,8 +16,8 @@ suppressPackageStartupMessages({
 # Get command-line arguments
 args <- commandArgs(trailingOnly = TRUE)
 
-if (length(args) != 4) {
-  cat("Usage: correlation_analysis.R <all_reads_file> <hg_reads_file> <mapping_file> <output_dir>\n")
+if (length(args) < 4 || length(args) > 5) {
+  cat("Usage: correlation_analysis.R <all_reads_file> <hg_reads_file> <mapping_file> <output_dir> [samples_to_keep_file]\n")
   quit(save = "no", status = 1)
 }
 
@@ -25,6 +25,7 @@ all_reads_file <- args[1]
 hg_reads_file  <- args[2]
 mapping_file   <- args[3]
 output_dir     <- args[4]
+samples_to_keep_file <- if (length(args) == 5) args[5] else NULL
 correlations_file <- file.path(output_dir, "correlations.tsv")
 
 if (!dir.exists(output_dir)) {
@@ -57,23 +58,26 @@ if (length(common_samples) == 0) {
   quit(save = "no", status = 1)
 }
 
-# --- Filter Samples by Depth ---
-# Filter out samples where total read count is less than 2 million in hg_reads_file
-cat("Filtering samples by total read count in HG reads (min 2M)...\n")
-sample_sums_hg <- colSums(df_hg %>% select(all_of(common_samples)), na.rm = TRUE)
-samples_to_keep <- names(sample_sums_hg[sample_sums_hg >= 2e6])
-
-if (length(samples_to_keep) < length(common_samples)) {
-  n_removed <- length(common_samples) - length(samples_to_keep)
-  cat("Removed", n_removed, "samples with < 2M reads in HG matrix.\n")
-  common_samples <- samples_to_keep
+# --- Filter Samples by List (Optional) ---
+if (!is.null(samples_to_keep_file)) {
+  cat("Filtering samples using list from:", samples_to_keep_file, "\n")
+  if (!file.exists(samples_to_keep_file)) {
+    cat("ERROR: Sample list file not found:", samples_to_keep_file, "\n")
+    quit(save = "no", status = 1)
+  }
+  # Read the list of samples, stripping whitespace and skipping empty lines
+  target_samples <- read_lines(samples_to_keep_file) %>% trimws() %>% .[. != ""]
+  
+  original_n <- length(common_samples)
+  common_samples <- intersect(common_samples, target_samples)
+  
+  if (length(common_samples) == 0) {
+    cat("ERROR: No common samples remain after filtering with the provided list.\n")
+    quit(save = "no", status = 1)
+  }
+  cat("Kept", length(common_samples), "out of", original_n, "samples based on the provided list.\n")
 }
-
-if (length(common_samples) == 0) {
-  cat("ERROR: No samples remaining after filtering for minimum depth (2M).\n")
-  quit(save = "no", status = 1)
-}
-# -------------------------------
+# -----------------------------------------
 
 # --- Check Mapping Presence ---
 cat("Checking if all samples have mapping information...\n")
