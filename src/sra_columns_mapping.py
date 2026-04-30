@@ -191,7 +191,10 @@ def rename_columns_and_values(df):
         for phenotype in phenotypes
     }
 
-    df['status'] =  df['phenotype'].map(phenotype_mapping)
+    df['status'] =  (
+        df['phenotype'].map(phenotype_mapping)
+        #.fillna('missing') # NA's are fine
+    )
 
     # Drop empty columns
     df = df.dropna(how='all', axis=1)
