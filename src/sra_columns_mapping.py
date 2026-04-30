@@ -147,18 +147,51 @@ def rename_columns_and_values(df):
     df['analysis_batch'] = df['dataset_short_name']
 
     # add 'status' column
-    # TODO We need a specific mapping between the precise phenotype and the coarse-grain status, e.g.
-    # 'Multiple myeloma': 'cancer
-    # 'Cirrhosis': 'non-cancer disease
-    # ...
-    def map_status(x):
-        if x == 'Healthy':
-            return 'healthy'
-        elif ('Cancer' in x):
-            return 'cancer'
-        else:
-            return 'non-cancer disease'
-    df['status'] =  df['phenotype'].apply(lambda x: map_status(str(x)))
+    status_grouping = {
+        "cancer": [
+            "cancer",
+            "Acute Myeloid Leukemia",
+            "Colorectal cancer",
+            "Diffuse large B-cell lymphoma",
+            "Esophagus cancer",
+            "Liver cancer",
+            "Lung cancer",
+            "Multiple myeloma",
+            "Pancreatic cancer",
+            "Primary mediastinal B-cell lymphoma",
+            "Stomach cancer",
+        ],
+        "non-cancer disease": [
+            "non-cancer disease",
+            "Alzheimers disease",
+            "Chronic hepatitis B",
+            "Chronic kidney failure EPO-treated",
+            "Cirrhosis",
+            "Diverticulitis",
+            "Nonalcoholic fatty liver disease",
+            "Nonalcoholic steatohepatitis",
+            "Pre-cancerous condition: cirrhosis",
+            "Pre-cancerous condition: MGUS",
+            "Pre-eclampsia",
+        ],
+        "healthy": [
+            "healthy",
+            "G-CSF-treated healthy donors",
+            "Healthy pregnant woman",
+            "Healthy pregnant women",
+            "Healthy pregnant woman who delivered preterm",
+            "Healthy pregnant women who delivered preterm",
+            "Healthy",
+        ],
+    }
+    # create mapping: 'phenotype' -> 'status'
+    phenotype_mapping = {
+        phenotype: status_label
+        for status_label, phenotypes in status_grouping.items()
+        for phenotype in phenotypes
+    }
+
+    df['status'] =  df['phenotype'].map(phenotype_mapping)
 
     # Drop empty columns
     df = df.dropna(how='all', axis=1)
