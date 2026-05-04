@@ -551,7 +551,7 @@ ggsave("figures/high_quality_sample_fraction_barplot_2.svg", quality_plot, width
 ######################################################
 
 # ─── Helper function ─────────────────────────────────────────────────────────
-make_threshold_plot <- function(data, metric_col, thresholds, x_label, y_label = "Fraction of samples passing threshold") {
+make_threshold_plot <- function(data, metric_col, thresholds, x_label, y_label = "% of samples passing threshold") {
   
   # For each dataset and threshold, compute fraction passing
   threshold_df <- expand.grid(

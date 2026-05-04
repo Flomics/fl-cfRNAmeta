@@ -9,6 +9,7 @@ library(tidyr)
 suppressMessages(library("variancePartition"))
 suppressMessages(library("edgeR"))
 
+setwd("~/fl-cfRNAmeta")
 
 platelet_info <- read.delim("tables/sampleinfo_external_and_internal_datasets.tsv", header = TRUE, sep = "\t", fileEncoding = "UTF-8")
 
@@ -19,21 +20,54 @@ filtered_df <- filtered_df %>%
     by = "sample_name"
   )
 
-# ─── Datasets to include in the analysis ─────────────────────────────────────
-DATASETS_TO_INCLUDE <- c(
-  # Fill with values from dataset_batch.y to include
-)
+filtered_df$simple_phenotype <- NA
+filtered_df$simple_phenotype[filtered_df$phenotype == "healthy"] <- "healthy"
+filtered_df$simple_phenotype[is.na(filtered_df$phenotype)] <- "missing"
+filtered_df$simple_phenotype[filtered_df$phenotype == ""] <- "missing"
+filtered_df$simple_phenotype[grep("Acute Myeloid Leukemia",filtered_df$phenotype)] <- "cancer"
+filtered_df$simple_phenotype[grep("Alzheimers disease",filtered_df$phenotype)] <- "non-cancer disease"
+filtered_df$simple_phenotype[grep("Chronic hepatitis B",filtered_df$phenotype)] <- "non-cancer disease"
+filtered_df$simple_phenotype[grep("Chronic kidney failure EPO-treated",filtered_df$phenotype)] <- "non-cancer disease"
+filtered_df$simple_phenotype[grep("Cirrhosis",filtered_df$phenotype)] <- "non-cancer disease"
+filtered_df$simple_phenotype[grep("Colorectal cancer",filtered_df$phenotype)] <- "cancer"
+filtered_df$simple_phenotype[grep("Diffuse large B-cell lymphoma",filtered_df$phenotype)] <- "cancer"
+filtered_df$simple_phenotype[grep("Diverticulitis",filtered_df$phenotype)] <- "non-cancer disease"
+filtered_df$simple_phenotype[grep("Esophagus cancer",filtered_df$phenotype)] <- "cancer"
+filtered_df$simple_phenotype[grep("G-CSF-treated healthy donors",filtered_df$phenotype)] <- "healthy"
+filtered_df$simple_phenotype[grep("Healthy",filtered_df$phenotype)] <- "healthy"
+filtered_df$simple_phenotype[grep("Healthy pregnant woman",filtered_df$phenotype)] <- "healthy"
+filtered_df$simple_phenotype[grep("Healthy pregnant woman who delivered preterm",filtered_df$phenotype)] <- "non-cancer disease"
+filtered_df$simple_phenotype[grep("Liver cancer",filtered_df$phenotype)] <- "cancer"
+filtered_df$simple_phenotype[grep("Lung cancer",filtered_df$phenotype)] <- "cancer"
+filtered_df$simple_phenotype[grep("Multiple myeloma",filtered_df$phenotype)] <- "cancer"
+filtered_df$simple_phenotype[grep("Nonalcoholic fatty liver disease",filtered_df$phenotype)] <- "non-cancer disease"
+filtered_df$simple_phenotype[grep("Nonalcoholic steatohepatitis",filtered_df$phenotype)] <- "non-cancer disease"
+filtered_df$simple_phenotype[grep("Pancreatic cancer",filtered_df$phenotype)] <- "cancer"
+filtered_df$simple_phenotype[grep("Pre-cancerous condition: cirrhosis",filtered_df$phenotype)] <- "non-cancer disease"
+filtered_df$simple_phenotype[grep("Pre-cancerous condition: MGUS",filtered_df$phenotype)] <- "non-cancer disease"
+filtered_df$simple_phenotype[grep("Pre-eclampsia",filtered_df$phenotype)] <- "non-cancer disease"
+filtered_df$simple_phenotype[grep("Primary mediastinal B-cell lymphoma",filtered_df$phenotype)] <- "cancer"
+filtered_df$simple_phenotype[grep("Stomach cancer",filtered_df$phenotype)] <- "cancer"
 
-filtered_df <- filtered_df %>%
-  filter(dataset_batch.y %in% DATASETS_TO_INCLUDE)
 
-cat("Datasets included:", paste(DATASETS_TO_INCLUDE, collapse = ", "), "\n")
-cat("Samples after dataset filter:", nrow(filtered_df), "\n")
+
+# # ─── Datasets to include in the analysis ─────────────────────────────────────
+# DATASETS_TO_INCLUDE <- c(
+#   "chen", "decruyenaere", "flomics_2", "moufarrej_site_1", "moufarrej_site_2", 
+#   "roskams_pilot", "roskams_validation", "tao", "zhu"
+# )
+# 
+# filtered_df <- filtered_df %>%
+#   filter(dataset_batch.y %in% DATASETS_TO_INCLUDE)
+# 
+# cat("Datasets included:", paste(DATASETS_TO_INCLUDE, collapse = ", "), "\n")
+# cat("Samples after dataset filter:", nrow(filtered_df), "\n")
 
 # ─── Variables to test ───────────────────────────────────────────────────────
 VP_NUMERIC <- c(
   "genes_contributing_to_80._of_reads",   # NG80
   "percentage_of_spliced_reads",           # FSR
+  "protein_coding_pct",                     # biotype composition
   "exonic_reads_minus_spike_ins"           # FER 
 )
 
@@ -46,22 +80,35 @@ VP_NUMERIC <- c(
   "genes_contributing_to_80._of_reads",   # NG80
   "percentage_of_spliced_reads",           # FSR
   "exonic_reads_minus_spike_ins",          # FER
-  "protein_coding_pct",                     # biotype composition
-  "platelet"
+  "platelet",
+  "mapped_fragments",
+  "read_number"
 )
 
 VP_CATEGORICAL <- c(
-  "status"            # phenotype
+  "dataset_batch.y",      # dataset
+  "simple_phenotype",           # phenotype
+  "read_length",
+  "plasma_tubes",
+  "biomaterial",
+  "nucleic_acid_type",
+  "rna_extraction_kit_short_name",
+  "dnase",
+  "library_prep_kit_short_name",
+  "library_selection",
+  "cdna_library_type",
+  "centrifugation_step_1",
+  "centrifugation_step_2"
 )
 
 # ─── Prepare sampleinfo ──────────────────────────────────────────────────────
 # Start from table_filtered which already has all the QC metrics
-vp_sampleinfo <- table_filtered %>%
-  select(sample_name, all_of(VP_NUMERIC), all_of(VP_CATEGORICAL)) %>%
-  filter(!is.na(genes_contributing_to_80._of_reads) &
-           !is.na(percentage_of_spliced_reads) &
-           !is.na(status)) %>%
-  as.data.frame()
+# vp_sampleinfo <- table_filtered %>%
+#   select(sample_name, all_of(VP_NUMERIC), all_of(VP_CATEGORICAL)) %>%
+#   filter(!is.na(genes_contributing_to_80._of_reads) &
+#            !is.na(percentage_of_spliced_reads) &
+#            !is.na(status)) %>%
+#   as.data.frame()
 
 vp_sampleinfo <- filtered_df %>%
   select(sample_name, dataset_batch.y, all_of(VP_NUMERIC), all_of(VP_CATEGORICAL)) %>%
@@ -69,7 +116,7 @@ vp_sampleinfo <- filtered_df %>%
   filter(
     !is.na(genes_contributing_to_80._of_reads),
     !is.na(percentage_of_spliced_reads),
-    !is.na(status)
+    !is.na(simple_phenotype)
   ) %>%
   as.data.frame()
 
@@ -79,9 +126,23 @@ cat("Samples dropped:", nrow(filtered_df) - nrow(vp_sampleinfo), "\n")
 
 row.names(vp_sampleinfo) <- vp_sampleinfo$sample_name
 
+# ─── Clean categorical variables ─────────────────────────────────────────────
+# Sentinel strings that should be treated as missing
+INVALID_LEVELS <- c("Unspecified", "unspecified", "None", "none", "NA", "N/A", "n/a", "")
+
+for (cat in VP_CATEGORICAL) {
+  x <- trimws(as.character(vp_sampleinfo[[cat]]))
+  invalid <- x %in% INVALID_LEVELS | grepl("^\\s*$", x) | is.na(x)
+  if (any(invalid)) {
+    cat("  Recoding", sum(invalid), "invalid values in", cat, "-> 'Other'\n")
+    x[invalid] <- "Other"
+  }
+  vp_sampleinfo[[cat]] <- x
+}
+
 # Make categorical variables factors
 for (cat in VP_CATEGORICAL) {
-  vp_sampleinfo[[cat]] <- as.factor(vp_sampleinfo[[cat]])
+  vp_sampleinfo[[cat]] <- droplevels(as.factor(vp_sampleinfo[[cat]]))
 }
 
 # Remove categories with only 1 level (would break the model)
@@ -96,9 +157,12 @@ for (cat in VP_CATEGORICAL) {
 VP_CATEGORICAL <- VP_CATEGORICAL[!VP_CATEGORICAL %in% to_remove_vars]
 vp_sampleinfo  <- vp_sampleinfo[, !colnames(vp_sampleinfo) %in% to_remove_vars]
 
+# Log-transform NG80 before scaling
+vp_sampleinfo$genes_contributing_to_80._of_reads <- log(vp_sampleinfo$genes_contributing_to_80._of_reads)
+
 # Scale numeric variables (important for variance partition)
 for (num in VP_NUMERIC) {
-  vp_sampleinfo[[num]] <- scale(vp_sampleinfo[[num]])
+  vp_sampleinfo[[num]] <- as.numeric(scale(vp_sampleinfo[[num]]))
 }
 
 # ─── Check collinearity between metadata variables ────────────────────────────
@@ -113,9 +177,11 @@ form_check <- as.formula(
 C <- canCorPairs(form_check, vp_sampleinfo)
 
 # Plot collinearity
-png("figures/variance_partition_collinearity.png", units = "in", width = 8, height = 8, res = 300)
+png("figures/variance_partition_collinearity_figure1.png", units = "in", width = 8, height = 8, res = 300)
 plotCorrMatrix(C)
 dev.off()
+
+
 
 # ─── Prepare count matrix ─────────────────────────────────────────────────────
 # Keep only samples present in vp_sampleinfo
@@ -141,10 +207,16 @@ keep <- rowSums(vp_cpm > 1) >= (0.1 * ncol(vp_cpm))
 cat("Genes after filtering:", sum(keep), "\n")
 vp_cpm_filt <- vp_cpm[keep, ]
 
+# ─── Parallelisation (register before the slow model fit) ────────────────────
+library(BiocParallel)
+library(parallel)
+param <- MulticoreParam(detectCores() - 1, progressbar = TRUE)
+register(param)
+
 # ─── Fit variance partition model (slow step) ────────────────────────────────
 message("Fitting variance partition model — this may take a while...")
 
-varPart <- fitExtractVarPartModel(vp_cpm_filt, form_check, vp_sampleinfo)
+varPart <- fitExtractVarPartModel(vp_cpm_filt, form_check, vp_sampleinfo, BPPARAM = param)
 
 # Sort genes by median variance explained
 vp_sorted <- sortCols(varPart)
@@ -168,13 +240,30 @@ vp_long$Variable <- recode(vp_long$Variable,
                            "status"                             = "Phenotype",
                            "Residuals"                          = "Residuals",
                            "protein_coding_pct"                 = "Protein coding (%)",
-                           "platelet"                           = "Platelet (%)"
+                           "platelet"                           = "Platelet (%)",
+                           "mapped_fragments" = "Mapped fragments",
+                           "cdna_library_type" = "cDNA Library type",
+                           "simple_phenotype" = "Phenotype",
+                           "read_number" = "Read number",
+                           "read_length" = "Read length",
+                           "plasma_tubes" = "Plasma tubes",
+                           "biomaterial" = "Biomaterial",
+                           "nucleic_acid_type" = "Nucleic acid type",
+                           "rna_extraction_kit_short_name" = "RNA extraction kit",
+                           "dnase" = "DNase",
+                           "library_prep_kit_short_name" = "Library prep kit",
+                           "library_selection" = "Library selection",
+                           "centrifugation_step_1" = "Centrifugation step 1",
+                           "centrifugation_step_2"  = "Centrifugation step 2"
 )
+
+n_vars   <- length(levels(vp_long$Variable))
+vp_cols  <- colorRampPalette(RColorBrewer::brewer.pal(8, "Set2"))(n_vars)
 
 p_vp <- ggplot(vp_long, aes(x = Variable, y = VarianceExplained, fill = Variable)) +
   geom_violin(scale = "width", alpha = 0.8) +
   geom_boxplot(width = 0.1, outlier.shape = NA, alpha = 0.5) +
-  scale_fill_brewer(palette = "Set2") +
+  scale_fill_manual(values = vp_cols) +
   scale_y_continuous(labels = scales::percent) +
   labs(
     x = NULL,
@@ -193,9 +282,9 @@ p_vp <- ggplot(vp_long, aes(x = Variable, y = VarianceExplained, fill = Variable
     plot.background    = element_rect(fill = "white", colour = "white")
   )
 
-ggsave("figures/variance_partition_violin_no_dataset.png", p_vp,
+ggsave("figures/variance_partition_violin_ALL.png", p_vp,
        width = 8, height = 5, dpi = 600, device = ragg::agg_png)
-ggsave("figures/variance_partition_violin_no_dataset.svg", p_vp,
+ ggsave("figures/variance_partition_violin_logng80.svg", p_vp,
        width = 8, height = 5, device = "svg")
 
 # Save the variance partition table
@@ -205,11 +294,6 @@ write.table(vp_sorted, "tables/variance_partition_results.tsv",
 ######################################################
 # Variance Partition Analysis — Per Dataset
 ######################################################
-
-library(BiocParallel)
-library(parallel)
-param <- SnowParam(detectCores() - 1, "SOCK", progressbar = TRUE)
-register(param)
 
 # Datasets to skip — parent-level collapsed groups that overlap with sub-batches
 # to avoid double-counting samples
@@ -252,6 +336,7 @@ for (ds in datasets) {
   
   # ─── Scale numerics ──────────────────────────────────────────────────────
   ds_data$status <- as.factor(ds_data$status)
+  ds_data$genes_contributing_to_80._of_reads <- log(ds_data$genes_contributing_to_80._of_reads)
   for (num in VP_NUMERIC) {
     ds_data[[num]] <- scale(ds_data[[num]])
   }
