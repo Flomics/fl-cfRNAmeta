@@ -224,15 +224,10 @@ vp_sampleinfo <- vp_sampleinfo[colnames(vp_counts), ]
 cat("Samples in variance partition model:", ncol(vp_counts), "\n")
 cat("Genes in variance partition model:  ", nrow(vp_counts), "\n")
 
-# Normalize counts with edgeR CPM
-dge        <- DGEList(counts = vp_counts)
-dge        <- calcNormFactors(dge)
-vp_cpm     <- cpm(dge, log = TRUE)  # log-CPM is standard for variancePartition
-
-# Keep only genes with log-CPM > 1 in at least 10% of samples
-keep <- rowSums(vp_cpm > 1) >= (0.1 * ncol(vp_cpm))
+# Filter: keep genes with TPM > 1 in at least 10% of samples
+keep        <- rowSums(vp_counts > 1) >= (0.1 * ncol(vp_counts))
 cat("Genes after filtering:", sum(keep), "\n")
-vp_cpm_filt <- vp_cpm[keep, ]
+vp_tpm_filt <- log2(vp_counts[keep, ] + 1)
 
 # ─── Parallelisation (register before the slow model fit) ────────────────────
 library(BiocParallel)
@@ -243,7 +238,7 @@ register(param)
 # ─── Fit variance partition model (slow step) ────────────────────────────────
 message("Fitting variance partition model — this may take a while...")
 
-varPart <- fitExtractVarPartModel(vp_cpm_filt, form_check, vp_sampleinfo, BPPARAM = param)
+varPart <- fitExtractVarPartModel(vp_tpm_filt, form_check, vp_sampleinfo, BPPARAM = param)
 
 # Sort genes by median variance explained
 vp_sorted <- sortCols(varPart)
