@@ -143,7 +143,7 @@ def preprocess_roskams(dataset_metadata):
     df["dataset_batch"] = np.where(df["cohort"] == "pilot", "roskams_pilot", "roskams_validation")
     df["read_length"] = np.where(df["dataset_batch"] == "roskams_pilot", "2x100", "2x150")
     df["centrifugation_step_1"] = "1000g"
-    df["centrifugation_step_2"] = "15000g" 
+    df["centrifugation_step_2"] = "15000g"
 
     # Phenotype is described in the source_name column
     df['source_name'].unique()
@@ -186,6 +186,14 @@ def preprocess_roskams(dataset_metadata):
         .merge(supp_table[['SeqID', 'Library preparation batch', 'RNA extraction batch']]
                 .rename(columns={'SeqID':'Sample_id'}), on='Sample_id', how='outer')
     )
+
+    # Exclude a sample that failed during fl-rnaseq execution and is missing some QC metrics (SRR15619058)
+    n1 = len(df)
+    df = df[~(df['run'].isin([
+        'SRR15619058',
+    ]))]
+    n2 = len(df)
+    print(f"Exclude a sample that failed during fl-rnaseq execution and is missing some QC metrics (SRR15619058). N = {n1 - n2}")
 
     df = merge_sample_with_dataset_metadata(df, dataset_metadata)
 
