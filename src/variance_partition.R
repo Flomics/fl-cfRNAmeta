@@ -330,6 +330,7 @@ vp_sampleinfo_nod <- vp_sampleinfo[vp_sampleinfo$dataset_batch.y != "decruyenaer
 vp_tpm_filt_nod   <- vp_tpm_filt[, rownames(vp_sampleinfo_nod)]
 
 message("Fitting variance partition model without decruyenaere...")
+gc()
 varPart_nod <- fitExtractVarPartModel(vp_tpm_filt_nod, form_check, vp_sampleinfo_nod, BPPARAM = param)
 vp_sorted_nod <- sortCols(varPart_nod)
 
