@@ -204,7 +204,7 @@ form_check <- as.formula(
 )
 
 # Plot collinearity
-png("figures/variance_partition_collinearity_figure1.png", units = "in", width = 8, height = 8, res = 300)
+png("figures/variance_partition_collinearity_figure1_filtered.png", units = "in", width = 8, height = 8, res = 300)
 plotCorrMatrix(C)
 dev.off()
 
@@ -233,6 +233,7 @@ cat("Genes in variance partition model:  ", nrow(vp_counts), "\n")
 # Filter: keep genes with TPM > 1 in at least 10% of samples, then log2-transform
 keep        <- rowSums(vp_counts > 1) >= (0.1 * ncol(vp_counts))
 cat("Genes after filtering:", sum(keep), "\n")
+gc()
 vp_tpm_filt <- log2(vp_counts[keep, ] + 1)
 rm(vp_counts); gc()
 
@@ -244,7 +245,7 @@ register(param)
 
 # ─── Fit variance partition model (slow step) ────────────────────────────────
 message("Fitting variance partition model — this may take a while...")
-
+gc()
 varPart <- fitExtractVarPartModel(vp_tpm_filt, form_check, vp_sampleinfo, BPPARAM = param)
 
 # Sort genes by median variance explained
@@ -269,7 +270,8 @@ vp_long$Variable <- recode(vp_long$Variable,
                            "status"                             = "Phenotype",
                            "Residuals"                          = "Residuals",
                            "protein_coding_pct"                 = "Protein coding (%)",
-                           "platelet"                           = "Platelet (%)",
+                           "platelet.y"                           = "Platelet (%)",
+                           "broad_protocol_category" = "Broad Protocol Category (BPC)",
                            "mapped_fragments" = "Mapped fragments",
                            "cdna_library_type" = "cDNA Library type",
                            "simple_phenotype" = "Phenotype",
@@ -311,7 +313,7 @@ p_vp <- ggplot(vp_long, aes(x = Variable, y = VarianceExplained, fill = Variable
     plot.background    = element_rect(fill = "white", colour = "white")
   )
 
-ggsave("figures/variance_partition_violin_ALL.png", p_vp,
+ggsave("figures/variance_partition_violin_figure_1_filtered.png", p_vp,
        width = 8, height = 5, dpi = 600, device = ragg::agg_png)
  ggsave("figures/variance_partition_violin_logng80.svg", p_vp,
        width = 8, height = 5, device = "svg")
