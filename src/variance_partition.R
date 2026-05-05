@@ -329,6 +329,15 @@ write.table(vp_sorted, "tables/variance_partition_results.tsv",
 vp_sampleinfo_nod <- vp_sampleinfo[vp_sampleinfo$dataset_batch.y != "decruyenaere", ]
 vp_tpm_filt_nod   <- vp_tpm_filt[, rownames(vp_sampleinfo_nod)]
 
+# Collinearity check
+form_canCor_nod <- as.formula(
+  paste0("~ ", paste(c(VP_NUMERIC, VP_CATEGORICAL), collapse = " + "))
+)
+C_nod <- canCorPairs(form_canCor_nod, vp_sampleinfo_nod)
+png("figures/variance_partition_collinearity_no_decruyenaere.png", units = "in", width = 8, height = 8, res = 300)
+plotCorrMatrix(C_nod)
+dev.off()
+
 message("Fitting variance partition model without decruyenaere...")
 gc()
 varPart_nod <- fitExtractVarPartModel(vp_tpm_filt_nod, form_check, vp_sampleinfo_nod, BPPARAM = param)
