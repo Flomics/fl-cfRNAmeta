@@ -205,29 +205,26 @@ dev.off()
 vp_samples <- rownames(vp_sampleinfo)
 vp_counts  <- count_mat[, colnames(count_mat) %in% vp_samples, drop = FALSE]
 tmp <- fread("tables/gene_tpm_norm.tsv")
-# Get the sample columns that exist in both objects
 sample_cols <- intersect(names(tmp), table_filtered$sample_name)
 cat("Matched samples:", length(sample_cols), "\n")
 
-# Subset the matrix to only matched samples
-tpm_mat <- as.matrix(tmp[, ..sample_cols])  # data.table syntax for column selection
+vp_counts <- as.matrix(tmp[, ..sample_cols])
+rm(tmp); gc()
 
-vp_counts  <- tpm_mat[, colnames(tpm_mat) %in% vp_samples, drop = FALSE]
-
-
-# Reorder columns to match sampleinfo row order
+# Subset and reorder to vp_samples
 vp_counts <- vp_counts[, vp_samples[vp_samples %in% colnames(vp_counts)], drop = FALSE]
 
-# Sync sampleinfo to samples actually present in count matrix
+# Sync sampleinfo to samples actually present in matrix
 vp_sampleinfo <- vp_sampleinfo[colnames(vp_counts), ]
 
 cat("Samples in variance partition model:", ncol(vp_counts), "\n")
 cat("Genes in variance partition model:  ", nrow(vp_counts), "\n")
 
-# Filter: keep genes with TPM > 1 in at least 10% of samples
+# Filter: keep genes with TPM > 1 in at least 10% of samples, then log2-transform
 keep        <- rowSums(vp_counts > 1) >= (0.1 * ncol(vp_counts))
 cat("Genes after filtering:", sum(keep), "\n")
 vp_tpm_filt <- log2(vp_counts[keep, ] + 1)
+rm(vp_counts); gc()
 
 # ─── Parallelisation (register before the slow model fit) ────────────────────
 library(BiocParallel)
