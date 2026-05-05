@@ -112,7 +112,7 @@ VP_NUMERIC <- c(
   "genes_contributing_to_80._of_reads",   # NG80
   "percentage_of_spliced_reads",           # FSR
   "exonic_reads_minus_spike_ins",          # FER
-  "platelet",
+  "platelet.y",
   "mapped_fragments",
   "read_number"
 )
@@ -120,7 +120,7 @@ VP_NUMERIC <- c(
 VP_CATEGORICAL <- c(
   "dataset_batch.y",      # dataset
   "simple_phenotype",           # phenotype
-  "broad_protocol_category.y"
+  "broad_protocol_category"
 )
 
 # ─── Prepare sampleinfo ──────────────────────────────────────────────────────
@@ -235,7 +235,7 @@ register(param)
 # ─── Fit variance partition model (slow step) ────────────────────────────────
 message("Fitting variance partition model — this may take a while...")
 
-varPart <- fitExtractVarPartModel(vp_tpm_filt, form_check, vp_sampleinfo, BPPARAM = param)
+varPart <- fitExtractVarPartModel(vp_tpm_filt, form_canCor, vp_sampleinfo, BPPARAM = param)
 
 # Sort genes by median variance explained
 vp_sorted <- sortCols(varPart)
