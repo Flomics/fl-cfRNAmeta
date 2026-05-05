@@ -1,5 +1,6 @@
 library(dplyr)
 library(tidyr)
+library(data.table)
 
 ######################################################
 # Variance Partition Analysis
@@ -18,7 +19,11 @@ filtered_df <- filtered_df %>%
   left_join(
     platelet_info %>% select(sample_name, platelet),
     by = "sample_name"
-  )
+  ) %>%
+  left_join(
+    metadata %>% select(run, broad_protocol_category),
+    by = c("sample_id" = "run")
+    )
 
 filtered_df$simple_phenotype <- NA
 filtered_df$simple_phenotype[filtered_df$phenotype == "healthy"] <- "healthy"
@@ -98,7 +103,24 @@ VP_CATEGORICAL <- c(
   "library_selection",
   "cdna_library_type",
   "centrifugation_step_1",
-  "centrifugation_step_2"
+  "centrifugation_step_2",
+  "broad_protocol_category.y"
+)
+
+
+VP_NUMERIC <- c(
+  "genes_contributing_to_80._of_reads",   # NG80
+  "percentage_of_spliced_reads",           # FSR
+  "exonic_reads_minus_spike_ins",          # FER
+  "platelet",
+  "mapped_fragments",
+  "read_number"
+)
+
+VP_CATEGORICAL <- c(
+  "dataset_batch.y",      # dataset
+  "simple_phenotype",           # phenotype
+  "broad_protocol_category.y"
 )
 
 # ─── Prepare sampleinfo ──────────────────────────────────────────────────────
@@ -166,15 +188,10 @@ for (num in VP_NUMERIC) {
 }
 
 # ─── Check collinearity between metadata variables ────────────────────────────
-form_check <- as.formula(
-  paste0(
-    "~ ",
-    paste(VP_NUMERIC, collapse = " + "),
-    " + (1 | ", paste(VP_CATEGORICAL, collapse = ") + (1 | "), ")"
-  )
+form_canCor <- as.formula(
+  paste0("~ ", paste(c(VP_NUMERIC, VP_CATEGORICAL), collapse = " + "))
 )
-
-C <- canCorPairs(form_check, vp_sampleinfo)
+C <- canCorPairs(form_canCor, vp_sampleinfo)
 
 # Plot collinearity
 png("figures/variance_partition_collinearity_figure1.png", units = "in", width = 8, height = 8, res = 300)
@@ -187,6 +204,16 @@ dev.off()
 # Keep only samples present in vp_sampleinfo
 vp_samples <- rownames(vp_sampleinfo)
 vp_counts  <- count_mat[, colnames(count_mat) %in% vp_samples, drop = FALSE]
+tmp <- fread("tables/gene_tpm_norm.tsv")
+# Get the sample columns that exist in both objects
+sample_cols <- intersect(names(tmp), table_filtered$sample_name)
+cat("Matched samples:", length(sample_cols), "\n")
+
+# Subset the matrix to only matched samples
+tpm_mat <- as.matrix(tmp[, ..sample_cols])  # data.table syntax for column selection
+
+vp_counts  <- tpm_mat[, colnames(tpm_mat) %in% vp_samples, drop = FALSE]
+
 
 # Reorder columns to match sampleinfo row order
 vp_counts <- vp_counts[, vp_samples[vp_samples %in% colnames(vp_counts)], drop = FALSE]
