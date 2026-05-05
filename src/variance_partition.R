@@ -188,10 +188,20 @@ for (num in VP_NUMERIC) {
 }
 
 # ─── Check collinearity between metadata variables ────────────────────────────
+# Flat formula for canCorPairs (does not accept random effects)
 form_canCor <- as.formula(
   paste0("~ ", paste(c(VP_NUMERIC, VP_CATEGORICAL), collapse = " + "))
 )
 C <- canCorPairs(form_canCor, vp_sampleinfo)
+
+# Model formula for VPA: numerics as fixed effects, categoricals as random effects
+form_check <- as.formula(
+  paste0(
+    "~ ",
+    paste(VP_NUMERIC, collapse = " + "),
+    " + (1 | ", paste(VP_CATEGORICAL, collapse = ") + (1 | "), ")"
+  )
+)
 
 # Plot collinearity
 png("figures/variance_partition_collinearity_figure1.png", units = "in", width = 8, height = 8, res = 300)
@@ -235,7 +245,7 @@ register(param)
 # ─── Fit variance partition model (slow step) ────────────────────────────────
 message("Fitting variance partition model — this may take a while...")
 
-varPart <- fitExtractVarPartModel(vp_tpm_filt, form_canCor, vp_sampleinfo, BPPARAM = param)
+varPart <- fitExtractVarPartModel(vp_tpm_filt, form_check, vp_sampleinfo, BPPARAM = param)
 
 # Sort genes by median variance explained
 vp_sorted <- sortCols(varPart)
