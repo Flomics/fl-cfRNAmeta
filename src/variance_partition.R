@@ -323,6 +323,67 @@ write.table(vp_sorted, "tables/variance_partition_results.tsv",
             quote = FALSE, sep = "\t")
 
 ######################################################
+# Variance Partition — Excluding decruyenaere
+######################################################
+
+vp_sampleinfo_nod <- vp_sampleinfo[vp_sampleinfo$dataset_batch.y != "decruyenaere", ]
+vp_tpm_filt_nod   <- vp_tpm_filt[, rownames(vp_sampleinfo_nod)]
+
+message("Fitting variance partition model without decruyenaere...")
+varPart_nod <- fitExtractVarPartModel(vp_tpm_filt_nod, form_check, vp_sampleinfo_nod, BPPARAM = param)
+vp_sorted_nod <- sortCols(varPart_nod)
+
+vp_long_nod <- pivot_longer(
+  as.data.frame(vp_sorted_nod),
+  cols      = everything(),
+  names_to  = "Variable",
+  values_to = "VarianceExplained"
+)
+vp_long_nod$Variable <- factor(vp_long_nod$Variable, levels = colnames(vp_sorted_nod))
+vp_long_nod$Variable <- recode(vp_long_nod$Variable,
+                               "genes_contributing_to_80._of_reads" = "NG80",
+                               "percentage_of_spliced_reads"        = "FSR",
+                               "exonic_reads_minus_spike_ins"       = "FER",
+                               "dataset_batch.y"                    = "Dataset",
+                               "Residuals"                          = "Residuals",
+                               "platelet.y"                         = "Platelet (%)",
+                               "broad_protocol_category"            = "Broad Protocol Category (BPC)",
+                               "mapped_fragments"                   = "Mapped fragments",
+                               "simple_phenotype"                   = "Phenotype",
+                               "read_number"                        = "Read number"
+)
+
+n_vars_nod  <- length(levels(vp_long_nod$Variable))
+vp_cols_nod <- colorRampPalette(RColorBrewer::brewer.pal(8, "Set2"))(n_vars_nod)
+
+p_vp_nod <- ggplot(vp_long_nod, aes(x = Variable, y = VarianceExplained, fill = Variable)) +
+  geom_violin(scale = "width", alpha = 0.8) +
+  geom_boxplot(width = 0.1, outlier.shape = NA, alpha = 0.5) +
+  scale_fill_manual(values = vp_cols_nod) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(x = NULL, y = "Fraction of variance explained") +
+  theme_minimal(base_size = 13) +
+  theme(
+    text               = element_text(family = "Arial"),
+    axis.title         = element_text(face = "bold", size = 12),
+    axis.text.x        = element_text(angle = 45, hjust = 1, size = 11),
+    axis.text.y        = element_text(size = 10),
+    legend.position    = "none",
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor   = element_blank(),
+    panel.grid.major.y = element_line(linewidth = 0.8),
+    plot.background    = element_rect(fill = "white", colour = "white")
+  )
+
+ggsave("figures/variance_partition_violin_no_decruyenaere.png", p_vp_nod,
+       width = 8, height = 5, dpi = 600, device = ragg::agg_png)
+ggsave("figures/variance_partition_violin_no_decruyenaere.svg", p_vp_nod,
+       width = 8, height = 5, device = "svg")
+
+write.table(vp_sorted_nod, "tables/variance_partition_results_no_decruyenaere.tsv",
+            quote = FALSE, sep = "\t")
+
+######################################################
 # Variance Partition Analysis — Per Dataset
 ######################################################
 
