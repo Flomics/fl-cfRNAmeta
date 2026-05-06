@@ -201,9 +201,9 @@ ng_no_spike_ins <- read.delim("tables/genes_contributing_to_percentage_reads_no_
 ng_no_spike_ins_table <- table_filtered %>%
   left_join(ng_no_spike_ins, by = c("sample_name" = "Sample"))
 
-wid <- 5.03
-hei <- 3
-scl <- 0.66
+#wid <- 5.03
+#hei <- 3
+#scl <- 0.66
 #######
 # Main loop
 #######
@@ -389,11 +389,6 @@ cat(sprintf("Mean FSR: %.1f%% for Pilot vs %.1f%% for Validation, MWW test p=%.2
 # Stats for manuscript ng80
 ####################################################
 
-
-
-
-
-
 x <- ng_no_spike_ins_table$number_of_genes_contributing_to_80._of_reads[ng_no_spike_ins_table$dataset_batch.y == "rozowsky"]
 median_value <- median(x, na.rm = TRUE)
 sd_value <- sd(x, na.rm = TRUE)
@@ -549,6 +544,245 @@ quality_plot <- add_bottom_brackets(quality_plot, bracket_df, levels(table_filte
 
 ggsave("figures/high_quality_sample_fraction_barplot_2.png", quality_plot, width = 3.35, height = 3.35*(3/5), dpi = 600, device = ragg::agg_png, scaling = 5/12)
 ggsave("figures/high_quality_sample_fraction_barplot_2.svg", quality_plot, width = 3.35, height = 3.35*(3/5), dpi = 600, device = "svg", scaling =5/12)
+
+
+######################################################
+# Sensitivity analysis: fraction of samples passing threshold
+######################################################
+
+# ─── Helper function ─────────────────────────────────────────────────────────
+make_threshold_plot <- function(data, metric_col, thresholds, x_label, y_label = "% of samples passing threshold") {
+  
+  # For each dataset and threshold, compute fraction passing
+  threshold_df <- expand.grid(
+    dataset   = unique(data$dataset_batch.y),
+    threshold = thresholds
+  ) %>%
+    rowwise() %>%
+    mutate(
+      fraction = {
+        vals <- data[[metric_col]][data$dataset_batch.y == dataset]
+        vals <- vals[!is.na(vals)]
+        if (length(vals) == 0) NA_real_
+        else sum(vals >= threshold) / length(vals) * 100
+      }
+    ) %>%
+    ungroup() %>%
+    mutate(dataset = factor(dataset, levels = core_order))
+  
+  p <- ggplot(threshold_df, aes(x = threshold, y = fraction, color = dataset)) +
+    geom_line(linewidth = 0.7, alpha = 0.85) +
+    scale_color_manual(
+      values = adjusted_palette,
+      labels = datasetsLabels[core_order],
+      drop   = TRUE,
+      name   = "Dataset"
+    ) +
+    labs(x = x_label, y = y_label) +
+    scale_y_continuous(
+      limits = c(0, 100),
+      breaks = c(0, 25, 50, 75, 100),
+      labels = c("0", "25", "50", "75", "100")
+    ) +
+    theme_minimal(base_size = 13) +
+    theme(
+      text               = element_text(family = "Arial"),
+      axis.title         = element_text(face = "bold", size = 12),
+      axis.text          = element_text(size = 10),
+      legend.text        = element_text(size = 9),
+      legend.title       = element_text(face = "bold"),
+      legend.key.height  = unit(0.5, "lines"),
+      panel.grid.major.x = element_blank(),
+      panel.grid.minor.x = element_blank(),
+      panel.grid.major.y = element_line(linewidth = 0.8),
+      panel.grid.minor.y = element_blank(),
+      plot.background    = element_rect(fill = "white", colour = "white")
+    ) +
+    guides(color = guide_legend(ncol = 1))
+  
+  return(p)
+}
+
+# Make sure palette is set correctly (raw IDs as names)
+# table_filtered$dataset_batch.y <- factor(table_filtered$dataset_batch.y, levels = core_order)
+# adjusted_palette <- datasetsPalette[core_order]
+# names(adjusted_palette) <- core_order
+
+# ─── Plot 1: NG80 threshold ───────────────────────────────────────────────────
+p_sens_ng80 <- make_threshold_plot(
+  data       = table_filtered,
+  metric_col = "genes_contributing_to_80._of_reads",
+  thresholds = seq(0, 20000, by = 100),
+  x_label    = "NG80 threshold"
+) +
+  scale_x_continuous(
+    trans  = log10_trans(),
+    breaks = c(10, 100, 1000, 10000, 20000),
+    labels = c("10", "100", "1,000", "10,000", "20,000")
+  )
+
+ggsave("figures/sensitivity_ng80_threshold.png", p_sens_ng80,
+       width = 10, height = 6, dpi = 600, device = ragg::agg_png)
+ggsave("figures/sensitivity_ng80_threshold.svg", p_sens_ng80,
+       width = 10, height = 6, device = "svg")
+
+# ─── Plot 2: FSR threshold ────────────────────────────────────────────────────
+p_sens_fsr <- make_threshold_plot(
+  data       = table_filtered,
+  metric_col = "percentage_of_spliced_reads",
+  thresholds = seq(0, 55, by = 5),
+  x_label    = "FSR threshold (%)"
+)
+
+ggsave("figures/sensitivity_fsr_threshold.png", p_sens_fsr,
+       width = 10, height = 6, dpi = 600, device = ragg::agg_png)
+ggsave("figures/sensitivity_fsr_threshold.svg", p_sens_fsr,
+       width = 10, height = 6, device = "svg")
+
+# ─── Plot 3: FER threshold ────────────────────────────────────────────────────
+p_sens_fer <- make_threshold_plot(
+  data       = table_filtered,
+  metric_col = "exonic_reads_minus_spike_ins",
+  thresholds = seq(0, 100, by = 5),
+  x_label    = "FER threshold (%)"
+)
+
+ggsave("figures/sensitivity_fer_threshold.png", p_sens_fer,
+       width = 10, height = 6, dpi = 600, device = ragg::agg_png)
+ggsave("figures/sensitivity_fer_threshold.svg", p_sens_fer,
+       width = 10, height = 6, device = "svg")
+
+
+
+
+##############################################
+############################### For slide deck
+##############################################
+
+table_filtered$collapsed_batch <- as.character(table_filtered$dataset_batch.y)
+
+table_filtered$collapsed_batch[table_filtered$dataset_batch.y %in% c("reggiardo_bioivt", "reggiardo_dls")] <- "reggiardo"
+table_filtered$collapsed_batch[table_filtered$dataset_batch.y %in% c("block_150bp", "block_300bp")] <- "block"
+table_filtered$collapsed_batch[table_filtered$dataset_batch.y %in% c("moufarrej_site_1", "moufarrej_site_2")] <- "moufarrej"
+table_filtered$collapsed_batch[table_filtered$dataset_batch.y %in% c("roskams_pilot", "roskams_validation")] <- "roskams"
+table_filtered$collapsed_batch[table_filtered$dataset_batch.y %in% c("giraldez_standard", "giraldez_phospho-rna-seq")] <- "giraldez"
+
+table_filtered <- table_filtered %>%
+  filter(!collapsed_batch %in% c("wei", "rozowsky", "chalasani", "ibarra_buffy_coat", "ibarra_plasma_cancer", "ibarra_plasma_non_cancer", "ibarra_serum", "toden"))
+
+
+quality_summary <- table_filtered %>%
+  mutate(
+    high_quality = genes_contributing_to_80._of_reads > 1000 &
+      (percentage_of_spliced_reads > 20 | exonic_reads_minus_spike_ins > 75)
+  ) %>%
+  group_by(collapsed_batch) %>%
+  summarise(
+    total = n(),
+    high_quality = sum(high_quality, na.rm = TRUE)
+  ) %>%
+  mutate(
+    percent_high_quality = 100 * high_quality / total,
+    collapsed_batch = factor(collapsed_batch, levels = core_order)
+  )
+
+
+# bpc_info <- metadata[, c("dataset_batch", "broad_protocol_category")]
+# bpc_info$dataset_batch.y <- bpc_info$dataset_batch
+# 
+# bpc_info$collapsed_batch <- as.character(bpc_info$dataset_batch.y)
+# 
+# bpc_info$collapsed_batch[bpc_info$dataset_batch.y %in% c("reggiardo_bioivt", "reggiardo_dls")] <- "reggiardo"
+# bpc_info$collapsed_batch[bpc_info$dataset_batch.y %in% c("block_150bp", "block_300bp")] <- "block"
+# bpc_info$collapsed_batch[bpc_info$dataset_batch.y %in% c("moufarrej_site_1", "moufarrej_site_2")] <- "moufarrej"
+# bpc_info$collapsed_batch[bpc_info$dataset_batch.y %in% c("roskams_pilot", "roskams_validation")] <- "roskams"
+# bpc_info$collapsed_batch[bpc_info$dataset_batch.y %in% c("giraldez_standard", "giraldez_phospho-rna-seq")] <- "giraldez"
+
+
+# y_vals <- quality_summary$percent_high_quality
+# y_min <- min(y_vals, na.rm = TRUE)
+# y_max <- max(y_vals, na.rm = TRUE)
+# y_range <- y_max - y_min
+# 
+# annotation_y <- 0 - 0.05 * y_range
+# annotation_height <- 0.03 * y_range
+# 
+# y_limit_min <- min(annotation_y - annotation_height, y_min - 0.02 * y_range)
+# y_limit_max <- y_max + 0.1 * y_range
+# 
+# annotation_df <- quality_summary %>%
+#   select(collapsed_batch) %>%
+#   distinct() %>%
+#   left_join(bpc_info, by = "collapsed_batch") %>%
+#   mutate(
+#     y = annotation_y,
+#     broad_protocol_category = factor(broad_protocol_category, levels = bpc_order)
+#   )
+
+grey_palette <- datasetsPalette
+
+# Set everything to grey except flomics_2
+grey_palette[names(grey_palette) != "flomics_2"] <- "#b3b3b3"
+
+quality_plot <- ggplot(quality_summary, aes(x = collapsed_batch, y = percent_high_quality, fill = collapsed_batch)) +
+  geom_bar(stat = "identity", alpha = 0.8) +
+  #geom_text(aes(label = paste0("N=", high_quality)), vjust = -0.5, size = 2.5) +
+  labs(
+    x = "Dataset",
+    y = "Fraction of samples with NG80>1,000\nand FSR>20% OR FER>75%",
+    title = "High-Quality Samples per Dataset"
+  ) +
+  theme_classic() +
+  coord_cartesian(clip = "off", ylim = c(y_limit_min, y_limit_max)) +
+  theme(text=element_text(family="Arial"),
+        line = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.y = element_line(size = 0.8), 
+        panel.grid.minor.y = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 12, vjust=1.5), #or
+        axis.title = element_text(size = 12, face = "bold"),
+        axis.title.x = element_blank(),
+        plot.title = element_blank(),
+        plot.margin = margin(0, 0, 0, 11),
+        legend = "none") +
+  scale_x_discrete(labels = datasetsLabels) +
+  scale_fill_manual(values = grey_palette, labels = datasetsLabels, guide = "none") +
+  scale_color_manual(values = grey_palette, labels = datasetsLabels) +
+  scale_y_continuous(
+    limits = c(y_limit_min, y_limit_max),
+    breaks = c(0, 25, 50, 75, 100),
+    labels = c("0", "25", "50", "75", "100")
+  )
+
+
+# quality_plot <- quality_plot + new_scale_fill()
+# 
+# quality_plot <- quality_plot +
+#   geom_tile(
+#     data = annotation_df,
+#     aes(x = collapsed_batch, y = y, fill = broad_protocol_category),
+#     width = 0.95, height = annotation_height,
+#     inherit.aes = FALSE
+#   ) +
+#   scale_fill_manual(
+#     name = "Broad Protocol Category (BPC)",
+#     values = bpc_colors,
+#     labels = bpc_labels
+#   ) +
+#   theme(
+#     legend.position = "bottom",
+#     legend.title = element_text(face = "bold", size = 12),
+#     legend.text = element_text(size = 12),
+#     legend.key.size = unit(0.4, "cm"),
+#     legend.spacing.x = unit(0.2, "cm"),
+#     legend.margin = margin(0, 0, 0, 0)
+#   )
+
+
+
+ggsave("figures/high_quality_sample_fraction_barplot_slide_deck.png", quality_plot, width = 3.35, height = 3.35*(3/5), dpi = 600, device = ragg::agg_png, scaling = 5/12)
+ggsave("figures/high_quality_sample_fraction_barplot_slide_deck.svg", quality_plot, width = 3.35, height = 3.35*(3/5), dpi = 600, device = "svg", scaling =5/12)
 
 
 #######################################################
@@ -767,7 +1001,7 @@ ggsave("figures/fragment_number_2.svg", p, width = 11, height = 6, dpi = 600, de
 table_filtered_ng80 <- table_filtered %>%
   left_join(ng_no_spike_ins, by = c("sample_name" = "Sample"))
 table_filtered_ng80$log_genes_80 <- log(table_filtered_ng80$number_of_genes_contributing_to_80._of_reads)
-
+table_filtered$number_of_genes_contributing_to_80._of_reads <- table_filtered_ng80$number_of_genes_contributing_to_80._of_reads
 
 y_breaks <- log(c(100, 500, 1000, 5000, 10000, 20000))
 
@@ -1181,6 +1415,163 @@ p_facet <- ggplot(
 
 ggsave("figures/diversity_scatterplot_facet_2_no_spikeins.png", p_facet, width = 20, height = 10, dpi = 600, device = ragg::agg_png)
 ggsave("figures/diversity_scatterplot_facet_2_no_spikeins.svg", p_facet, width = 20, height = 10, device = "svg")
+
+##################################
+# Slide deck diversity scatterplot
+##################################
+# adjusted_palette <- datasetsPalette
+# 
+# table_filtered$dataset_batch.y <- factor(table_filtered$dataset_batch.y, levels = core_order)
+# adjusted_palette <- adjusted_palette[core_order]
+# 
+# 
+# table_filtered$dataset_batch.y <- factor(
+#   table_filtered$dataset_batch.y,
+#   levels = core_order,
+#   labels = datasetsLabels[core_order]
+# )
+# 
+# adjusted_palette <- adjusted_palette[core_order]
+# names(adjusted_palette) <- datasetsLabels[core_order]  # to match new factor labels
+
+table_filtered <- table_filtered %>%
+  filter(!dataset_batch.y %in% c("wei", "rozowsky", "chalasani", "ibarra_buffy_coat", "ibarra_plasma_cancer", "ibarra_plasma_non_cancer", "ibarra_serum", "toden"))
+
+table_filtered$collapsed_batch <- as.character(table_filtered$dataset_batch.y)
+
+table_filtered$collapsed_batch[table_filtered$dataset_batch.y %in% c("reggiardo_bioivt", "reggiardo_dls")] <- "reggiardo"
+table_filtered$collapsed_batch[table_filtered$dataset_batch.y %in% c("block_150bp", "block_300bp")] <- "block"
+table_filtered$collapsed_batch[table_filtered$dataset_batch.y %in% c("moufarrej_site_1", "moufarrej_site_2")] <- "moufarrej"
+table_filtered$collapsed_batch[table_filtered$dataset_batch.y %in% c("roskams_pilot", "roskams_validation")] <- "roskams"
+table_filtered$collapsed_batch[table_filtered$dataset_batch.y %in% c("giraldez_standard", "giraldez_phospho-rna-seq")] <- "giraldez"
+
+table_filtered <- table_filtered %>%
+  filter(!collapsed_batch %in% c("wei", "rozowsky", "chalasani", "ibarra_buffy_coat", "ibarra_plasma_cancer", "ibarra_plasma_non_cancer", "ibarra_serum", "toden"))
+
+
+grey_palette <- datasetsPalette
+
+# Set everything to grey except flomics_2
+grey_palette[names(grey_palette) != "flomics_2"] <- "#b3b3b3"
+
+p_scatter <- ggplot(
+  data = table_filtered,
+  aes(x = percentage_of_spliced_reads,
+      y = number_of_genes_contributing_to_80._of_reads,
+      color = collapsed_batch)) +
+  geom_point(size = 2, alpha = 0.8) +
+  scale_color_manual(
+    values = grey_palette,
+    labels = datasetsLabels,
+    drop = FALSE
+  ) +
+  labs(
+    x = "Fraction of spliced reads (FSR)",
+    y = "NG80",
+    color = "Dataset"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(text=element_text(family="Arial"),
+        strip.text = element_text(face = "bold"),
+        axis.title = element_text(face = "bold"),
+        legend.text = element_text(size = 9),
+        legend.title = element_text(face = "bold"),
+        legend.key.height = unit(0.5, "lines"),
+        plot.background = element_rect(fill = "white", colour = "white")
+  ) +
+  guides(color = guide_legend(ncol = 1)) +
+  scale_y_continuous(trans = log10_trans())
+
+
+x_lim <- range(table_filtered$percentage_of_spliced_reads, na.rm = TRUE)
+y_lim <- range(table_filtered$number_of_genes_contributing_to_80._of_reads, na.rm = TRUE)
+
+p_facet <- ggplot(
+  data = table_filtered,
+  aes(x = percentage_of_spliced_reads,
+      y = number_of_genes_contributing_to_80._of_reads,
+      color = dataset_batch.y)) +
+  geom_point(size = 2, alpha = 0.8) +
+  # Trick to enforce shared limits even with scales = "free"
+  geom_blank(aes(x = x_lim[1], y = y_lim[1])) +
+  geom_blank(aes(x = x_lim[2], y = y_lim[2])) +
+  facet_wrap(~ dataset_batch.y, scales = "free") +
+  scale_color_manual(values = adjusted_palette, drop = FALSE) +
+  labs(
+    x = "Fraction of spliced reads (FSR)",
+    y = "NG80",
+    color = "Dataset"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    strip.text = element_text(face = "bold"),
+    axis.title = element_text(face = "bold"),
+    legend.text = element_text(size = 9),
+    legend.title = element_text(face = "bold"),
+    legend.key.height = unit(0.5, "lines"),
+    plot.background = element_rect(fill = "white", colour = "white"),
+    panel.spacing = unit(0.8, "lines")
+  ) +
+  guides(color = guide_legend(ncol = 1)) +
+  scale_y_continuous(trans = log10_trans())
+
+
+ggsave("figures/diversity_scatterplot_slide_deck.png", p_scatter, width = 15, height = 7.5, dpi = 600, device = ragg::agg_png)
+ggsave("figures/diversity_scatterplot_slide_deck.svg", p_scatter, width = 15, height = 7.5, device = "svg")
+
+# Summarise to get medians per collapsed dataset
+median_df <- table_filtered %>%
+  group_by(collapsed_batch) %>%
+  summarise(
+    median_fsr = median(percentage_of_spliced_reads, na.rm = TRUE),
+    median_ng80 = median(number_of_genes_contributing_to_80._of_reads, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# Scatterplot using medians
+p_scatter <- ggplot(
+  data = median_df,
+  aes(x = median_fsr,
+      y = median_ng80,
+      color = collapsed_batch)) +
+  annotate("rect",
+           xmin = 20, xmax = Inf,
+           ymin = 1000, ymax = Inf,
+           fill = "palegreen", alpha = 0.2) +
+  geom_text(
+    data = subset(median_df, collapsed_batch == "flomics_2"),
+    aes(label = "Flomics"),
+    vjust = -1,   # move text above the point
+    hjust = 0.5,
+    color = "black",
+    fontface = "bold",
+    inherit.aes = TRUE
+  ) +
+  geom_point(size = 3, alpha = 0.9) +
+  scale_color_manual(
+    values = datasetsPalette,
+    labels = datasetsLabels,
+    drop = FALSE
+  ) +
+  labs(
+    x = "Median Fraction of spliced reads (FSR)",
+    y = "Median NG80",
+    color = "Dataset"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(text=element_text(family="Arial"),
+        strip.text = element_text(face = "bold"),
+        axis.title = element_text(face = "bold"),
+        legend.text = element_text(size = 9),
+        legend.title = element_text(face = "bold"),
+        legend.key.height = unit(0.5, "lines"),
+        plot.background = element_rect(fill = "white", colour = "white")
+  ) +
+  guides(color = guide_legend(ncol = 1)) +
+  scale_y_continuous(trans = log10_trans())
+
+ggsave("figures/diversity_scatterplot_slide_deck_median.png", p_scatter, width = 10, height = 5, dpi = 600, device = ragg::agg_png)
+ggsave("figures/diversity_scatterplot_slide_deck_median.svg", p_scatter, width = 15, height = 7.5, device = "svg")
 
 
 #################################
