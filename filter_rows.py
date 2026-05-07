@@ -7,7 +7,7 @@ import csv
 
 def main():
     parser = argparse.ArgumentParser(description="Filter rows of a TSV file based on a column value and operator.")
-    parser.add_argument("file", help="Input tab-separated file")
+    parser.add_argument("file", help="Input tab-separated file (use '-' for stdin)")
     parser.add_argument("column", help="Column header to filter on")
     parser.add_argument("operator", choices=["==", ">", ">=", "<", "<=", "!="], help="Comparison operator")
     parser.add_argument("value", help="Value to compare against")
@@ -27,11 +27,14 @@ def main():
     op_func = ops[args.operator]
 
     try:
-        with open(args.file, 'r', newline='') as f:
+        # Open file or use stdin
+        input_handle = sys.stdin if args.file == '-' else open(args.file, 'r', newline='')
+        
+        with input_handle as f:
             reader = csv.DictReader(f, delimiter='\t')
             
             if args.column not in reader.fieldnames:
-                print(f"Error: Column '{args.column}' not found in {args.file}", file=sys.stderr)
+                print(f"Error: Column '{args.column}' not found.", file=sys.stderr)
                 sys.exit(1)
 
             # Output the header
@@ -44,7 +47,7 @@ def main():
                 try:
                     val = float(raw_val)
                     comp_val = float(args.value)
-                except ValueError:
+                except (ValueError, TypeError):
                     # Fallback to string comparison
                     val = raw_val
                     comp_val = args.value
