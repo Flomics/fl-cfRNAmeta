@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 
 # src/correlation_analysis.R
-# Processes gene count matrices sample by sample using tidyverse.
+# Processes gene count matrices sample by sample
 # Produces one scatterplot per sample with Pearson correlation.
 
 suppressPackageStartupMessages({
@@ -16,8 +16,12 @@ suppressPackageStartupMessages({
 # Get command-line arguments
 args <- commandArgs(trailingOnly = TRUE)
 
+# Parse flags
+no_scatterplots <- "--no_scatterplots" %in% args
+args <- args[args != "--no_scatterplots"]
+
 if (length(args) < 4 || length(args) > 5) {
-  cat("Usage: correlation_analysis.R <all_reads_file> <hg_reads_file> <mapping_file> <output_dir> [samples_to_keep_file]\n")
+  cat("Usage: correlation_analysis.R [--no_scatterplots] <all_reads_file> <hg_reads_file> <mapping_file> <output_dir> [samples_to_keep_file]\n")
   quit(save = "no", status = 1)
 }
 
@@ -124,26 +128,28 @@ correlation_results <- map_dfr(common_samples, function(s_id) {
   r_spearman <- cor(sample_data$counts_all, sample_data$counts_hg, method = "spearman")
   
   # Create individual plot
-  p <- ggplot(sample_data, aes(x = counts_all + 1, y = counts_hg + 1)) +
-    geom_point(alpha = 0.2, size = 0.5) +
-    scale_x_log10(labels = label_scientific()) +
-    scale_y_log10(labels = label_scientific()) +
-    geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +
-    labs(
-      title = paste("Gene Count Correlation -", s_id),
-      subtitle = paste0("Pearson R (log10) = ", round(r_pearson, 4), 
-                        "\nSpearman Rho = ", round(r_spearman, 4),
-                        "\n(n = ", nrow(sample_data), " genes)"),
-      x = "Raw Counts + 1 (All Reads, log10)",
-      y = "Raw Counts + 1 (HG Reads, log10)"
-    ) +
-    theme_minimal() +
-    theme(plot.title = element_text(hjust = 0.5),
-          plot.subtitle = element_text(hjust = 0.5))
-  
-  # Save as PNG
-  file_name <- file.path(output_dir, paste0(s_id, "_correlation.png"))
-  ggsave(file_name, plot = p, width = 7, height = 7, dpi = 150)
+  if (!no_scatterplots) {
+    p <- ggplot(sample_data, aes(x = counts_all + 1, y = counts_hg + 1)) +
+      geom_point(alpha = 0.2, size = 0.5) +
+      scale_x_log10(labels = label_scientific()) +
+      scale_y_log10(labels = label_scientific()) +
+      geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +
+      labs(
+        title = paste("Gene Count Correlation -", s_id),
+        subtitle = paste0("Pearson R (log10) = ", round(r_pearson, 4), 
+                          "\nSpearman Rho = ", round(r_spearman, 4),
+                          "\n(n = ", nrow(sample_data), " genes)"),
+        x = "Raw Counts + 1 (All Reads, log10)",
+        y = "Raw Counts + 1 (HG Reads, log10)"
+      ) +
+      theme_minimal() +
+      theme(plot.title = element_text(hjust = 0.5),
+            plot.subtitle = element_text(hjust = 0.5))
+    
+    # Save as PNG
+    file_name <- file.path(output_dir, paste0(s_id, "_correlation.png"))
+    ggsave(file_name, plot = p, width = 7, height = 7, dpi = 150)
+  }
   
   # Return data for summary plot
   return(data.frame(
