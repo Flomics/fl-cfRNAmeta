@@ -33,6 +33,7 @@ samples_to_keep_file <- if (length(args) == 5) args[5] else NULL
 correlations_file <- file.path(output_dir, "correlations.tsv")
 
 if (!dir.exists(output_dir)) {
+  cat("Creating output directory:", output_dir, "\n")
   dir.create(output_dir, recursive = TRUE)
 }
 
