@@ -99,15 +99,15 @@ cat("Processing", length(common_samples), "common samples...\n")
 # Reshape to long format for easier joining and per-sample processing
 cat("Reshaping data...\n")
 df_all_long <- df_all %>%
-  select(gene_id, all_of(common_samples)) %>%
-  pivot_longer(cols = -gene_id, names_to = "sample_id", values_to = "counts_all")
+  select(gene_id, gene_name, all_of(common_samples)) %>%
+  pivot_longer(cols = -c(gene_id, gene_name), names_to = "sample_id", values_to = "counts_all")
 
 df_hg_long <- df_hg %>%
-  select(gene_id, all_of(common_samples)) %>%
-  pivot_longer(cols = -gene_id, names_to = "sample_id", values_to = "counts_hg")
+  select(gene_id, gene_name, all_of(common_samples)) %>%
+  pivot_longer(cols = -c(gene_id, gene_name), names_to = "sample_id", values_to = "counts_hg")
 
 # Join the two datasets
-df_combined <- inner_join(df_all_long, df_hg_long, by = c("gene_id", "sample_id"))
+df_combined <- inner_join(df_all_long, df_hg_long, by = c("gene_id", "gene_name", "sample_id"))
 
 # Process each sample and collect results
 cat("Processing individual samples and generating plots...\n")
@@ -128,6 +128,18 @@ correlation_results <- map_dfr(common_samples, function(s_id) {
   r_pearson  <- cor(log_all, log_hg, method = "pearson")
   r_spearman <- cor(sample_data$counts_all, sample_data$counts_hg, method = "spearman")
   
+  # Identify outliers if correlation is low
+  if (r_pearson < 0.9) {
+    cat("  Sample", s_id, "has low correlation (R =", round(r_pearson, 4), "). Saving top 1000 outliers...\n")
+    outliers <- sample_data %>%
+      mutate(log_diff = abs(log10(counts_all + 1) - log10(counts_hg + 1))) %>%
+      arrange(desc(log_diff)) %>%
+      head(1000)
+    
+    outliers_file <- file.path(output_dir, paste0(s_id, "_top1000outliers.tsv"))
+    write_tsv(outliers, outliers_file)
+  }
+
   # Create individual plot
   if (!no_scatterplots) {
     p <- ggplot(sample_data, aes(x = counts_all + 1, y = counts_hg + 1)) +
