@@ -228,30 +228,20 @@ if (nrow(correlation_results) > 0) {
   if (file.exists(mappings_json)) {
     cat("Applying custom dataset ordering and labeling from:", mappings_json, "\n")
     m_json <- fromJSON(mappings_json)
-    
-    # Extract order and labels
     v_order  <- m_json$datasetVisualOrder
     v_labels <- unlist(m_json$datasetsLabels)
     
-    # Filter order to only include datasets present in data
-    # (prevents creating empty facets/axis categories)
     present_datasets <- unique(plot_data$dataset)
     v_order <- v_order[v_order %in% present_datasets]
-    
-    # Add any present datasets not in the visual order list to the end
     missing_from_order <- setdiff(present_datasets, v_order)
     final_order <- c(v_order, missing_from_order)
     
-    # Transform dataset to factor with custom labels
     plot_data <- plot_data %>%
       mutate(dataset = factor(dataset, levels = final_order)) %>%
       mutate(dataset_label = ifelse(dataset %in% names(v_labels), 
                                    v_labels[as.character(dataset)], 
                                    as.character(dataset))) %>%
-      mutate(dataset_label = factor(dataset_label, levels = v_labels[as.character(final_order)]))
-    
-    # Replace dataset with labeled factor for plotting
-    plot_data <- plot_data %>%
+      mutate(dataset_label = factor(dataset_label, levels = v_labels[as.character(final_order)])) %>%
       mutate(dataset = dataset_label)
   }
 
@@ -277,17 +267,12 @@ if (nrow(correlation_results) > 0) {
     
     ggsave(file.path(output_dir, "dataset_pearson_summary.png"), plot = p_summary, width = 14, height = 7, dpi = 150)
 
-    # 2. Pearson vs Mapped Percentage (Consolidated Faceted Plot)
+    # 2. Pearson vs Mapped Percentage (Faceted)
     cat("\nGenerating consolidated Pearson vs Mapped Percentage plot...\n")
-    
-    # Compute correlations per dataset for labels
     facet_correlations <- plot_data %>%
       group_by(dataset) %>%
-      summarize(
-        r_val = cor(mapped_percentage, pearson_r, use = "complete.obs"),
-        n_samples = n(),
-        .groups = "drop"
-      ) %>%
+      summarize(r_val = cor(mapped_percentage, pearson_r, use = "complete.obs"),
+                n_samples = n(), .groups = "drop") %>%
       mutate(label = paste0("r = ", round(r_val, 3), "\nn = ", n_samples))
 
     p_faceted <- ggplot(plot_data, aes(x = mapped_percentage, y = pearson_r)) +
@@ -307,11 +292,30 @@ if (nrow(correlation_results) > 0) {
             plot.subtitle = element_text(hjust = 0.5),
             legend.position = "bottom")
     
-    # Dynamic height based on number of rows
     n_datasets <- length(unique(plot_data$dataset))
     n_rows <- ceiling(n_datasets / 6)
     ggsave(file.path(output_dir, "all_datasets_mapped_pct_vs_pearson.png"), 
            plot = p_faceted, width = 18, height = 3 * n_rows + 2, dpi = 150)
+
+    # 3. Pearson vs Avg Mapped Read Length (Global)
+    cat("\nGenerating Pearson vs Avg Mapped Read Length plot...\n")
+    global_r <- cor(plot_data$avg_mapped_read_length, plot_data$pearson_r, use = "complete.obs")
+    
+    p_rl <- ggplot(plot_data, aes(x = avg_mapped_read_length, y = pearson_r)) +
+      geom_point(aes(color = dataset), alpha = 0.6, size = 2) +
+      scale_y_continuous(limits = c(0, 1)) +
+      labs(
+        title = "Pearson R vs Avg Mapped Read Length",
+        subtitle = paste0("Global Pearson r = ", round(global_r, 3), 
+                          " (n = ", nrow(plot_data), " samples)"),
+        x = "Avg Mapped Read Length", y = "Pearson R (log10 counts)",
+        color = "Dataset"
+      ) + theme_minimal() +
+      theme(plot.title = element_text(hjust = 0.5),
+            plot.subtitle = element_text(hjust = 0.5),
+            legend.position = "right")
+    
+    ggsave(file.path(output_dir, "pearson_vs_read_length.png"), plot = p_rl, width = 10, height = 7, dpi = 150)
 
   } else {
     cat("WARNING: No samples with valid dataset mapping remaining. Skipping plots.\n")
