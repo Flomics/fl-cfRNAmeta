@@ -244,14 +244,27 @@ if (nrow(correlation_results) > 0) {
 
     # 2. Pearson vs Mapped Percentage (Consolidated Faceted Plot)
     cat("\nGenerating consolidated Pearson vs Mapped Percentage plot...\n")
+    
+    # Compute correlations per dataset for labels
+    facet_correlations <- plot_data %>%
+      group_by(dataset) %>%
+      summarize(
+        r_val = cor(mapped_percentage, pearson_r, use = "complete.obs"),
+        n_samples = n(),
+        .groups = "drop"
+      ) %>%
+      mutate(label = paste0("r = ", round(r_val, 3), "\nn = ", n_samples))
+
     p_faceted <- ggplot(plot_data, aes(x = mapped_percentage, y = pearson_r)) +
       geom_point(aes(color = avg_mapped_read_length), alpha = 0.7, size = 2) +
+      geom_text(data = facet_correlations, aes(x = Inf, y = 0, label = label),
+                hjust = 1.1, vjust = -0.5, size = 3, inherit.aes = FALSE) +
       scale_y_continuous(limits = c(0, 1)) +
       scale_color_viridis_c(option = "viridis") +
       facet_wrap(~dataset, ncol = 6) +
       labs(
         title = "Pearson R vs Mapped % by Dataset",
-        subtitle = "Correlations calculated on log10(counts + 1)",
+        subtitle = "Facets show correlation between Mapped % and Pearson R",
         x = "Mapped Percentage (%)", y = "Pearson R (log10 counts)",
         color = "Avg Mapped Read Length"
       ) + theme_minimal() +
@@ -259,7 +272,7 @@ if (nrow(correlation_results) > 0) {
             plot.subtitle = element_text(hjust = 0.5),
             legend.position = "bottom")
     
-    # Dynamic height based on number of rows (dataset count / 6)
+    # Dynamic height based on number of rows
     n_datasets <- length(unique(plot_data$dataset))
     n_rows <- ceiling(n_datasets / 6)
     ggsave(file.path(output_dir, "all_datasets_mapped_pct_vs_pearson.png"), 
