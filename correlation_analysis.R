@@ -53,7 +53,7 @@ if (!dir.exists(output_dir)) {
   dir.create(output_dir, recursive = TRUE)
 }
 
-# --- 1. Identify Expected Samples (Efficiency: Read only headers) ---
+# --- 1. Identify Expected Samples ---
 cat("Identifying expected samples from matrix headers...\n")
 all_header <- robust_read(all_reads_file, "All Reads header", n_max = 0)
 hg_header  <- robust_read(hg_reads_file, "HG Reads header", n_max = 0)
@@ -81,7 +81,7 @@ if (!is.null(samples_to_keep_file)) {
     cat("ERROR: No common samples remain after filtering.\n")
     quit(save = "no", status = 1)
   }
-  cat("Kept", length(common_samples), "out of", original_n, "samples based on provided list.\n")
+  cat("Kept", length(common_samples), "out of", original_n, "samples.\n")
 }
 
 # --- 3. Read Metadata ---
@@ -167,6 +167,10 @@ if (!only_summary_plot) {
     return(data.frame(sample_id = s_id, pearson_r = r_pearson, spearman_rho = r_spearman, stringsAsFactors = FALSE))
   })
 
+  # Enrich with metadata before saving
+  correlation_results <- correlation_results %>%
+    left_join(df_sampleinfo, by = c("sample_id" = "sample_name"))
+
   cat("Saving correlation results to:", correlations_file, "\n")
   write_tsv(correlation_results, correlations_file)
 
@@ -190,8 +194,17 @@ if (!only_summary_plot) {
     quit(save = "no", status = 1)
   }
   
-  # Filter the loaded results to only include the common_samples (in case TSV has more)
+  # Filter to common_samples
   correlation_results <- correlation_results %>% filter(sample_id %in% common_samples)
+  
+  # Ensure loaded data has necessary metadata columns (in case an old TSV is being used)
+  if (!all(c("avg_mapped_read_length", "mapped_percentage") %in% colnames(correlation_results))) {
+    cat("Note: Metadata columns missing from TSV. Joining with current sampleinfo...\n")
+    correlation_results <- correlation_results %>%
+      select(-any_of(c("avg_mapped_read_length", "mapped_percentage"))) %>%
+      left_join(df_sampleinfo, by = c("sample_id" = "sample_name"))
+  }
+  
   cat("Verified and kept", nrow(correlation_results), "samples for summary plotting.\n")
 }
 
@@ -200,12 +213,11 @@ if (!only_summary_plot) {
 # -----------------------------------------
 if (nrow(correlation_results) > 0) {
   
-  # Join all metadata for plotting
+  # Join with dataset mapping
   plot_data <- correlation_results %>%
     left_join(df_mapping, by = c("sample_id" = "sample_name")) %>%
     rename(dataset = dataset_batch) %>%
-    filter(!is.na(dataset), dataset != "") %>%
-    left_join(df_sampleinfo, by = c("sample_id" = "sample_name"))
+    filter(!is.na(dataset), dataset != "")
 
   if (nrow(plot_data) > 0) {
     
