@@ -40,10 +40,11 @@ if (!dir.exists(output_dir)) {
 
 # Always read mapping file as it's needed for the summary plot
 df_mapping <- read_tsv(mapping_file, show_col_types = FALSE)
-# Read sampleinfo for avg_mapped_read_length
+
+# Read sampleinfo for avg_mapped_read_length and mapped_percentage
 cat("Reading sampleinfo from:", sampleinfo_file, "\n")
 df_sampleinfo <- read_tsv(sampleinfo_file, show_col_types = FALSE) %>%
-  select(sample_name, avg_mapped_read_length)
+  select(sample_name, avg_mapped_read_length, mapped_percentage)
 
 if (!only_summary_plot) {
   # -----------------------------------------
@@ -180,11 +181,11 @@ if (!only_summary_plot) {
 }
 
 # -----------------------------------------
-# --- Generate Summary Boxplot ---
+# --- Generate Plots ---
 # -----------------------------------------
 if (nrow(correlation_results) > 0) {
-  cat("\nGenerating summary boxplot...\n")
   
+  # Join all metadata for plotting
   plot_data <- correlation_results %>%
     left_join(df_mapping, by = c("sample_id" = "sample_name")) %>%
     rename(dataset = dataset_batch) %>%
@@ -192,6 +193,9 @@ if (nrow(correlation_results) > 0) {
     left_join(df_sampleinfo, by = c("sample_id" = "sample_name"))
 
   if (nrow(plot_data) > 0) {
+    
+    # 1. Summary Pearson Boxplot
+    cat("\nGenerating summary boxplot...\n")
     p_summary <- ggplot(plot_data, aes(x = dataset, y = pearson_r)) +
       geom_boxplot(alpha = 0.7, outlier.shape = NA, fill = NA, color = "lightgrey") +
       geom_jitter(aes(color = avg_mapped_read_length), width = 0.2, alpha = 0.5, size = 1.5) +
@@ -215,8 +219,38 @@ if (nrow(correlation_results) > 0) {
     summary_file <- file.path(output_dir, "dataset_pearson_summary.png")
     ggsave(summary_file, plot = p_summary, width = 12, height = 7, dpi = 150)
     cat("Summary plot saved to:", summary_file, "\n")
+
+    # 2. Pearson vs Mapped Percentage (One per Dataset)
+    cat("\nGenerating Pearson vs Mapped Percentage scatterplots per dataset...\n")
+    datasets <- unique(plot_data$dataset)
+    for (ds in datasets) {
+      ds_data <- plot_data %>% filter(dataset == ds)
+      
+      p_ds <- ggplot(ds_data, aes(x = mapped_percentage, y = pearson_r)) +
+        geom_point(aes(color = avg_mapped_read_length), alpha = 0.7, size = 3) +
+        scale_y_continuous(limits = c(0, 1)) +
+        scale_color_viridis_c(option = "viridis") +
+        labs(
+          title = paste("Pearson R vs Mapped % -", ds),
+          subtitle = "Correlations calculated on log10(counts + 1)",
+          x = "Mapped Percentage (%)",
+          y = "Pearson R (log10 counts)",
+          color = "Avg Mapped Read Length"
+        ) +
+        theme_minimal() +
+        theme(
+          plot.title = element_text(hjust = 0.5),
+          plot.subtitle = element_text(hjust = 0.5),
+          legend.position = "right"
+        )
+      
+      ds_plot_file <- file.path(output_dir, paste0(ds, "_mapped_pct_vs_pearson.png"))
+      ggsave(ds_plot_file, plot = p_ds, width = 8, height = 7, dpi = 150)
+      cat("  Saved dataset plot:", ds_plot_file, "\n")
+    }
+
   } else {
-    cat("WARNING: No samples with valid dataset mapping remaining. Skipping summary plot.\n")
+    cat("WARNING: No samples with valid dataset mapping remaining. Skipping plots.\n")
   }
 }
 
