@@ -13,6 +13,22 @@ suppressPackageStartupMessages({
   library(scales)
 })
 
+# --- Robust Data Loading Helper ---
+robust_read <- function(file, name) {
+  # Increase guess_max for large files and disable quoting to prevent 
+  # issues with special characters in gene names/metadata.
+  df <- read_tsv(file, show_col_types = FALSE, guess_max = 100000, quote = "")
+  
+  # Report parsing problems if any
+  p <- problems(df)
+  if (nrow(p) > 0) {
+    cat(paste0("\nWARNING: Parsing issues detected in ", name, " (", file, "):\n"), file = stderr())
+    print(head(p, 5), file = stderr())
+    cat("... use problems(df) in R for the full list.\n\n", file = stderr())
+  }
+  return(df)
+}
+
 # Get command-line arguments
 args <- commandArgs(trailingOnly = TRUE)
 
@@ -39,11 +55,11 @@ if (!dir.exists(output_dir)) {
 }
 
 # Always read mapping file as it's needed for the summary plot
-df_mapping <- read_tsv(mapping_file, show_col_types = FALSE)
+df_mapping <- robust_read(mapping_file, "mapping file")
 
 # Read sampleinfo for avg_mapped_read_length and mapped_percentage
 cat("Reading sampleinfo from:", sampleinfo_file, "\n")
-df_sampleinfo <- read_tsv(sampleinfo_file, show_col_types = FALSE) %>%
+df_sampleinfo <- robust_read(sampleinfo_file, "sampleinfo file") %>%
   select(sample_name, avg_mapped_read_length, mapped_percentage)
 
 if (!only_summary_plot) {
@@ -51,8 +67,8 @@ if (!only_summary_plot) {
   # --- Full Analysis Mode ---
   # -----------------------------------------
   cat("Reading matrices...\n")
-  df_all <- read_tsv(all_reads_file, show_col_types = FALSE)
-  df_hg <- read_tsv(hg_reads_file, show_col_types = FALSE)
+  df_all <- robust_read(all_reads_file, "All Reads matrix")
+  df_hg <- robust_read(hg_reads_file, "HG Reads matrix")
 
   # --- Filter Spike-ins ---
   cat("Filtering out ERCC and SIRV records...\n")
@@ -161,7 +177,7 @@ if (!only_summary_plot) {
     cat("ERROR: Correlations file not found. Run without --only_summary_plot first.\n")
     quit(save = "no", status = 1)
   }
-  correlation_results <- read_tsv(correlations_file, show_col_types = FALSE)
+  correlation_results <- robust_read(correlations_file, "pre-calculated correlations")
 
   # --- Filter Samples by List (Optional) ---
   if (!is.null(samples_to_keep_file)) {
