@@ -2,7 +2,7 @@
 
 # src/correlation_analysis.R
 # Processes gene count matrices sample by sample
-# Produces individual scatterplots and a summary boxplot of correlations.
+# Produces individual scatterplots and summary plots of correlations.
 
 suppressPackageStartupMessages({
   library(dplyr)
@@ -53,51 +53,13 @@ if (!dir.exists(output_dir)) {
   dir.create(output_dir, recursive = TRUE)
 }
 
-# --- 1. Identify Expected Samples ---
-cat("Identifying expected samples from matrix headers...\n")
-all_header <- robust_read(all_reads_file, "All Reads header", n_max = 0)
-hg_header  <- robust_read(hg_reads_file, "HG Reads header", n_max = 0)
-
-all_samples <- colnames(all_header)[-(1:2)]
-hg_samples  <- colnames(hg_header)[-(1:2)]
-common_samples <- intersect(all_samples, hg_samples)
-
-if (length(common_samples) == 0) {
-  cat("\nERROR: No common sample IDs found between the two matrices.\n")
-  quit(save = "no", status = 1)
-}
-
-# --- 2. Filter Samples by List (Optional) ---
-if (!is.null(samples_to_keep_file)) {
-  cat("Filtering samples using list from:", samples_to_keep_file, "\n")
-  if (!file.exists(samples_to_keep_file)) {
-    cat("ERROR: Sample list file not found:", samples_to_keep_file, "\n")
-    quit(save = "no", status = 1)
-  }
-  target_samples <- read_lines(samples_to_keep_file) %>% trimws() %>% .[. != ""]
-  original_n <- length(common_samples)
-  common_samples <- intersect(common_samples, target_samples)
-  if (length(common_samples) == 0) {
-    cat("ERROR: No common samples remain after filtering.\n")
-    quit(save = "no", status = 1)
-  }
-  cat("Kept", length(common_samples), "out of", original_n, "samples.\n")
-}
-
-# --- 3. Read Metadata ---
+# Always read mapping file as it's needed for the summary plot
 df_mapping <- robust_read(mapping_file, "mapping file")
+
+# Read sampleinfo for avg_mapped_read_length and mapped_percentage
 cat("Reading sampleinfo from:", sampleinfo_file, "\n")
 df_sampleinfo <- robust_read(sampleinfo_file, "sampleinfo file") %>%
   select(sample_name, avg_mapped_read_length, mapped_percentage)
-
-# Check Mapping Presence
-missing_metadata <- setdiff(common_samples, df_mapping$sample_name)
-if (length(missing_metadata) > 0) {
-  cat("ERROR: The following samples are missing from mapping file:\n")
-  cat(paste(missing_metadata, collapse = ", "), "\n")
-  quit(save = "no", status = 1)
-}
-
 
 if (!only_summary_plot) {
   # -----------------------------------------
@@ -111,6 +73,39 @@ if (!only_summary_plot) {
   cat("Filtering out ERCC and SIRV records...\n")
   df_all <- df_all %>% filter(!grepl("^(ERCC-|SIRV)", gene_id))
   df_hg <- df_hg %>% filter(!grepl("^(ERCC-|SIRV)", gene_id))
+
+  # Identify common samples (columns 3 onwards)
+  all_header <- robust_read(all_reads_file, "All Reads header", n_max = 0)
+  hg_header  <- robust_read(hg_reads_file, "HG Reads header", n_max = 0)
+  all_samples <- colnames(all_header)[-(1:2)]
+  hg_samples  <- colnames(hg_header)[-(1:2)]
+  common_samples <- intersect(all_samples, hg_samples)
+
+  if (length(common_samples) == 0) {
+    cat("\nERROR: No common sample IDs found between the two matrices.\n")
+    quit(save = "no", status = 1)
+  }
+
+  # --- Filter Samples by List (Optional) ---
+  if (!is.null(samples_to_keep_file)) {
+    cat("Filtering samples using list from:", samples_to_keep_file, "\n")
+    target_samples <- read_lines(samples_to_keep_file) %>% trimws() %>% .[. != ""]
+    original_n <- length(common_samples)
+    common_samples <- intersect(common_samples, target_samples)
+    if (length(common_samples) == 0) {
+      cat("ERROR: No common samples remain after filtering.\n")
+      quit(save = "no", status = 1)
+    }
+    cat("Kept", length(common_samples), "out of", original_n, "samples.\n")
+  }
+
+  # --- Check Mapping Presence ---
+  missing_metadata <- setdiff(common_samples, df_mapping$sample_name)
+  if (length(missing_metadata) > 0) {
+    cat("ERROR: The following samples are missing from mapping file:\n")
+    cat(paste(missing_metadata, collapse = ", "), "\n")
+    quit(save = "no", status = 1)
+  }
 
   cat("Processing", length(common_samples), "common samples...\n")
 
@@ -185,27 +180,33 @@ if (!only_summary_plot) {
   }
   correlation_results <- robust_read(correlations_file, "pre-calculated correlations")
 
-  # Ensure all common_samples are present in loaded correlations
-  missing_correlations <- setdiff(common_samples, correlation_results$sample_id)
+  # Efficiently get common_samples from headers for validation
+  all_header <- robust_read(all_reads_file, "All Reads header", n_max = 0)
+  hg_header  <- robust_read(hg_reads_file, "HG Reads header", n_max = 0)
+  all_samples <- colnames(all_header)[-(1:2)]
+  hg_samples  <- colnames(hg_header)[-(1:2)]
+  target_common <- intersect(all_samples, hg_samples)
+  
+  if (!is.null(samples_to_keep_file)) {
+    targets <- read_lines(samples_to_keep_file) %>% trimws() %>% .[. != ""]
+    target_common <- intersect(target_common, targets)
+  }
+
+  missing_correlations <- setdiff(target_common, correlation_results$sample_id)
   if (length(missing_correlations) > 0) {
-    cat("ERROR: Pre-calculated correlations are missing for the following samples:\n")
+    cat("ERROR: Pre-calculated correlations are missing for the following expected samples:\n")
     cat(paste(missing_correlations, collapse = ", "), "\n")
-    cat("Please run the full analysis without --only_summary_plot to generate them.\n")
     quit(save = "no", status = 1)
   }
   
-  # Filter to common_samples
-  correlation_results <- correlation_results %>% filter(sample_id %in% common_samples)
+  correlation_results <- correlation_results %>% filter(sample_id %in% target_common)
   
-  # Ensure loaded data has necessary metadata columns (in case an old TSV is being used)
   if (!all(c("avg_mapped_read_length", "mapped_percentage") %in% colnames(correlation_results))) {
     cat("Note: Metadata columns missing from TSV. Joining with current sampleinfo...\n")
     correlation_results <- correlation_results %>%
       select(-any_of(c("avg_mapped_read_length", "mapped_percentage"))) %>%
       left_join(df_sampleinfo, by = c("sample_id" = "sample_name"))
   }
-  
-  cat("Verified and kept", nrow(correlation_results), "samples for summary plotting.\n")
 }
 
 # -----------------------------------------
@@ -231,50 +232,38 @@ if (nrow(correlation_results) > 0) {
       labs(
         title = "Pearson Correlation Summary by Dataset",
         subtitle = "Correlations calculated on log10(counts + 1)",
-        x = "Dataset",
-        y = "Pearson R (log10 counts)",
+        x = "Dataset", y = "Pearson R (log10 counts)",
         color = "Avg Mapped Read Length"
-      ) +
-      theme_minimal() +
-      theme(
-        axis.text.x = element_text(angle = 45, hjust = 1),
-        plot.title = element_text(hjust = 0.5),
-        plot.subtitle = element_text(hjust = 0.5),
-        legend.position = "right"
-      )
+      ) + theme_minimal() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1),
+            plot.title = element_text(hjust = 0.5),
+            plot.subtitle = element_text(hjust = 0.5),
+            legend.position = "right")
     
-    summary_file <- file.path(output_dir, "dataset_pearson_summary.png")
-    ggsave(summary_file, plot = p_summary, width = 12, height = 7, dpi = 150)
-    cat("Summary plot saved to:", summary_file, "\n")
+    ggsave(file.path(output_dir, "dataset_pearson_summary.png"), plot = p_summary, width = 12, height = 7, dpi = 150)
 
-    # 2. Pearson vs Mapped Percentage (One per Dataset)
-    cat("\nGenerating Pearson vs Mapped Percentage scatterplots per dataset...\n")
-    datasets <- unique(plot_data$dataset)
-    for (ds in datasets) {
-      ds_data <- plot_data %>% filter(dataset == ds)
-      
-      p_ds <- ggplot(ds_data, aes(x = mapped_percentage, y = pearson_r)) +
-        geom_point(aes(color = avg_mapped_read_length), alpha = 0.7, size = 3) +
-        scale_y_continuous(limits = c(0, 1)) +
-        scale_color_viridis_c(option = "viridis") +
-        labs(
-          title = paste("Pearson R vs Mapped % -", ds),
-          subtitle = "Correlations calculated on log10(counts + 1)",
-          x = "Mapped Percentage (%)",
-          y = "Pearson R (log10 counts)",
-          color = "Avg Mapped Read Length"
-        ) +
-        theme_minimal() +
-        theme(
-          plot.title = element_text(hjust = 0.5),
-          plot.subtitle = element_text(hjust = 0.5),
-          legend.position = "right"
-        )
-      
-      ds_plot_file <- file.path(output_dir, paste0(ds, "_mapped_pct_vs_pearson.png"))
-      ggsave(ds_plot_file, plot = p_ds, width = 8, height = 7, dpi = 150)
-      cat("  Saved dataset plot:", ds_plot_file, "\n")
-    }
+    # 2. Pearson vs Mapped Percentage (Consolidated Faceted Plot)
+    cat("\nGenerating consolidated Pearson vs Mapped Percentage plot...\n")
+    p_faceted <- ggplot(plot_data, aes(x = mapped_percentage, y = pearson_r)) +
+      geom_point(aes(color = avg_mapped_read_length), alpha = 0.7, size = 2) +
+      scale_y_continuous(limits = c(0, 1)) +
+      scale_color_viridis_c(option = "viridis") +
+      facet_wrap(~dataset, ncol = 6) +
+      labs(
+        title = "Pearson R vs Mapped % by Dataset",
+        subtitle = "Correlations calculated on log10(counts + 1)",
+        x = "Mapped Percentage (%)", y = "Pearson R (log10 counts)",
+        color = "Avg Mapped Read Length"
+      ) + theme_minimal() +
+      theme(plot.title = element_text(hjust = 0.5),
+            plot.subtitle = element_text(hjust = 0.5),
+            legend.position = "bottom")
+    
+    # Dynamic height based on number of rows (dataset count / 6)
+    n_datasets <- length(unique(plot_data$dataset))
+    n_rows <- ceiling(n_datasets / 6)
+    ggsave(file.path(output_dir, "all_datasets_mapped_pct_vs_pearson.png"), 
+           plot = p_faceted, width = 18, height = 3 * n_rows + 2, dpi = 150)
 
   } else {
     cat("WARNING: No samples with valid dataset mapping remaining. Skipping plots.\n")
