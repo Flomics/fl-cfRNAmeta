@@ -11,6 +11,7 @@ suppressPackageStartupMessages({
   library(readr)
   library(purrr)
   library(scales)
+  library(jsonlite)
 })
 
 # --- Robust Data Loading Helper ---
@@ -47,6 +48,9 @@ sampleinfo_file   <- args[4]
 output_dir        <- args[5]
 samples_to_keep_file <- if (length(args) == 6) args[6] else NULL
 correlations_file <- file.path(output_dir, "correlations.tsv")
+
+# Path to dataset mappings (relative to project root)
+mappings_json <- "fl-cfRNAmeta/src/dataset_mappings.json"
 
 if (!dir.exists(output_dir)) {
   cat("Creating output directory:", output_dir, "\n")
@@ -220,6 +224,37 @@ if (nrow(correlation_results) > 0) {
     rename(dataset = dataset_batch) %>%
     filter(!is.na(dataset), dataset != "")
 
+  # --- Apply Custom Ordering and Labeling from JSON ---
+  if (file.exists(mappings_json)) {
+    cat("Applying custom dataset ordering and labeling from:", mappings_json, "\n")
+    m_json <- fromJSON(mappings_json)
+    
+    # Extract order and labels
+    v_order  <- m_json$datasetVisualOrder
+    v_labels <- unlist(m_json$datasetsLabels)
+    
+    # Filter order to only include datasets present in data
+    # (prevents creating empty facets/axis categories)
+    present_datasets <- unique(plot_data$dataset)
+    v_order <- v_order[v_order %in% present_datasets]
+    
+    # Add any present datasets not in the visual order list to the end
+    missing_from_order <- setdiff(present_datasets, v_order)
+    final_order <- c(v_order, missing_from_order)
+    
+    # Transform dataset to factor with custom labels
+    plot_data <- plot_data %>%
+      mutate(dataset = factor(dataset, levels = final_order)) %>%
+      mutate(dataset_label = ifelse(dataset %in% names(v_labels), 
+                                   v_labels[as.character(dataset)], 
+                                   as.character(dataset))) %>%
+      mutate(dataset_label = factor(dataset_label, levels = v_labels[as.character(final_order)]))
+    
+    # Replace dataset with labeled factor for plotting
+    plot_data <- plot_data %>%
+      mutate(dataset = dataset_label)
+  }
+
   if (nrow(plot_data) > 0) {
     
     # 1. Summary Pearson Boxplot
@@ -240,7 +275,7 @@ if (nrow(correlation_results) > 0) {
             plot.subtitle = element_text(hjust = 0.5),
             legend.position = "right")
     
-    ggsave(file.path(output_dir, "dataset_pearson_summary.png"), plot = p_summary, width = 12, height = 7, dpi = 150)
+    ggsave(file.path(output_dir, "dataset_pearson_summary.png"), plot = p_summary, width = 14, height = 7, dpi = 150)
 
     # 2. Pearson vs Mapped Percentage (Consolidated Faceted Plot)
     cat("\nGenerating consolidated Pearson vs Mapped Percentage plot...\n")
