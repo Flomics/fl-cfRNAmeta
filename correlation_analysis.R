@@ -14,10 +14,9 @@ suppressPackageStartupMessages({
 })
 
 # --- Robust Data Loading Helper ---
-robust_read <- function(file, name) {
-  # Increase guess_max for large files and disable quoting to prevent 
-  # issues with special characters in gene names/metadata.
-  df <- read_tsv(file, show_col_types = FALSE, guess_max = 100000, quote = "")
+robust_read <- function(file, name, n_max = Inf) {
+  # Increase guess_max for large files and disable quoting
+  df <- read_tsv(file, show_col_types = FALSE, guess_max = 100000, quote = "", n_max = n_max)
   
   # Report parsing problems if any
   p <- problems(df)
@@ -54,13 +53,51 @@ if (!dir.exists(output_dir)) {
   dir.create(output_dir, recursive = TRUE)
 }
 
-# Always read mapping file as it's needed for the summary plot
-df_mapping <- robust_read(mapping_file, "mapping file")
+# --- 1. Identify Expected Samples (Efficiency: Read only headers) ---
+cat("Identifying expected samples from matrix headers...\n")
+all_header <- robust_read(all_reads_file, "All Reads header", n_max = 0)
+hg_header  <- robust_read(hg_reads_file, "HG Reads header", n_max = 0)
 
-# Read sampleinfo for avg_mapped_read_length and mapped_percentage
+all_samples <- colnames(all_header)[-(1:2)]
+hg_samples  <- colnames(hg_header)[-(1:2)]
+common_samples <- intersect(all_samples, hg_samples)
+
+if (length(common_samples) == 0) {
+  cat("\nERROR: No common sample IDs found between the two matrices.\n")
+  quit(save = "no", status = 1)
+}
+
+# --- 2. Filter Samples by List (Optional) ---
+if (!is.null(samples_to_keep_file)) {
+  cat("Filtering samples using list from:", samples_to_keep_file, "\n")
+  if (!file.exists(samples_to_keep_file)) {
+    cat("ERROR: Sample list file not found:", samples_to_keep_file, "\n")
+    quit(save = "no", status = 1)
+  }
+  target_samples <- read_lines(samples_to_keep_file) %>% trimws() %>% .[. != ""]
+  original_n <- length(common_samples)
+  common_samples <- intersect(common_samples, target_samples)
+  if (length(common_samples) == 0) {
+    cat("ERROR: No common samples remain after filtering.\n")
+    quit(save = "no", status = 1)
+  }
+  cat("Kept", length(common_samples), "out of", original_n, "samples based on provided list.\n")
+}
+
+# --- 3. Read Metadata ---
+df_mapping <- robust_read(mapping_file, "mapping file")
 cat("Reading sampleinfo from:", sampleinfo_file, "\n")
 df_sampleinfo <- robust_read(sampleinfo_file, "sampleinfo file") %>%
   select(sample_name, avg_mapped_read_length, mapped_percentage)
+
+# Check Mapping Presence
+missing_metadata <- setdiff(common_samples, df_mapping$sample_name)
+if (length(missing_metadata) > 0) {
+  cat("ERROR: The following samples are missing from mapping file:\n")
+  cat(paste(missing_metadata, collapse = ", "), "\n")
+  quit(save = "no", status = 1)
+}
+
 
 if (!only_summary_plot) {
   # -----------------------------------------
@@ -74,41 +111,6 @@ if (!only_summary_plot) {
   cat("Filtering out ERCC and SIRV records...\n")
   df_all <- df_all %>% filter(!grepl("^(ERCC-|SIRV)", gene_id))
   df_hg <- df_hg %>% filter(!grepl("^(ERCC-|SIRV)", gene_id))
-
-  # Identify common samples (columns 3 onwards)
-  all_samples <- colnames(df_all)[-(1:2)]
-  hg_samples <- colnames(df_hg)[-(1:2)]
-  common_samples <- intersect(all_samples, hg_samples)
-
-  if (length(common_samples) == 0) {
-    cat("\nWARNING: No common sample IDs found between the two files.\n")
-    quit(save = "no", status = 1)
-  }
-
-  # --- Filter Samples by List (Optional) ---
-  if (!is.null(samples_to_keep_file)) {
-    cat("Filtering samples using list from:", samples_to_keep_file, "\n")
-    if (!file.exists(samples_to_keep_file)) {
-      cat("ERROR: Sample list file not found:", samples_to_keep_file, "\n")
-      quit(save = "no", status = 1)
-    }
-    target_samples <- read_lines(samples_to_keep_file) %>% trimws() %>% .[. != ""]
-    original_n <- length(common_samples)
-    common_samples <- intersect(common_samples, target_samples)
-    if (length(common_samples) == 0) {
-      cat("ERROR: No common samples remain after filtering.\n")
-      quit(save = "no", status = 1)
-    }
-    cat("Kept", length(common_samples), "out of", original_n, "samples.\n")
-  }
-
-  # --- Check Mapping Presence ---
-  missing_metadata <- setdiff(common_samples, df_mapping$sample_name)
-  if (length(missing_metadata) > 0) {
-    cat("ERROR: The following samples are missing from mapping file:\n")
-    cat(paste(missing_metadata, collapse = ", "), "\n")
-    quit(save = "no", status = 1)
-  }
 
   cat("Processing", length(common_samples), "common samples...\n")
 
@@ -179,21 +181,18 @@ if (!only_summary_plot) {
   }
   correlation_results <- robust_read(correlations_file, "pre-calculated correlations")
 
-  # --- Filter Samples by List (Optional) ---
-  if (!is.null(samples_to_keep_file)) {
-    cat("Filtering samples using list from:", samples_to_keep_file, "\n")
-    if (!file.exists(samples_to_keep_file)) {
-      cat("ERROR: Sample list file not found:", samples_to_keep_file, "\n")
-      quit(save = "no", status = 1)
-    }
-    target_samples <- read_lines(samples_to_keep_file) %>% trimws() %>% .[. != ""]
-    correlation_results <- correlation_results %>% filter(sample_id %in% target_samples)
-    if (nrow(correlation_results) == 0) {
-      cat("ERROR: No samples remain after filtering.\n")
-      quit(save = "no", status = 1)
-    }
-    cat("Kept", nrow(correlation_results), "samples based on the provided list.\n")
+  # Ensure all common_samples are present in loaded correlations
+  missing_correlations <- setdiff(common_samples, correlation_results$sample_id)
+  if (length(missing_correlations) > 0) {
+    cat("ERROR: Pre-calculated correlations are missing for the following samples:\n")
+    cat(paste(missing_correlations, collapse = ", "), "\n")
+    cat("Please run the full analysis without --only_summary_plot to generate them.\n")
+    quit(save = "no", status = 1)
   }
+  
+  # Filter the loaded results to only include the common_samples (in case TSV has more)
+  correlation_results <- correlation_results %>% filter(sample_id %in% common_samples)
+  cat("Verified and kept", nrow(correlation_results), "samples for summary plotting.\n")
 }
 
 # -----------------------------------------
