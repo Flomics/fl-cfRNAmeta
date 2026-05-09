@@ -238,9 +238,7 @@ if (nrow(correlation_results) > 0) {
     missing_from_order <- setdiff(present_datasets, v_order)
     final_order <- c(v_order, missing_from_order)
     
-    # Prepare color palette for labels
     if (!is.null(v_palette)) {
-      # Map internal dataset IDs to labels for the palette
       final_palette <- v_palette[names(v_palette) %in% names(v_labels)]
       names(final_palette) <- v_labels[names(final_palette)]
     }
@@ -312,11 +310,11 @@ if (nrow(correlation_results) > 0) {
     
     p_rl <- ggplot(plot_data, aes(x = avg_mapped_read_length, y = pearson_r)) +
       geom_point(aes(color = dataset), alpha = 0.6, size = 2) +
+      geom_smooth(method = "loess", color = "black", se = FALSE, linetype = "solid", size = 0.8) +
       scale_y_continuous(limits = c(0, 1)) +
       labs(
         title = "Pearson R vs Avg Mapped Read Length",
-        subtitle = paste0("Global Pearson r = ", round(global_r, 3), 
-                          " (n = ", nrow(plot_data), " samples)"),
+        subtitle = paste0("Global Pearson r = ", round(global_r, 3)),
         x = "Avg Mapped Read Length", y = "Pearson R (log10 counts)",
         color = "Dataset"
       ) + theme_minimal() +
