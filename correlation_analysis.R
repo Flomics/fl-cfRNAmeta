@@ -191,8 +191,7 @@ if (nrow(correlation_results) > 0) {
   group_summary <- stat_data %>% group_by(group) %>%
     summarize(n = n(), mean_r = mean(pearson_r), median_r = median(pearson_r), sd_r = sd(pearson_r), .groups = "drop")
   
-  # Welch's t-test (parametric) and Wilcoxon rank sum (non-parametric)
-  t_test_res <- t.test(pearson_r ~ group, data = stat_data)
+  # Wilcoxon rank sum test (non-parametric)
   wilcox_res <- wilcox.test(pearson_r ~ group, data = stat_data)
   
   stats_file <- file.path(output_dir, "read_length_threshold_analysis.txt")
@@ -204,9 +203,7 @@ if (nrow(correlation_results) > 0) {
   print(as.data.frame(group_summary))
   cat("\n------------------------------------------------------------------------\n")
   cat("Hypothesis: Pearson R values differ between the two groups.\n\n")
-  cat("1. Welch Two Sample t-test (Parametric):\n")
-  print(t_test_res)
-  cat("\n2. Wilcoxon Rank Sum Test with Continuity Correction (Non-Parametric):\n")
+  cat("1. Wilcoxon Rank Sum Test with Continuity Correction (Non-Parametric):\n")
   print(wilcox_res)
   cat("\nInterpretation:\n")
   cat("A p-value < 0.05 indicates a statistically significant difference in correlation consistency\nbetween samples above and below the ", threshold, "bp threshold.\n", sep="")
