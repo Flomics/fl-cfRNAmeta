@@ -20,16 +20,17 @@ args <- commandArgs(trailingOnly = TRUE)
 only_summary_plot <- "--only_summary_plot" %in% args
 args <- args[args != "--only_summary_plot"]
 
-if (length(args) < 4 || length(args) > 5) {
-  cat("Usage: correlation_analysis.R [--only_summary_plot] <all_reads_file> <hg_reads_file> <mapping_file> <output_dir> [samples_to_keep_file]\n")
+if (length(args) < 5 || length(args) > 6) {
+  cat("Usage: correlation_analysis.R [--only_summary_plot] <all_reads_file> <hg_reads_file> <mapping_file> <sampleinfo_file> <output_dir> [samples_to_keep_file]\n")
   quit(save = "no", status = 1)
 }
 
-all_reads_file <- args[1]
-hg_reads_file  <- args[2]
-mapping_file   <- args[3]
-output_dir     <- args[4]
-samples_to_keep_file <- if (length(args) == 5) args[5] else NULL
+all_reads_file    <- args[1]
+hg_reads_file     <- args[2]
+mapping_file      <- args[3]
+sampleinfo_file   <- args[4]
+output_dir        <- args[5]
+samples_to_keep_file <- if (length(args) == 6) args[6] else NULL
 correlations_file <- file.path(output_dir, "correlations.tsv")
 
 if (!dir.exists(output_dir)) {
@@ -39,6 +40,10 @@ if (!dir.exists(output_dir)) {
 
 # Always read mapping file as it's needed for the summary plot
 df_mapping <- read_tsv(mapping_file, show_col_types = FALSE)
+# Read sampleinfo for avg_mapped_read_length
+cat("Reading sampleinfo from:", sampleinfo_file, "\n")
+df_sampleinfo <- read_tsv(sampleinfo_file, show_col_types = FALSE) %>%
+  select(sample_name, avg_mapped_read_length)
 
 if (!only_summary_plot) {
   # -----------------------------------------
@@ -183,29 +188,32 @@ if (nrow(correlation_results) > 0) {
   plot_data <- correlation_results %>%
     left_join(df_mapping, by = c("sample_id" = "sample_name")) %>%
     rename(dataset = dataset_batch) %>%
-    filter(!is.na(dataset), dataset != "")
+    filter(!is.na(dataset), dataset != "") %>%
+    left_join(df_sampleinfo, by = c("sample_id" = "sample_name"))
 
   if (nrow(plot_data) > 0) {
-    p_summary <- ggplot(plot_data, aes(x = dataset, y = pearson_r, fill = dataset)) +
-      geom_boxplot(alpha = 0.7, outlier.shape = NA) +
-      geom_jitter(width = 0.2, alpha = 0.5, size = 1) +
+    p_summary <- ggplot(plot_data, aes(x = dataset, y = pearson_r)) +
+      geom_boxplot(alpha = 0.7, outlier.shape = NA, fill = NA, color = "lightgrey") +
+      geom_jitter(aes(color = avg_mapped_read_length), width = 0.2, alpha = 0.5, size = 1.5) +
       scale_y_continuous(limits = c(0, 1)) +
+      scale_color_viridis_c(option = "plasma") +
       labs(
         title = "Pearson Correlation Summary by Dataset",
         subtitle = "Correlations calculated on log10(counts + 1)",
         x = "Dataset",
-        y = "Pearson R (log10 counts)"
+        y = "Pearson R (log10 counts)",
+        color = "Avg Mapped Read Length"
       ) +
       theme_minimal() +
       theme(
-        legend.position = "none",
         axis.text.x = element_text(angle = 45, hjust = 1),
         plot.title = element_text(hjust = 0.5),
-        plot.subtitle = element_text(hjust = 0.5)
+        plot.subtitle = element_text(hjust = 0.5),
+        legend.position = "right"
       )
     
     summary_file <- file.path(output_dir, "dataset_pearson_summary.png")
-    ggsave(summary_file, plot = p_summary, width = 10, height = 7, dpi = 150)
+    ggsave(summary_file, plot = p_summary, width = 12, height = 7, dpi = 150)
     cat("Summary plot saved to:", summary_file, "\n")
   } else {
     cat("WARNING: No samples with valid dataset mapping remaining. Skipping summary plot.\n")
