@@ -310,7 +310,7 @@ if (nrow(correlation_results) > 0) {
     
     p_rl <- ggplot(plot_data, aes(x = avg_mapped_read_length, y = pearson_r)) +
       geom_point(aes(color = dataset), alpha = 0.6, size = 2) +
-      geom_smooth(method = "loess", color = "black", se = FALSE, linetype = "solid", size = 0.8) +
+      geom_smooth(method = "loess", color = "black", se = FALSE, linetype = "solid", linewidth = 0.8) +
       scale_y_continuous(limits = c(0, 1)) +
       labs(
         title = "Pearson R vs Avg Mapped Read Length",
