@@ -196,7 +196,7 @@ if (nrow(correlation_results) > 0) {
       geom_boxplot(alpha = 0.7, outlier.shape = NA, fill = NA, color = "lightgrey") +
       geom_jitter(aes(color = avg_mapped_read_length), width = 0.2, alpha = 0.5, size = 1.5) +
       scale_y_continuous(limits = c(0, 1)) +
-      scale_color_viridis_c(option = "plasma") +
+      scale_color_viridis_c(option = "viridis") +
       labs(
         title = "Pearson Correlation Summary by Dataset",
         subtitle = "Correlations calculated on log10(counts + 1)",
