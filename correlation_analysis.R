@@ -225,17 +225,26 @@ if (nrow(correlation_results) > 0) {
     filter(!is.na(dataset), dataset != "")
 
   # --- Apply Custom Ordering and Labeling from JSON ---
+  final_palette <- NULL
   if (file.exists(mappings_json)) {
     cat("Applying custom dataset ordering and labeling from:", mappings_json, "\n")
     m_json <- fromJSON(mappings_json)
     v_order  <- m_json$datasetVisualOrder
     v_labels <- unlist(m_json$datasetsLabels)
+    v_palette <- unlist(m_json$datasetsPalette)
     
     present_datasets <- unique(plot_data$dataset)
     v_order <- v_order[v_order %in% present_datasets]
     missing_from_order <- setdiff(present_datasets, v_order)
     final_order <- c(v_order, missing_from_order)
     
+    # Prepare color palette for labels
+    if (!is.null(v_palette)) {
+      # Map internal dataset IDs to labels for the palette
+      final_palette <- v_palette[names(v_palette) %in% names(v_labels)]
+      names(final_palette) <- v_labels[names(final_palette)]
+    }
+
     plot_data <- plot_data %>%
       mutate(dataset = factor(dataset, levels = final_order)) %>%
       mutate(dataset_label = ifelse(dataset %in% names(v_labels), 
@@ -315,7 +324,11 @@ if (nrow(correlation_results) > 0) {
             plot.subtitle = element_text(hjust = 0.5),
             legend.position = "right")
     
-    ggsave(file.path(output_dir, "pearson_vs_read_length.png"), plot = p_rl, width = 10, height = 7, dpi = 150)
+    if (!is.null(final_palette)) {
+      p_rl <- p_rl + scale_color_manual(values = final_palette)
+    }
+    
+    ggsave(file.path(output_dir, "pearson_vs_read_length.png"), plot = p_rl, width = 12, height = 7, dpi = 150)
 
   } else {
     cat("WARNING: No samples with valid dataset mapping remaining. Skipping plots.\n")
