@@ -182,8 +182,7 @@ if (nrow(correlation_results) > 0) {
   p_rl <- ggplot(plot_data, aes(x = avg_mapped_read_length, y = pearson_r)) +
     geom_point(aes(color = dataset), alpha = 0.6, size = 2) +
     geom_smooth(method = "loess", color = "black", se = FALSE, linetype = "solid", linewidth = 0.8) +
-    scale_y_continuous(limits = c(0, 1)) + 
-    labs(title = "", x = "Effective fragment length\n(average mapped length, bp)", y = "Pearson R", color = "Dataset") +
+    scale_y_continuous(limits = c(0, 1)) + labs(title = "", x = "Effective fragment length\n(average mapped length, bp)", y = "Pearson R\n(human-only vs unfiltered reads-based quantifications", color = "Dataset") +
     theme(legend.position = "right")
   if (!is.null(final_palette)) p_rl <- p_rl + scale_color_manual(values = final_palette)
   ggsave(file.path(output_dir, "pearson_vs_read_length.png"), plot = p_rl, width = 12, height = 7, dpi = 150)
