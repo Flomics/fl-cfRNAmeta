@@ -178,7 +178,7 @@ if (nrow(correlation_results) > 0) {
   p_rl <- ggplot(plot_data, aes(x = avg_mapped_read_length, y = pearson_r)) +
     geom_point(aes(color = dataset), alpha = 0.6, size = 2) +
     geom_smooth(method = "loess", color = "black", se = FALSE, linetype = "solid", linewidth = 0.8) +
-    scale_y_continuous(limits = c(0, 1)) + labs(title = "Pearson R vs Avg Mapped Read Length", subtitle = paste0("Global Pearson r = ", round(global_r, 3)), x = "Read Length", y = "Pearson R (log10)", color = "Dataset") +
+    scale_y_continuous(limits = c(0, 1)) + labs(title = "", x = "Effective fragment length\n(average mapped length, bp)", y = "Pearson R", color = "Dataset") +
     theme_minimal() + theme(legend.position = "right")
   if (!is.null(final_palette)) p_rl <- p_rl + scale_color_manual(values = final_palette)
   ggsave(file.path(output_dir, "pearson_vs_read_length.png"), plot = p_rl, width = 12, height = 7, dpi = 150)
@@ -205,8 +205,6 @@ if (nrow(correlation_results) > 0) {
   cat("Hypothesis: Pearson R values differ between the two groups.\n\n")
   cat("1. Wilcoxon Rank Sum Test with Continuity Correction (Non-Parametric):\n")
   print(wilcox_res)
-  cat("\nInterpretation:\n")
-  cat("A p-value < 0.05 indicates a statistically significant difference in correlation consistency\nbetween samples above and below the ", threshold, "bp threshold.\n", sep="")
   sink()
   cat("Statistical analysis results saved to:", stats_file, "\n")
 }
