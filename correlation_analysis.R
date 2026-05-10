@@ -14,6 +14,9 @@ suppressPackageStartupMessages({
   library(jsonlite)
 })
 
+# Set global ggplot2 font to Arial
+theme_set(theme_minimal(base_family = "Arial"))
+
 # --- Robust Data Loading Helper ---
 robust_read <- function(file, name, n_max = Inf) {
   df <- read_tsv(file, show_col_types = FALSE, guess_max = 100000, quote = "", n_max = n_max)
@@ -101,7 +104,7 @@ if (!only_summary_plot) {
       geom_point(alpha = 0.2, size = 0.5) + scale_x_log10(labels = label_scientific()) +
       scale_y_log10(labels = label_scientific()) + geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +
       labs(title = paste("Correlation -", s_id), subtitle = paste0("R = ", round(r_pearson, 4)),
-           x = "Counts+1 (All)", y = "Counts+1 (HG)") + theme_minimal()
+           x = "Counts+1 (All)", y = "Counts+1 (HG)")
     ggsave(file.path(output_dir, paste0(s_id, "_correlation.png")), plot = p, width = 7, height = 7, dpi = 150)
     return(data.frame(sample_id = s_id, pearson_r = r_pearson, spearman_rho = r_spearman, stringsAsFactors = FALSE))
   })
@@ -157,7 +160,7 @@ if (nrow(correlation_results) > 0) {
     geom_jitter(aes(color = avg_mapped_read_length), width = 0.2, alpha = 0.5, size = 1.5) +
     scale_y_continuous(limits = c(0, 1)) + scale_color_viridis_c(option = "viridis") +
     labs(title = "Pearson Correlation Summary by Dataset", x = "Dataset", y = "Pearson R (log10)", color = "Read Length") +
-    theme_minimal() + theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "right")
+    theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "right")
   ggsave(file.path(output_dir, "dataset_pearson_summary.png"), plot = p_summary, width = 14, height = 7, dpi = 150)
 
   # 2. Pearson vs Mapped Percentage (Faceted)
@@ -166,10 +169,11 @@ if (nrow(correlation_results) > 0) {
     mutate(label = paste0("r = ", round(r_val, 3), "\nn = ", n_samples))
   p_faceted <- ggplot(plot_data, aes(x = mapped_percentage, y = pearson_r)) +
     geom_point(aes(color = avg_mapped_read_length), alpha = 0.7, size = 2) +
-    geom_text(data = facet_correlations, aes(x = Inf, y = 0, label = label), hjust = 1.1, vjust = -0.5, size = 3, inherit.aes = FALSE) +
+    geom_text(data = facet_correlations, aes(x = Inf, y = 0, label = label), 
+              hjust = 1.1, vjust = -0.5, size = 3, family = "Arial", inherit.aes = FALSE) +
     scale_y_continuous(limits = c(0, 1)) + scale_color_viridis_c(option = "viridis") +
     facet_wrap(~dataset, ncol = 6) + labs(title = "Pearson R vs Mapped % by Dataset", x = "Mapped %", y = "Pearson R (log10)", color = "Read Length") +
-    theme_minimal() + theme(legend.position = "bottom")
+    theme(legend.position = "bottom")
   ggsave(file.path(output_dir, "all_datasets_mapped_pct_vs_pearson.png"), plot = p_faceted, width = 18, height = 3 * ceiling(length(unique(plot_data$dataset))/6) + 2, dpi = 150)
 
   # 3. Pearson vs Avg Mapped Read Length (Global) + STATS
@@ -178,8 +182,9 @@ if (nrow(correlation_results) > 0) {
   p_rl <- ggplot(plot_data, aes(x = avg_mapped_read_length, y = pearson_r)) +
     geom_point(aes(color = dataset), alpha = 0.6, size = 2) +
     geom_smooth(method = "loess", color = "black", se = FALSE, linetype = "solid", linewidth = 0.8) +
-    scale_y_continuous(limits = c(0, 1)) + labs(title = "", x = "Effective fragment length\n(average mapped length, bp)", y = "Pearson R", color = "Dataset") +
-    theme_minimal() + theme(legend.position = "right")
+    scale_y_continuous(limits = c(0, 1)) + 
+    labs(title = "", x = "Effective fragment length\n(average mapped length, bp)", y = "Pearson R", color = "Dataset") +
+    theme(legend.position = "right")
   if (!is.null(final_palette)) p_rl <- p_rl + scale_color_manual(values = final_palette)
   ggsave(file.path(output_dir, "pearson_vs_read_length.png"), plot = p_rl, width = 12, height = 7, dpi = 150)
 
