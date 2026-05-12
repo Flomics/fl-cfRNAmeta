@@ -159,7 +159,7 @@ if (nrow(correlation_results) > 0) {
     geom_boxplot(alpha = 0.7, outlier.shape = NA, fill = NA, color = "lightgrey") +
     geom_jitter(aes(color = avg_mapped_read_length), width = 0.2, alpha = 0.5, size = 1.5) +
     scale_y_continuous(limits = c(0, 1)) + scale_color_viridis_c(option = "viridis") +
-    labs(title = "Pearson Correlation Summary by Dataset", x = "Dataset", y = "Pearson R (log10)", color = "Read Length") +
+    labs(title = "Pearson Correlation Summary by Dataset", x = "Dataset", y = "Pearson R (log10)", color = "Effective fragment length\n(average mapped length, bp)") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "right")
   ggsave(file.path(output_dir, "dataset_pearson_summary.png"), plot = p_summary, width = 14, height = 7, dpi = 150)
 
@@ -172,7 +172,7 @@ if (nrow(correlation_results) > 0) {
     geom_text(data = facet_correlations, aes(x = Inf, y = 0, label = label), 
               hjust = 1.1, vjust = -0.5, size = 3, family = "Arial", inherit.aes = FALSE) +
     scale_y_continuous(limits = c(0, 1)) + scale_color_viridis_c(option = "viridis") +
-    facet_wrap(~dataset, ncol = 6) + labs(title = "Pearson R vs Mapped % by Dataset", x = "Mapped %", y = "Pearson R (log10)", color = "Read Length") +
+    facet_wrap(~dataset, ncol = 6) + labs(title = "", x = "% reads mapped to the human genome", y = "Pearson R (log10)", color = "Effective fragment length\n(average mapped length, bp)") +
     theme(legend.position = "bottom")
   ggsave(file.path(output_dir, "all_datasets_mapped_pct_vs_pearson.png"), plot = p_faceted, width = 18, height = 3 * ceiling(length(unique(plot_data$dataset))/6) + 2, dpi = 150)
 
