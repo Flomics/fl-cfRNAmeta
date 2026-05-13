@@ -19,7 +19,10 @@ theme_set(theme_minimal(base_family = "Arial"))
 
 # --- Robust Data Loading Helper ---
 robust_read <- function(file, name, n_max = Inf) {
+  # Increase guess_max for large files and disable quoting
   df <- read_tsv(file, show_col_types = FALSE, guess_max = 100000, quote = "", n_max = n_max)
+  
+  # Report parsing problems if any
   p <- problems(df)
   if (nrow(p) > 0) {
     cat(paste0("\nWARNING: Parsing issues detected in ", name, " (", file, "):\n"), file = stderr())
@@ -36,8 +39,8 @@ args <- commandArgs(trailingOnly = TRUE)
 only_summary_plot <- "--only_summary_plot" %in% args
 args <- args[args != "--only_summary_plot"]
 
-if (length(args) < 5 || length(args) > 6) {
-  cat("Usage: correlation_analysis.R [--only_summary_plot] <all_reads_file> <hg_reads_file> <mapping_file> <sampleinfo_file> <output_dir> [samples_to_keep_file]\n")
+if (length(args) < 6 || length(args) > 7) {
+  cat("Usage: correlation_analysis.R [--only_summary_plot] <all_reads_file> <hg_reads_file> <mapping_file> <sampleinfo_file> <taxa_file> <output_dir> [samples_to_keep_file]\n")
   quit(save = "no", status = 1)
 }
 
@@ -45,10 +48,12 @@ all_reads_file    <- args[1]
 hg_reads_file     <- args[2]
 mapping_file      <- args[3]
 sampleinfo_file   <- args[4]
-output_dir        <- args[5]
-samples_to_keep_file <- if (length(args) == 6) args[6] else NULL
+taxa_file         <- args[5]
+output_dir        <- args[6]
+samples_to_keep_file <- if (length(args) == 7) args[7] else NULL
 correlations_file <- file.path(output_dir, "correlations.tsv")
 
+# Path to dataset mappings (relative to project root)
 mappings_json <- "fl-cfRNAmeta/src/dataset_mappings.json"
 
 if (!dir.exists(output_dir)) {
@@ -56,10 +61,29 @@ if (!dir.exists(output_dir)) {
   dir.create(output_dir, recursive = TRUE)
 }
 
-# Metadata
+# Always read mapping file as it's needed for the summary plot
 df_mapping <- robust_read(mapping_file, "mapping file")
+
+# Read sampleinfo for avg_mapped_read_length; also keep sample_id (SAMP... IDs)
+# which acts as a bridge to the taxa file
+cat("Reading sampleinfo from:", sampleinfo_file, "\n")
 df_sampleinfo <- robust_read(sampleinfo_file, "sampleinfo file") %>%
-  select(sample_name, avg_mapped_read_length, mapped_percentage)
+  select(sample_name, sample_id, avg_mapped_read_length)
+
+# Read taxa information
+cat("Reading taxa data from:", taxa_file, "\n")
+df_taxa <- robust_read(taxa_file, "taxa file") %>%
+  rename(percent_human_reads = human) %>%
+  # taxa file uses sampleinfo$sample_id (SAMP... IDs) as its sample_name;
+  # remap to sampleinfo$sample_name so downstream joins work against correlations$sample_id
+  left_join(df_sampleinfo %>% select(sample_name, sample_id),
+            by = c("sample_name" = "sample_id")) %>%
+  mutate(sample_name = coalesce(sample_name.y, sample_name)) %>%  # prefer remapped name; keep original if no match
+  select(-sample_name.y)
+
+# Identify taxonomic columns for faceted plotting (X-axis)
+taxa_plot_cols <- c("percent_human_reads", "fungi", "other_eukaryotes", "bacteria", "other", "unclassified")
+taxa_plot_cols <- intersect(taxa_plot_cols, colnames(df_taxa))
 
 if (!only_summary_plot) {
   # -----------------------------------------
@@ -69,65 +93,147 @@ if (!only_summary_plot) {
   df_all <- robust_read(all_reads_file, "All Reads matrix")
   df_hg <- robust_read(hg_reads_file, "HG Reads matrix")
 
+  # --- Filter Spike-ins ---
+  cat("Filtering out ERCC and SIRV records...\n")
   df_all <- df_all %>% filter(!grepl("^(ERCC-|SIRV)", gene_id))
   df_hg <- df_hg %>% filter(!grepl("^(ERCC-|SIRV)", gene_id))
 
+  # Identify common samples (columns 3 onwards)
   all_header <- robust_read(all_reads_file, "All Reads header", n_max = 0)
   hg_header  <- robust_read(hg_reads_file, "HG Reads header", n_max = 0)
-  common_samples <- intersect(colnames(all_header)[-(1:2)], colnames(hg_header)[-(1:2)])
+  all_samples <- colnames(all_header)[-(1:2)]
+  hg_samples  <- colnames(hg_header)[-(1:2)]
+  common_samples <- intersect(all_samples, hg_samples)
 
+  if (length(common_samples) == 0) {
+    cat("\nERROR: No common sample IDs found between the two matrices.\n")
+    quit(save = "no", status = 1)
+  }
+
+  # --- Filter Samples by List (Optional) ---
   if (!is.null(samples_to_keep_file)) {
+    cat("Filtering samples using list from:", samples_to_keep_file, "\n")
     target_samples <- read_lines(samples_to_keep_file) %>% trimws() %>% .[. != ""]
+    original_n <- length(common_samples)
     common_samples <- intersect(common_samples, target_samples)
+    if (length(common_samples) == 0) {
+      cat("ERROR: No common samples remain after filtering.\n")
+      quit(save = "no", status = 1)
+    }
+    cat("Kept", length(common_samples), "out of", original_n, "samples.\n")
+  }
+
+  # --- Check Mapping Presence ---
+  missing_metadata <- setdiff(common_samples, df_mapping$sample_name)
+  if (length(missing_metadata) > 0) {
+    cat("ERROR: The following samples are missing from mapping file:\n")
+    cat(paste(missing_metadata, collapse = ", "), "\n")
+    quit(save = "no", status = 1)
   }
 
   cat("Processing", length(common_samples), "common samples...\n")
 
-  df_all_long <- df_all %>% select(gene_id, gene_name, all_of(common_samples)) %>%
+  cat("Reshaping data...\n")
+  df_all_long <- df_all %>%
+    select(gene_id, gene_name, all_of(common_samples)) %>%
     pivot_longer(cols = -c(gene_id, gene_name), names_to = "sample_id", values_to = "counts_all")
-  df_hg_long <- df_hg %>% select(gene_id, gene_name, all_of(common_samples)) %>%
+
+  df_hg_long <- df_hg %>%
+    select(gene_id, gene_name, all_of(common_samples)) %>%
     pivot_longer(cols = -c(gene_id, gene_name), names_to = "sample_id", values_to = "counts_hg")
+
   df_combined <- inner_join(df_all_long, df_hg_long, by = c("gene_id", "gene_name", "sample_id"))
 
+  cat("Calculating correlations and generating plots...\n")
   correlation_results <- map_dfr(common_samples, function(s_id) {
-    sample_data <- df_combined %>% filter(sample_id == s_id) %>% filter(!is.na(counts_all), !is.na(counts_hg))
+    sample_data <- df_combined %>%
+      filter(sample_id == s_id) %>%
+      filter(!is.na(counts_all), !is.na(counts_hg))
+    
     if (nrow(sample_data) < 2) return(NULL)
-    r_pearson  <- cor(log10(sample_data$counts_all + 1), log10(sample_data$counts_hg + 1), method = "pearson")
+    
+    log_all <- log10(sample_data$counts_all + 1)
+    log_hg <- log10(sample_data$counts_hg + 1)
+    
+    r_pearson  <- cor(log_all, log_hg, method = "pearson")
     r_spearman <- cor(sample_data$counts_all, sample_data$counts_hg, method = "spearman")
+    
     if (r_pearson < 0.9) {
-      outliers <- sample_data %>% mutate(log_diff = abs(log10(counts_all + 1) - log10(counts_hg + 1))) %>%
-        arrange(desc(log_diff)) %>% head(1000)
+      cat("  Sample", s_id, "has low correlation (R =", round(r_pearson, 4), "). Saving top 1000 outliers...\n")
+      outliers <- sample_data %>%
+        mutate(log_diff = abs(log10(counts_all + 1) - log10(counts_hg + 1))) %>%
+        arrange(desc(log_diff)) %>%
+        head(1000)
       write_tsv(outliers, file.path(output_dir, paste0(s_id, "_top1000outliers.tsv")))
     }
+
     # Individual plot
     p <- ggplot(sample_data, aes(x = counts_all + 1, y = counts_hg + 1)) +
-      geom_point(alpha = 0.2, size = 0.5) + scale_x_log10(labels = label_scientific()) +
-      scale_y_log10(labels = label_scientific()) + geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +
-      labs(title = paste("Correlation -", s_id), subtitle = paste0("R = ", round(r_pearson, 4)),
-           x = "Counts+1 (All)", y = "Counts+1 (HG)")
+      geom_point(alpha = 0.2, size = 0.5) +
+      scale_x_log10(labels = label_scientific()) +
+      scale_y_log10(labels = label_scientific()) +
+      geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +
+      labs(
+        title = paste("Gene Count Correlation -", s_id),
+        subtitle = paste0("Pearson R (log10) = ", round(r_pearson, 4), 
+                          "\nSpearman Rho = ", round(r_spearman, 4)),
+        x = "Raw Counts + 1 (All Reads, log10)",
+        y = "Raw Counts + 1 (HG Reads, log10)"
+      )
+    
     ggsave(file.path(output_dir, paste0(s_id, "_correlation.png")), plot = p, width = 7, height = 7, dpi = 150)
+    
     return(data.frame(sample_id = s_id, pearson_r = r_pearson, spearman_rho = r_spearman, stringsAsFactors = FALSE))
   })
 
-  correlation_results <- correlation_results %>% left_join(df_sampleinfo, by = c("sample_id" = "sample_name"))
+  # Enrich with metadata before saving
+  correlation_results <- correlation_results %>%
+    left_join(df_sampleinfo %>% select(sample_name, avg_mapped_read_length), by = c("sample_id" = "sample_name")) %>%
+    left_join(df_taxa %>% select(sample_name, all_of(taxa_plot_cols)), by = c("sample_id" = "sample_name"))
+
+  cat("Saving correlation results to:", correlations_file, "\n")
   write_tsv(correlation_results, correlations_file)
 
 } else {
   # -----------------------------------------
   # --- Summary Only Mode ---
   # -----------------------------------------
+  cat("Mode: --only_summary_plot. Reading pre-calculated results from:", correlations_file, "\n")
+  if (!file.exists(correlations_file)) {
+    cat("ERROR: Correlations file not found. Run without --only_summary_plot first.\n")
+    quit(save = "no", status = 1)
+  }
   correlation_results <- robust_read(correlations_file, "pre-calculated correlations")
+
+  # Efficiently get common_samples from headers for validation
   all_header <- robust_read(all_reads_file, "All Reads header", n_max = 0)
   hg_header  <- robust_read(hg_reads_file, "HG Reads header", n_max = 0)
-  target_common <- intersect(colnames(all_header)[-(1:2)], colnames(hg_header)[-(1:2)])
+  all_samples <- colnames(all_header)[-(1:2)]
+  hg_samples  <- colnames(hg_header)[-(1:2)]
+  target_common <- intersect(all_samples, hg_samples)
+  
   if (!is.null(samples_to_keep_file)) {
     targets <- read_lines(samples_to_keep_file) %>% trimws() %>% .[. != ""]
     target_common <- intersect(target_common, targets)
   }
+
+  missing_correlations <- setdiff(target_common, correlation_results$sample_id)
+  if (length(missing_correlations) > 0) {
+    cat("ERROR: Pre-calculated correlations are missing for the following expected samples:\n")
+    cat(paste(missing_correlations, collapse = ", "), "\n")
+    quit(save = "no", status = 1)
+  }
+  
   correlation_results <- correlation_results %>% filter(sample_id %in% target_common)
-  if (!all(c("avg_mapped_read_length", "mapped_percentage") %in% colnames(correlation_results))) {
-    correlation_results <- correlation_results %>% select(-any_of(c("avg_mapped_read_length", "mapped_percentage"))) %>%
-      left_join(df_sampleinfo, by = c("sample_id" = "sample_name"))
+  
+  # Ensure loaded data has necessary metadata columns
+  needed_cols <- c("avg_mapped_read_length", taxa_plot_cols)
+  if (!all(needed_cols %in% colnames(correlation_results))) {
+    cat("Note: Metadata columns missing from TSV. Joining with current metadata sources...\n")
+    correlation_results <- correlation_results %>%
+      select(-any_of(needed_cols)) %>%
+      left_join(df_sampleinfo %>% select(sample_name, avg_mapped_read_length), by = c("sample_id" = "sample_name")) %>%
+      left_join(df_taxa %>% select(sample_name, all_of(taxa_plot_cols)), by = c("sample_id" = "sample_name"))
   }
 }
 
@@ -135,82 +241,160 @@ if (!only_summary_plot) {
 # --- Generate Plots ---
 # -----------------------------------------
 if (nrow(correlation_results) > 0) {
-  plot_data <- correlation_results %>% left_join(df_mapping, by = c("sample_id" = "sample_name")) %>%
-    rename(dataset = dataset_batch) %>% filter(!is.na(dataset), dataset != "")
+  
+  # Join with dataset mapping
+  plot_data <- correlation_results %>%
+    left_join(df_mapping, by = c("sample_id" = "sample_name")) %>%
+    rename(dataset = dataset_batch) %>%
+    filter(!is.na(dataset), dataset != "")
 
+  # --- Apply Custom Ordering and Labeling from JSON ---
   final_palette <- NULL
   if (file.exists(mappings_json)) {
+    cat("Applying custom dataset ordering and labeling from:", mappings_json, "\n")
     m_json <- fromJSON(mappings_json)
-    v_order <- m_json$datasetVisualOrder[m_json$datasetVisualOrder %in% unique(plot_data$dataset)]
-    final_order <- c(v_order, setdiff(unique(plot_data$dataset), v_order))
+    v_order  <- m_json$datasetVisualOrder
     v_labels <- unlist(m_json$datasetsLabels)
-    if (!is.null(m_json$datasetsPalette)) {
-      final_palette <- unlist(m_json$datasetsPalette)[names(unlist(m_json$datasetsPalette)) %in% names(v_labels)]
+    v_palette <- unlist(m_json$datasetsPalette)
+    
+    present_datasets <- unique(plot_data$dataset)
+    v_order <- v_order[v_order %in% present_datasets]
+    missing_from_order <- setdiff(present_datasets, v_order)
+    final_order <- c(v_order, missing_from_order)
+    
+    if (!is.null(v_palette)) {
+      final_palette <- v_palette[names(v_palette) %in% names(v_labels)]
       names(final_palette) <- v_labels[names(final_palette)]
     }
-    plot_data <- plot_data %>% mutate(dataset = factor(dataset, levels = final_order)) %>%
-      mutate(dataset_label = ifelse(dataset %in% names(v_labels), v_labels[as.character(dataset)], as.character(dataset))) %>%
+
+    plot_data <- plot_data %>%
+      mutate(dataset = factor(dataset, levels = final_order)) %>%
+      mutate(dataset_label = ifelse(dataset %in% names(v_labels), 
+                                   v_labels[as.character(dataset)], 
+                                   as.character(dataset))) %>%
       mutate(dataset_label = factor(dataset_label, levels = v_labels[as.character(final_order)])) %>%
       mutate(dataset = dataset_label)
   }
 
-  # 1. Summary Pearson Boxplot
-  p_summary <- ggplot(plot_data, aes(x = dataset, y = pearson_r)) +
-    geom_boxplot(alpha = 0.7, outlier.shape = NA, fill = NA, color = "lightgrey") +
-    geom_jitter(aes(color = avg_mapped_read_length), width = 0.2, alpha = 0.5, size = 1.5) +
-    scale_y_continuous(limits = c(0, 1)) + scale_color_viridis_c(option = "viridis") +
-    labs(title = "Pearson Correlation Summary by Dataset", x = "Dataset", y = "Pearson R (log10)", color = "Effective fragment length\n(average mapped length, bp)") +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "right")
-  ggsave(file.path(output_dir, "dataset_pearson_summary.png"), plot = p_summary, width = 14, height = 7, dpi = 150)
+  if (nrow(plot_data) > 0) {
+    
+    # 1. Summary Pearson Boxplot
+    cat("\nGenerating summary boxplot...\n")
+    p_summary <- ggplot(plot_data, aes(x = dataset, y = pearson_r)) +
+      geom_boxplot(alpha = 0.7, outlier.shape = NA, fill = NA, color = "lightgrey") +
+      geom_jitter(aes(color = avg_mapped_read_length), width = 0.2, alpha = 0.5, size = 1.5) +
+      scale_y_continuous(limits = c(0, 1)) +
+      scale_color_viridis_c(option = "viridis") +
+      labs(
+        title = "Pearson Correlation Summary by Dataset",
+        subtitle = "Correlations calculated on log10(counts + 1)",
+        x = "Dataset", y = "Pearson R (log10 counts)",
+        color = "Avg Mapped Read Length"
+      ) +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1),
+            plot.title = element_text(hjust = 0.5),
+            plot.subtitle = element_text(hjust = 0.5),
+            legend.position = "right")
+    
+    ggsave(file.path(output_dir, "dataset_pearson_summary.png"), plot = p_summary, width = 14, height = 7, dpi = 150)
 
-  # 2. Pearson vs Mapped Percentage (Faceted)
-  facet_correlations <- plot_data %>% group_by(dataset) %>%
-    summarize(r_val = cor(mapped_percentage, pearson_r, use = "complete.obs"), n_samples = n(), .groups = "drop") %>%
-    mutate(label = paste0("r = ", round(r_val, 3), "\nn = ", n_samples))
-  p_faceted <- ggplot(plot_data, aes(x = mapped_percentage, y = pearson_r)) +
-    geom_point(aes(color = avg_mapped_read_length), alpha = 0.7, size = 2) +
-    geom_text(data = facet_correlations, aes(x = Inf, y = 0, label = label), 
-              hjust = 1.1, vjust = -0.5, size = 3, family = "Arial", inherit.aes = FALSE) +
-    scale_y_continuous(limits = c(0, 1)) + scale_color_viridis_c(option = "viridis") +
-    facet_wrap(~dataset, ncol = 6) + labs(title = "", x = "% reads mapped to the human genome", y = "Pearson R (log10)", color = "Effective fragment length\n(average mapped length, bp)") +
-    theme(legend.position = "bottom")
-  ggsave(file.path(output_dir, "all_datasets_mapped_pct_vs_pearson.png"), plot = p_faceted, width = 18, height = 3 * ceiling(length(unique(plot_data$dataset))/6) + 2, dpi = 150)
+    # 2. Taxonomic Metric Plots (Faceted)
+    for (t_col in taxa_plot_cols) {
+      cat("\nGenerating consolidated Pearson vs", t_col, "plot...\n")
 
-  # 3. Pearson vs Avg Mapped Read Length (Global) + STATS
-  cat("\nGenerating Pearson vs Avg Mapped Read Length plot and statistical analysis...\n")
-  global_r <- cor(plot_data$avg_mapped_read_length, plot_data$pearson_r, use = "complete.obs")
-  p_rl <- ggplot(plot_data, aes(x = avg_mapped_read_length, y = pearson_r)) +
-    geom_point(aes(color = dataset), alpha = 0.6, size = 2) +
-    geom_smooth(method = "loess", color = "black", se = FALSE, linetype = "solid", linewidth = 0.8) +
-    scale_y_continuous(limits = c(0, 1)) + labs(title = "", x = "Effective fragment length\n(average mapped length, bp)", y = "Pearson R\n(human-only vs unfiltered reads-based quantifications", color = "Dataset") +
-    theme(legend.position = "right")
-  if (!is.null(final_palette)) p_rl <- p_rl + scale_color_manual(values = final_palette)
-  ggsave(file.path(output_dir, "pearson_vs_read_length.png"), plot = p_rl, width = 12, height = 7, dpi = 150)
+      # Drop rows with NA in the current taxa column; avoids empty facets and
+      # suppresses "removed N rows" warnings from geom_point
+      plot_data_t <- plot_data %>% filter(!is.na(.data[[t_col]]))
 
-  # --- Threshold Statistical Analysis (X = 100) ---
-  threshold <- 100
-  stat_data <- plot_data %>% filter(!is.na(avg_mapped_read_length), !is.na(pearson_r)) %>%
-    mutate(group = ifelse(avg_mapped_read_length < threshold, paste0("< ", threshold), paste0(">= ", threshold)))
-  
-  group_summary <- stat_data %>% group_by(group) %>%
-    summarize(n = n(), mean_r = mean(pearson_r), median_r = median(pearson_r), sd_r = sd(pearson_r), .groups = "drop")
-  
-  # Wilcoxon rank sum test (non-parametric)
-  wilcox_res <- wilcox.test(pearson_r ~ group, data = stat_data)
-  
-  stats_file <- file.path(output_dir, "read_length_threshold_analysis.txt")
-  sink(stats_file)
-  cat("========================================================================\n")
-  cat("Statistical Analysis: Pearson R by Read Length Threshold (", threshold, "bp)\n", sep="")
-  cat("========================================================================\n\n")
-  cat("Group Summary Statistics:\n")
-  print(as.data.frame(group_summary))
-  cat("\n------------------------------------------------------------------------\n")
-  cat("Hypothesis: Pearson R values differ between the two groups.\n\n")
-  cat("1. Wilcoxon Rank Sum Test with Continuity Correction (Non-Parametric):\n")
-  print(wilcox_res)
-  sink()
-  cat("Statistical analysis results saved to:", stats_file, "\n")
+      # Report datasets that were entirely dropped for this taxa column
+      dropped_ds <- setdiff(unique(plot_data$dataset), unique(plot_data_t$dataset))
+      if (length(dropped_ds) > 0) {
+        cat("  Note: no", t_col, "data for dataset(s):", paste(dropped_ds, collapse = ", "), "\n")
+      }
+
+      facet_correlations <- plot_data_t %>%
+        group_by(dataset) %>%
+        summarize(
+          # Guard: cor() hard-errors when no complete pairs exist; return NA instead
+          r_val = {
+            x <- .data[[t_col]]
+            y <- pearson_r
+            ok <- !is.na(x) & !is.na(y)  # logical mask for complete pairs
+            if (sum(ok) < 2) NA_real_ else cor(x[ok], y[ok])
+          },
+          n_samples = n(), .groups = "drop"  # n = samples with valid taxa data
+        ) %>%
+        mutate(label = ifelse(
+          is.na(r_val),
+          paste0("r = NA\nn = ", n_samples),
+          paste0("r = ", round(r_val, 3), "\nn = ", n_samples)
+        ))
+
+      p_faceted <- ggplot(plot_data_t, aes(x = .data[[t_col]], y = pearson_r)) +
+        geom_point(aes(color = avg_mapped_read_length), alpha = 0.7, size = 2) +
+        geom_text(data = facet_correlations, aes(x = Inf, y = 0, label = label), 
+                  hjust = 1.1, vjust = -0.5, size = 3, family = "Arial", inherit.aes = FALSE) +
+        scale_y_continuous(limits = c(0, 1)) +
+        scale_color_viridis_c(option = "viridis") +
+        facet_wrap(~dataset, ncol = 6) +
+        labs(
+          title = paste("Pearson R vs", t_col, "by Dataset"),
+          subtitle = "Facets show correlation between metric and Pearson R",
+          x = paste(t_col, "(%)"), y = "Pearson R (log10 counts)",
+          color = "Avg Mapped Read Length"
+        ) +
+        theme(plot.title = element_text(hjust = 0.5),
+              plot.subtitle = element_text(hjust = 0.5),
+              legend.position = "bottom")
+      
+      n_datasets <- length(unique(plot_data_t$dataset))  # count only datasets with data for this taxa column
+      n_rows <- ceiling(n_datasets / 6)
+      ggsave(file.path(output_dir, paste0("all_datasets_", t_col, "_vs_pearson.png")), 
+             plot = p_faceted, width = 18, height = 3 * n_rows + 2, dpi = 150)
+    }
+
+    # 3. Pearson vs Avg Mapped Read Length (Global) + STATS
+    cat("\nGenerating Pearson vs Avg Mapped Read Length plot and statistical analysis...\n")
+    global_r <- cor(plot_data$avg_mapped_read_length, plot_data$pearson_r, use = "complete.obs")
+    p_rl <- ggplot(plot_data, aes(x = avg_mapped_read_length, y = pearson_r)) +
+      geom_point(aes(color = dataset), alpha = 0.6, size = 2) +
+      geom_smooth(method = "loess", color = "black", se = FALSE, linetype = "solid", linewidth = 0.8) +
+      scale_y_continuous(limits = c(0, 1)) + 
+      labs(title = "Pearson R vs Avg Mapped Read Length", 
+           subtitle = paste0("Global Pearson r = ", round(global_r, 3)),
+           x = "Effective fragment length\n(average mapped length, bp)", y = "Pearson R", color = "Dataset") +
+      theme(plot.title = element_text(hjust = 0.5),
+            plot.subtitle = element_text(hjust = 0.5),
+            legend.position = "right")
+    if (!is.null(final_palette)) p_rl <- p_rl + scale_color_manual(values = final_palette)
+    ggsave(file.path(output_dir, "pearson_vs_read_length.png"), plot = p_rl, width = 12, height = 7, dpi = 150)
+
+    # --- Threshold Statistical Analysis (X = 100) ---
+    threshold <- 100
+    stat_data <- plot_data %>% filter(!is.na(avg_mapped_read_length), !is.na(pearson_r)) %>%
+      mutate(group = ifelse(avg_mapped_read_length < threshold, paste0("< ", threshold), paste0(">= ", threshold)))
+    
+    group_summary <- stat_data %>% group_by(group) %>%
+      summarize(n = n(), mean_r = mean(pearson_r), median_r = median(pearson_r), sd_r = sd(pearson_r), .groups = "drop")
+    
+    wilcox_res <- wilcox.test(pearson_r ~ group, data = stat_data)
+    
+    stats_file <- file.path(output_dir, "read_length_threshold_analysis.txt")
+    sink(stats_file)
+    cat("========================================================================\n")
+    cat("Statistical Analysis: Pearson R by Read Length Threshold (", threshold, "bp)\n", sep="")
+    cat("========================================================================\n\n")
+    cat("Group Summary Statistics:\n")
+    print(as.data.frame(group_summary))
+    cat("\n------------------------------------------------------------------------\n")
+    cat("Hypothesis: Pearson R values differ between the two groups.\n\n")
+    cat("Wilcoxon Rank Sum Test with Continuity Correction (Non-Parametric):\n")
+    print(wilcox_res)
+    sink()
+    cat("Statistical analysis results saved to:", stats_file, "\n")
+  } else {
+    cat("WARNING: No samples with valid dataset mapping remaining. Skipping plots.\n")
+  }
 }
 
 cat("\nDone.\n")
