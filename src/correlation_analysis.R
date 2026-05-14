@@ -286,10 +286,10 @@ if (nrow(correlation_results) > 0) {
       scale_y_continuous(limits = c(0, 1)) +
       scale_color_viridis_c(option = "viridis") +
       labs(
-        title = "Pearson Correlation Summary by Dataset",
-        subtitle = "Correlations calculated on log10(counts + 1)",
+        title = "",
+        subtitle = "",
         x = "Dataset", y = "Pearson R (log10 counts)",
-        color = "Avg Mapped Read Length"
+        color = "Effective Fragment Length (EFL)\n(avg. mapped length, bp)"
       ) +
       theme(axis.text.x = element_text(angle = 45, hjust = 1),
             plot.title = element_text(hjust = 0.5),
@@ -338,10 +338,10 @@ if (nrow(correlation_results) > 0) {
         scale_color_viridis_c(option = "viridis") +
         facet_wrap(~dataset, ncol = 6) +
         labs(
-          title = paste("Pearson R vs", t_col, "by Dataset"),
-          subtitle = "Facets show correlation between metric and Pearson R",
-          x = paste(t_col, "(%)"), y = "Pearson R (log10 counts)",
-          color = "Avg Mapped Read Length"
+          title = "",
+          subtitle = "",
+          x = paste(t_col, "(%)"), y = "Pearson R\n(human-only vs unfiltered reads-based quantifications)",
+          color = "Effective Fragment Length (EFL)\n(avg. mapped length, bp)"
         ) +
         theme(plot.title = element_text(hjust = 0.5),
               plot.subtitle = element_text(hjust = 0.5),
@@ -360,9 +360,9 @@ if (nrow(correlation_results) > 0) {
       geom_point(aes(color = dataset), alpha = 0.6, size = 2) +
       geom_smooth(method = "loess", color = "black", se = FALSE, linetype = "solid", linewidth = 0.8) +
       scale_y_continuous(limits = c(0, 1)) + 
-      labs(title = "Pearson R vs Avg Mapped Read Length", 
+      labs(title = "", 
            subtitle = paste0("Global Pearson r = ", round(global_r, 3)),
-           x = "Effective fragment length\n(average mapped length, bp)", y = "Pearson R", color = "Dataset") +
+           x = "Effective fragment length\n(average mapped length, bp)", y = "Pearson R\n(human-only vs unfiltered reads-based quantifications)", color = "Dataset") +
       theme(plot.title = element_text(hjust = 0.5),
             plot.subtitle = element_text(hjust = 0.5),
             legend.position = "right")
