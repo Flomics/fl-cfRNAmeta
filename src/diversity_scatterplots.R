@@ -128,30 +128,30 @@ add_bottom_brackets <- function(p, bracket_df, factor_levels, y_base = -0.03, he
     x2 <- which(factor_levels == bracket_df$xmax[i])
     if (length(x1) == 0 || length(x2) == 0) next
 
-    offset  <- 0.004
-    x_start <- ((x1 - 1) / length(factor_levels)) + offset
-    x_end   <- (x2 / length(factor_levels)) - offset
-
     bracket <- linesGrob(
-      x = unit.c(unit(x_start, "npc"), unit(x_end, "npc")),
+      x = unit.c(unit(0, "npc"), unit(1, "npc")),
       y = unit(c(y_base, y_base), "npc"),
       gp = gpar(col = col, lwd = lwd)
     )
 
     verticals <- gList(
       linesGrob(
-        x = unit.c(unit(x_start, "npc"), unit(x_start, "npc")),
+        x = unit.c(unit(0, "npc"), unit(0, "npc")),
         y = unit(c(y_base, y_base - height), "npc"),
         gp = gpar(col = col, lwd = lwd)
       ),
       linesGrob(
-        x = unit.c(unit(x_end, "npc"), unit(x_end, "npc")),
+        x = unit.c(unit(1, "npc"), unit(1, "npc")),
         y = unit(c(y_base, y_base - height), "npc"),
         gp = gpar(col = col, lwd = lwd)
       )
     )
 
-    p <- p + annotation_custom(grobTree(bracket, verticals))
+    p <- p + annotation_custom(
+      grob = grobTree(bracket, verticals),
+      xmin = x1 - 0.5,
+      xmax = x2 + 0.5
+    )
   }
   return(p)
 }

@@ -1,6 +1,19 @@
-library(dplyr)
 library(tidyr)
 library(data.table)
+library(ggplot2)
+library(dplyr)
+library(ggpubr)
+library(scales)
+library(ggside)
+library(ggnewscale)
+library(grid)
+library(jsonlite)
+library(colorspace)
+library(showtext)
+library(svglite)
+library("extrafont")
+loadfonts()
+
 
 suppressMessages(library("variancePartition"))
 suppressMessages(library("edgeR"))
@@ -55,8 +68,7 @@ VP_NUMERIC <- c(
   "percentage_of_spliced_reads",           # FSR
   "exonic_reads_minus_spike_ins",          # FER
   "platelet.y",
-  "mapped_fragments",
-  "read_number"
+  "mapped_fragments"
 )
 
 VP_CATEGORICAL <- c(

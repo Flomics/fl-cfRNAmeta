@@ -143,36 +143,36 @@ column_names <- c(column_names, "percent_of_multimapped_reads_total_reads_mapped
 #write.table(table_filtered, file="Qc_table_filtered.tsv", row.names = FALSE)
 table_filtered$spike_in_pct <- table_filtered$spike_in_pct * 100
 
-add_bottom_brackets <- function(p, bracket_df, factor_levels, y_base = -0.03, height = 0.015, col="black", lwd=0.8) {
+add_bottom_brackets <- function(p, bracket_df, factor_levels, y_base = -0.03, height = 0.015, col = "black", lwd = 0.8) {
   for (i in seq_len(nrow(bracket_df))) {
     x1 <- which(factor_levels == bracket_df$xmin[i])
     x2 <- which(factor_levels == bracket_df$xmax[i])
     if (length(x1) == 0 || length(x2) == 0) next
-    
-    offset <- 0.004
-    x_start <- ((x1 - 1) / length(factor_levels)) + offset
-    x_end   <- (x2 / length(factor_levels)) - offset
-    
+
     bracket <- linesGrob(
-      x = unit.c(unit(x_start, "npc"), unit(x_end, "npc")),
+      x = unit.c(unit(0, "npc"), unit(1, "npc")),
       y = unit(c(y_base, y_base), "npc"),
       gp = gpar(col = col, lwd = lwd)
     )
-    
+
     verticals <- gList(
       linesGrob(
-        x = unit.c(unit(x_start, "npc"), unit(x_start, "npc")),
+        x = unit.c(unit(0, "npc"), unit(0, "npc")),
         y = unit(c(y_base, y_base - height), "npc"),
         gp = gpar(col = col, lwd = lwd)
       ),
       linesGrob(
-        x = unit.c(unit(x_end, "npc"), unit(x_end, "npc")),
+        x = unit.c(unit(1, "npc"), unit(1, "npc")),
         y = unit(c(y_base, y_base - height), "npc"),
         gp = gpar(col = col, lwd = lwd)
       )
     )
-    
-    p <- p + annotation_custom(grobTree(bracket, verticals))
+
+    p <- p + annotation_custom(
+      grob = grobTree(bracket, verticals),
+      xmin = x1 - 0.5,
+      xmax = x2 + 0.5
+    )
   }
   return(p)
 }
@@ -1178,39 +1178,8 @@ ggsave("figures/ng80_mrna_non_transformed_axis.svg", p, width = 11, height = 6, 
 # NpcG80 vs NG80
 ###############################
 
-add_bottom_brackets_filtered <- function(p, bracket_df, x_levels, offset = 0.005, y_base = -0.03, height = 0.015, col = "black", lwd = 0.95) {
-  for (i in seq_len(nrow(bracket_df))) {
-    x1 <- which(x_levels == bracket_df$xmin[i])
-    x2 <- which(x_levels == bracket_df$xmax[i])
-    if (length(x1) == 0 || length(x2) == 0) next
-    
-    # Add small spacing between brackets
-    offset <- 0.005 #spacing
-    x_start <- ((x1 - 1) / length(core_order_filtered)) + offset  # LEFT tick
-    x_end   <- (x2 / length(core_order_filtered)) - offset  
-    
-    bracket <- linesGrob(
-      x = unit.c(unit(x_start, "npc"), unit(x_end, "npc")),
-      y = unit(c(y_base, y_base), "npc"),
-      gp = gpar(col = col, lwd = lwd)
-    )
-    
-    verticals <- gList(
-      linesGrob(
-        x = unit.c(unit(x_start, "npc"), unit(x_start, "npc")),
-        y = unit(c(y_base, y_base - height), "npc"),
-        gp = gpar(col = col, lwd = lwd)
-      ),
-      linesGrob(
-        x = unit.c(unit(x_end, "npc"), unit(x_end, "npc")),
-        y = unit(c(y_base, y_base - height), "npc"),
-        gp = gpar(col = col, lwd = lwd)
-      )
-    )
-    
-    p <- p + annotation_custom(grobTree(bracket, verticals))
-  }
-  return(p)
+add_bottom_brackets_filtered <- function(p, bracket_df, x_levels, y_base = -0.03, height = 0.015, col = "black", lwd = 0.95) {
+  add_bottom_brackets(p, bracket_df, x_levels, y_base = y_base, height = height, col = col, lwd = lwd)
 }
 
 
