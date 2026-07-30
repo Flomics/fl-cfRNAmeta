@@ -179,7 +179,8 @@ phenotype_merged_plot_data$phenotype_merged <- factor(phenotype_merged_plot_data
 merged_colors <- merged_colors[legend_order]
 
 add_bottom_brackets <- function(p, bracket_df, factor_levels = NULL, y_base = 0.03,
-                                height = 0.015, col = "black", lwd = 0.8) {
+                                height = 0.015, col = "black", lwd = 0.8,
+                                x_inset = 0.04) {
   built <- ggplot_build(p)
   plot_levels <- built$layout$panel_params[[1]]$x$limits
   if (is.null(plot_levels)) {
@@ -210,6 +211,10 @@ add_bottom_brackets <- function(p, bracket_df, factor_levels = NULL, y_base = 0.
         x_start <- start_row$xmin
         x_end <- end_row$xmax
       }
+    }
+    if ((x_end - x_start) > (2 * x_inset)) {
+      x_start <- x_start + x_inset
+      x_end <- x_end - x_inset
     }
 
     bracket <- linesGrob(

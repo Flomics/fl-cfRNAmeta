@@ -1,4 +1,4 @@
-library(ggplot2)
+  library(ggplot2)
 library(dplyr)
 library(ggpubr)
 library(scales)
@@ -107,6 +107,18 @@ datasetsLabels <- ds_maps$datasetsLabels
 core_order <- ds_maps$core_order
 datasetsPalette <- ds_maps$datasetsPalette
 
+analysis_batch_map <- unlist(mappings$datasetAnalysisBatch)
+threshold_batch_map <- analysis_batch_map[core_order]
+threshold_batch_map[is.na(threshold_batch_map)] <- core_order[is.na(threshold_batch_map)]
+threshold_group_sizes <- table(threshold_batch_map)
+threshold_dataset_map <- setNames(
+  ifelse(threshold_group_sizes[threshold_batch_map] > 1, threshold_batch_map, core_order),
+  core_order
+)
+threshold_order <- unique(unname(threshold_dataset_map[core_order]))
+threshold_palette <- datasetsPalette[threshold_order]
+threshold_labels <- datasetsLabels[threshold_order]
+
 table_filtered$dataset_batch.y <- factor(table_filtered$dataset_batch.y, levels = core_order)
 
 column_names <- c(column_names, "percent_of_reads_mapping_to_spike_ins", "log_genes_80")
@@ -145,7 +157,8 @@ column_names <- c(column_names, "percent_of_multimapped_reads_total_reads_mapped
 table_filtered$spike_in_pct <- table_filtered$spike_in_pct * 100
 
 add_bottom_brackets <- function(p, bracket_df, factor_levels = NULL, y_base = 0.03,
-                                height = 0.015, col = "black", lwd = 0.8) {
+                                height = 0.015, col = "black", lwd = 0.8,
+                                x_inset = 0.04) {
   built <- ggplot_build(p)
   plot_levels <- built$layout$panel_params[[1]]$x$limits
   if (is.null(plot_levels)) {
@@ -176,6 +189,10 @@ add_bottom_brackets <- function(p, bracket_df, factor_levels = NULL, y_base = 0.
         x_start <- start_row$xmin
         x_end <- end_row$xmax
       }
+    }
+    if ((x_end - x_start) > (2 * x_inset)) {
+      x_start <- x_start + x_inset
+      x_end <- x_end - x_inset
     }
 
     bracket <- linesGrob(
@@ -582,29 +599,31 @@ ggsave("figures/high_quality_sample_fraction_barplot_2.svg", quality_plot, width
 
 # ─── Helper function ─────────────────────────────────────────────────────────
 make_threshold_plot <- function(data, metric_col, thresholds, x_label, y_label = "% of samples passing threshold") {
+  data_threshold <- data %>%
+    mutate(dataset = threshold_dataset_map[as.character(dataset_batch.y)])
   
   # For each dataset and threshold, compute fraction passing
   threshold_df <- expand.grid(
-    dataset   = unique(data$dataset_batch.y),
+    dataset   = threshold_order,
     threshold = thresholds
   ) %>%
     rowwise() %>%
     mutate(
       fraction = {
-        vals <- data[[metric_col]][data$dataset_batch.y == dataset]
+        vals <- data_threshold[[metric_col]][data_threshold$dataset == dataset]
         vals <- vals[!is.na(vals)]
         if (length(vals) == 0) NA_real_
         else sum(vals >= threshold) / length(vals) * 100
       }
     ) %>%
     ungroup() %>%
-    mutate(dataset = factor(dataset, levels = core_order))
+    mutate(dataset = factor(dataset, levels = threshold_order))
   
   p <- ggplot(threshold_df, aes(x = threshold, y = fraction, color = dataset)) +
     geom_line(linewidth = 0.7, alpha = 0.85) +
     scale_color_manual(
-      values = adjusted_palette,
-      labels = datasetsLabels[core_order],
+      values = threshold_palette,
+      labels = threshold_labels,
       drop   = TRUE,
       name   = "Dataset"
     ) +
@@ -633,10 +652,11 @@ make_threshold_plot <- function(data, metric_col, thresholds, x_label, y_label =
   return(p)
 }
 
-# Make sure palette is set correctly (raw IDs as names)
-# table_filtered$dataset_batch.y <- factor(table_filtered$dataset_batch.y, levels = core_order)
-# adjusted_palette <- datasetsPalette[core_order]
-# names(adjusted_palette) <- core_order
+# Make sure threshold plots use batch-safe colors while facet plots below can still
+# relabel datasets independently.
+table_filtered$dataset_batch.y <- factor(table_filtered$dataset_batch.y, levels = core_order)
+adjusted_palette <- datasetsPalette[core_order]
+names(adjusted_palette) <- core_order
 
 # ─── Plot 1: NG80 threshold ───────────────────────────────────────────────────
 p_sens_ng80 <- make_threshold_plot(
@@ -689,19 +709,20 @@ ggsave("figures/sensitivity_fer_threshold.svg", p_sens_fer,
 ############################### For slide deck
 ##############################################
 
-table_filtered$collapsed_batch <- as.character(table_filtered$dataset_batch.y)
+table_filtered_slides <- table_filtered
+table_filtered_slides$collapsed_batch <- as.character(table_filtered_slides$dataset_batch.y)
 
-table_filtered$collapsed_batch[table_filtered$dataset_batch.y %in% c("reggiardo_bioivt", "reggiardo_dls")] <- "reggiardo"
-table_filtered$collapsed_batch[table_filtered$dataset_batch.y %in% c("block_150bp", "block_300bp")] <- "block"
-table_filtered$collapsed_batch[table_filtered$dataset_batch.y %in% c("moufarrej_site_1", "moufarrej_site_2")] <- "moufarrej"
-table_filtered$collapsed_batch[table_filtered$dataset_batch.y %in% c("roskams_pilot", "roskams_validation")] <- "roskams"
-table_filtered$collapsed_batch[table_filtered$dataset_batch.y %in% c("giraldez_standard", "giraldez_phospho-rna-seq")] <- "giraldez"
+table_filtered_slides$collapsed_batch[table_filtered_slides$dataset_batch.y %in% c("reggiardo_bioivt", "reggiardo_dls")] <- "reggiardo"
+table_filtered_slides$collapsed_batch[table_filtered_slides$dataset_batch.y %in% c("block_150bp", "block_300bp")] <- "block"
+table_filtered_slides$collapsed_batch[table_filtered_slides$dataset_batch.y %in% c("moufarrej_site_1", "moufarrej_site_2")] <- "moufarrej"
+table_filtered_slides$collapsed_batch[table_filtered_slides$dataset_batch.y %in% c("roskams_pilot", "roskams_validation")] <- "roskams"
+table_filtered_slides$collapsed_batch[table_filtered_slides$dataset_batch.y %in% c("giraldez_standard", "giraldez_phospho-rna-seq")] <- "giraldez"
 
-table_filtered <- table_filtered %>%
+table_filtered_slides <- table_filtered_slides %>%
   filter(!collapsed_batch %in% c("wei", "rozowsky", "chalasani", "ibarra_buffy_coat", "ibarra_plasma_cancer", "ibarra_plasma_non_cancer", "ibarra_serum", "toden"))
 
 
-quality_summary <- table_filtered %>%
+quality_summary <- table_filtered_slides %>%
   mutate(
     high_quality = genes_contributing_to_80._of_reads > 1000 &
       (percentage_of_spliced_reads > 20 | exonic_reads_minus_spike_ins > 75)
@@ -1117,18 +1138,30 @@ ggsave("figures/ng80_non_transformed_axis_2_no_spikeins_scaled_2.svg", p, width 
 # NG80 protein coding
 ################################
 
-#ng_only_mrna <- read.delim("tables/genes_contributing_to_percentage_reads.tsv")
+ng_only_mrna <- read.delim("tables/genes_contributing_to_percentage_reads.tsv")
 
 ng80_table <- table_filtered %>%
-  left_join(ng_only_mrna, by = c("sample_name" = "Sample"))
+  left_join(
+    ng_only_mrna %>%
+      select(Sample, number_of_genes_contributing_to_80._of_reads) %>%
+      rename(number_of_genes_contributing_to_80._of_reads_pc = number_of_genes_contributing_to_80._of_reads),
+    by = c("sample_name" = "Sample")
+  ) %>%
+  left_join(
+    ng_no_spike_ins %>%
+      select(Sample, number_of_genes_contributing_to_80._of_reads) %>%
+      rename(number_of_genes_contributing_to_80._of_reads_no_spike = number_of_genes_contributing_to_80._of_reads),
+    by = c("sample_name" = "Sample")
+  )
 
-ng80_table$log_genes_80_pc <- log(ng80_table$number_of_genes_contributing_to_80._of_reads)
+ng80_table$number_of_genes_contributing_to_80._of_reads_pc <- as.numeric(ng80_table$number_of_genes_contributing_to_80._of_reads_pc)
+ng80_table$log_genes_80_pc <- log(ng80_table$number_of_genes_contributing_to_80._of_reads_pc)
 
 y_breaks <- log(c(100, 500, 1000, 5000, 10000, 20000))
 
 y_labels <- c(100, 500, 1000, 5000, 10000, 20000)
 
-y_vals <- ng80_table$log_genes_80
+y_vals <- ng80_table$log_genes_80_pc
 y_min <- min(y_vals, na.rm = TRUE)
 y_max <- max(y_vals, na.rm = TRUE)
 y_range <- y_max - y_min
@@ -1145,9 +1178,9 @@ bottom_annotation_df <- ng80_table %>%
     broad_protocol_category = factor(broad_protocol_category, levels = bpc_order)
   )
 
-p <- ggplot(ng80_table, aes(x = dataset_batch.y, y = log_genes_80, fill = dataset_batch.y)) +
+p <- ggplot(ng80_table, aes(x = dataset_batch.y, y = log_genes_80_pc, fill = dataset_batch.y)) +
   geom_boxplot(alpha = 0.3, aes(color = dataset_batch.y), position = position_dodge(width = 0.75), outlier.shape = NA) +
-  geom_point(aes(y = log_genes_80, color = dataset_batch.y), 
+  geom_point(aes(y = log_genes_80_pc, color = dataset_batch.y), 
              position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.8), 
              shape = 21, size = 1.5, stroke = 0.2, alpha = 0.6) +
   labs(title = "",
@@ -1214,7 +1247,7 @@ add_bottom_brackets_filtered <- function(p, bracket_df, x_levels, y_base = -0.03
 
 
 #ng80_table$ratio <- ng80_table$number_of_genes_contributing_to_80._of_reads / ng80_table$genes_contributing_to_80._of_reads
-ng80_table$ratio <- ng80_table$number_of_genes_contributing_to_80._of_reads /  ng_no_spike_ins_table$number_of_genes_contributing_to_80._of_reads
+ng80_table$ratio <- ng80_table$number_of_genes_contributing_to_80._of_reads_pc / ng80_table$number_of_genes_contributing_to_80._of_reads_no_spike
 
 
 y_breaks <- log(c(100, 500, 1000, 5000, 10000, 20000))
@@ -1311,7 +1344,7 @@ p <- p +
 
 p <- add_bottom_brackets_filtered(p, bracket_df, levels(ng80_table$dataset_batch.y),  y_base = 0.03)
 
-ggsave("figures/ng80_ratio_non_transformed_axis_filtered_2_no_spikein.png", width = 2.235, height = 3.35*(3/5), dpi = 600, device = ragg::agg_png, scaling =5/12, units = "in")
+ggsave("figures/ng80_ratio_non_transformed_axis_filtered_2_no_spikein.png", p, width = 2.235, height = 3.35*(3/5), dpi = 600, device = ragg::agg_png, scaling =5/12, units = "in")
 ggsave("figures/ng80_ratio_non_transformed_axis_filtered_2_no_spikein.svg", p, width = 2.235, height = 3.35*(3/5), units = "in", dpi = 600, scaling =5/12, device = "svg")
 
 
