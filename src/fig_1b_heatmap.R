@@ -145,10 +145,12 @@ get_palette_with_na <- function(varname, base, expand = TRUE) {
   return(color_map)
 }
 
-mappings <- fromJSON("src/dataset_mappings.json")
+source("src/load_dataset_mappings.R")
+ds_maps <- load_dataset_mappings("src/dataset_mappings.json")
+mappings <- ds_maps$mappings
 
-clean_dataset_names <- unlist(mappings$datasetsLabels)
-core_order <- unlist(mappings$datasetVisualOrder)
+clean_dataset_names <- ds_maps$datasetsLabels
+core_order <- ds_maps$core_order
 
 ordered_datasets <- c(clean_dataset_names[core_order])
 

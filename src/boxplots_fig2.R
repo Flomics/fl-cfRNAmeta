@@ -100,11 +100,12 @@ table_filtered <- filtered_data # NOT removing high spike-in samples
 
 num_datasets <- length(unique(table_filtered$dataset_batch.y))
 
-mappings <- fromJSON("src/dataset_mappings.json")
-
-datasetsLabels <- unlist(mappings$datasetsLabels)
-core_order <- unlist(mappings$datasetVisualOrder)
-datasetsPalette <- unlist(mappings$datasetsPalette)
+source("src/load_dataset_mappings.R")
+ds_maps <- load_dataset_mappings("src/dataset_mappings.json")
+mappings <- ds_maps$mappings
+datasetsLabels <- ds_maps$datasetsLabels
+core_order <- ds_maps$core_order
+datasetsPalette <- ds_maps$datasetsPalette
 
 table_filtered$dataset_batch.y <- factor(table_filtered$dataset_batch.y, levels = core_order)
 
@@ -143,11 +144,39 @@ column_names <- c(column_names, "percent_of_multimapped_reads_total_reads_mapped
 #write.table(table_filtered, file="Qc_table_filtered.tsv", row.names = FALSE)
 table_filtered$spike_in_pct <- table_filtered$spike_in_pct * 100
 
-add_bottom_brackets <- function(p, bracket_df, factor_levels, y_base = -0.03, height = 0.015, col = "black", lwd = 0.8) {
+add_bottom_brackets <- function(p, bracket_df, factor_levels = NULL, y_base = 0.03,
+                                height = 0.015, col = "black", lwd = 0.8) {
+  built <- ggplot_build(p)
+  plot_levels <- built$layout$panel_params[[1]]$x$limits
+  if (is.null(plot_levels)) {
+    plot_levels <- factor_levels
+  }
+
+  tile_layer <- NULL
+  for (layer in built$data) {
+    if (all(c("x", "ymin", "ymax") %in% names(layer)) &&
+        nrow(layer) <= length(plot_levels) &&
+        length(unique(layer$ymin)) == 1) {
+      tile_layer <- layer
+      break
+    }
+  }
+
   for (i in seq_len(nrow(bracket_df))) {
-    x1 <- which(factor_levels == bracket_df$xmin[i])
-    x2 <- which(factor_levels == bracket_df$xmax[i])
-    if (length(x1) == 0 || length(x2) == 0) next
+    x1 <- match(bracket_df$xmin[i], plot_levels)
+    x2 <- match(bracket_df$xmax[i], plot_levels)
+    if (is.na(x1) || is.na(x2)) next
+
+    x_start <- x1 - 0.5
+    x_end <- x2 + 0.5
+    if (!is.null(tile_layer) && all(c("x", "xmin", "xmax") %in% names(tile_layer))) {
+      start_row <- tile_layer[tile_layer$x == x1, , drop = FALSE]
+      end_row <- tile_layer[tile_layer$x == x2, , drop = FALSE]
+      if (nrow(start_row) == 1 && nrow(end_row) == 1) {
+        x_start <- start_row$xmin
+        x_end <- end_row$xmax
+      }
+    }
 
     bracket <- linesGrob(
       x = unit.c(unit(0, "npc"), unit(1, "npc")),
@@ -170,10 +199,11 @@ add_bottom_brackets <- function(p, bracket_df, factor_levels, y_base = -0.03, he
 
     p <- p + annotation_custom(
       grob = grobTree(bracket, verticals),
-      xmin = x1 - 0.5,
-      xmax = x2 + 0.5
+      xmin = x_start,
+      xmax = x_end
     )
   }
+
   return(p)
 }
 
@@ -282,7 +312,7 @@ ggplot_objects <- lapply(column_names, function(col_name) {
           line = element_blank(),
           panel.grid.major.x = element_blank(),
           panel.grid.minor.x = element_blank(),
-          panel.grid.major.y = element_line(size = 0.8), 
+          panel.grid.major.y = element_line(size = 0.8, colour = "grey90"), 
           panel.grid.minor.y = element_blank(),
           #plot.margin = margin(0, 0, 0, 28),
           axis.text.x = element_text(angle = 45, hjust = 1, vjust=1.1, size = 12),
@@ -497,7 +527,7 @@ quality_plot <- ggplot(quality_summary, aes(x = dataset_batch.y, y = percent_hig
         line = element_blank(),
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank(),
-        panel.grid.major.y = element_line(size = 0.8), 
+        panel.grid.major.y = element_line(size = 0.8, colour = "grey90"), 
         panel.grid.minor.y = element_blank(),
         axis.text.x = element_text(angle = 45, hjust = 1, size = 12, vjust=1.1),
         axis.title = element_text(size = 12, face = "bold"),
@@ -594,7 +624,7 @@ make_threshold_plot <- function(data, metric_col, thresholds, x_label, y_label =
       legend.key.height  = unit(0.5, "lines"),
       panel.grid.major.x = element_blank(),
       panel.grid.minor.x = element_blank(),
-      panel.grid.major.y = element_line(linewidth = 0.8),
+      panel.grid.major.y = element_line(linewidth = 0.8, colour = "grey90"),
       panel.grid.minor.y = element_blank(),
       plot.background    = element_rect(fill = "white", colour = "white")
     ) +
@@ -738,7 +768,7 @@ quality_plot <- ggplot(quality_summary, aes(x = collapsed_batch, y = percent_hig
         line = element_blank(),
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank(),
-        panel.grid.major.y = element_line(size = 0.8), 
+        panel.grid.major.y = element_line(size = 0.8, colour = "grey90"), 
         panel.grid.minor.y = element_blank(),
         axis.text.x = element_text(angle = 45, hjust = 1, size = 12, vjust=1.5), #or
         axis.title = element_text(size = 12, face = "bold"),
@@ -838,7 +868,7 @@ p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = Fragments_mapping_to_ex
         plot.margin = margin(20, 20, 20, 45),
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank(),
-        panel.grid.major.y = element_line(size = 0.8), 
+        panel.grid.major.y = element_line(size = 0.8, colour = "grey90"), 
         panel.grid.minor.y = element_blank(),
         axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust = 1.1),
         axis.title = element_text(size = 12, face = "bold"),
@@ -950,7 +980,7 @@ p <- ggplot(table_filtered, aes(x = dataset_batch.y, y = fragment_number, fill =
         plot.margin = margin(20, 20, 20, 45),        
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank(),
-        panel.grid.major.y = element_line(size = 0.8), 
+        panel.grid.major.y = element_line(size = 0.8, colour = "grey90"), 
         panel.grid.minor.y = element_blank(),
         axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust = 1.1),
         axis.title = element_text(size = 12, face = "bold"),
@@ -1039,7 +1069,7 @@ p <- ggplot(table_filtered_ng80, aes(x = dataset_batch.y, y = log_genes_80, fill
          plot.margin = margin(0, 0, 0, 12),      
          panel.grid.major.x = element_blank(),
          panel.grid.minor.x = element_blank(),
-         panel.grid.major.y = element_line(size = 0.8), 
+         panel.grid.major.y = element_line(size = 0.8, colour = "grey90"), 
          panel.grid.minor.y = element_blank(),
          axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1.1, size=12),
          axis.title = element_text(face = "bold", size = 12),
@@ -1129,7 +1159,7 @@ p <- ggplot(ng80_table, aes(x = dataset_batch.y, y = log_genes_80, fill = datase
          plot.margin = margin(20, 20, 20, 45),  
          panel.grid.major.x = element_blank(),
          panel.grid.minor.x = element_blank(),
-         panel.grid.major.y = element_line(size = 0.8), 
+         panel.grid.major.y = element_line(size = 0.8, colour = "grey90"), 
          panel.grid.minor.y = element_blank(),
          axis.text.x = element_text(angle = 45, hjust = 1, size = 10, vjust = 1.1),
          axis.title = element_text(size = 12, face = "bold"),
@@ -1237,7 +1267,7 @@ p <- ggplot(ng80_table, aes(x = dataset_batch.y, y = ratio, fill = dataset_batch
         text=element_text(family="Arial", size = 12),
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank(),
-        panel.grid.major.y = element_line(size = 0.8), 
+        panel.grid.major.y = element_line(size = 0.8, colour = "grey90"), 
         panel.grid.minor.y = element_blank(),
         axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1.1, size = 12),
         axis.title = element_text(face = "bold", size = 12),
@@ -1589,7 +1619,7 @@ p_microbial <- ggplot(
     text=element_text(family="Arial"),
     panel.grid.major.x = element_blank(),
     panel.grid.minor.x = element_blank(),
-    panel.grid.major.y = element_line(size = 0.8), 
+    panel.grid.major.y = element_line(size = 0.8, colour = "grey90"), 
     panel.grid.minor.y = element_blank(),
     strip.text = element_text(face = "bold"),
     axis.title = element_text(face = "bold"),

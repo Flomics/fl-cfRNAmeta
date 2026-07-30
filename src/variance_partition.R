@@ -236,7 +236,7 @@ p_vp <- ggplot(vp_long, aes(x = Variable, y = VarianceExplained, fill = Variable
     legend.position    = "none",
     panel.grid.major.x = element_blank(),
     panel.grid.minor   = element_blank(),
-    panel.grid.major.y = element_line(linewidth = 0.8),
+    panel.grid.major.y = element_line(linewidth = 0.8, colour = "grey90"),
     plot.background    = element_rect(fill = "white", colour = "white")
   )
 
@@ -306,7 +306,7 @@ p_vp_nod <- ggplot(vp_long_nod, aes(x = Variable, y = VarianceExplained, fill = 
     legend.position    = "none",
     panel.grid.major.x = element_blank(),
     panel.grid.minor   = element_blank(),
-    panel.grid.major.y = element_line(linewidth = 0.8),
+    panel.grid.major.y = element_line(linewidth = 0.8, colour = "grey90"),
     plot.background    = element_rect(fill = "white", colour = "white")
   )
 
@@ -434,7 +434,7 @@ for (ds in datasets) {
         legend.position    = "none",
         panel.grid.major.x = element_blank(),
         panel.grid.minor   = element_blank(),
-        panel.grid.major.y = element_line(linewidth = 0.8),
+        panel.grid.major.y = element_line(linewidth = 0.8, colour = "grey90"),
         plot.background    = element_rect(fill = "white", colour = "white")
       )
 

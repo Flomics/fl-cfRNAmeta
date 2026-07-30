@@ -252,10 +252,21 @@ if (nrow(correlation_results) > 0) {
   final_palette <- NULL
   if (file.exists(mappings_json)) {
     cat("Applying custom dataset ordering and labeling from:", mappings_json, "\n")
-    m_json <- fromJSON(mappings_json)
-    v_order  <- m_json$datasetVisualOrder
-    v_labels <- unlist(m_json$datasetsLabels)
-    v_palette <- unlist(m_json$datasetsPalette)
+    loader_path <- sub("dataset_mappings\\.json$", "load_dataset_mappings.R", mappings_json)
+    if (file.exists(loader_path)) {
+      source(loader_path)
+      ds_maps <- load_dataset_mappings(mappings_json)
+      v_order <- ds_maps$core_order
+      v_labels <- ds_maps$datasetsLabels
+      v_palette <- ds_maps$datasetsPalette
+    } else {
+      m_json <- fromJSON(mappings_json)
+      leaf_batches <- names(m_json$datasetAnalysisBatch)
+      v_order <- m_json$datasetVisualOrder
+      v_order <- v_order[v_order %in% leaf_batches]
+      v_labels <- unlist(m_json$datasetsLabels)
+      v_palette <- unlist(m_json$datasetsPalette)
+    }
     
     present_datasets <- unique(plot_data$dataset)
     v_order <- v_order[v_order %in% present_datasets]

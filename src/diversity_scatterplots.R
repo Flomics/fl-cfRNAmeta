@@ -81,11 +81,12 @@ table_filtered <- filtered_data  # high spike-in samples not removed
 
 num_datasets <- length(unique(table_filtered$dataset_batch.y))
 
-mappings <- fromJSON("src/dataset_mappings.json")
-
-datasetsLabels   <- unlist(mappings$datasetsLabels)
-core_order       <- unlist(mappings$datasetVisualOrder)
-datasetsPalette  <- unlist(mappings$datasetsPalette)
+source("src/load_dataset_mappings.R")
+ds_maps <- load_dataset_mappings("src/dataset_mappings.json")
+mappings <- ds_maps$mappings
+datasetsLabels <- ds_maps$datasetsLabels
+core_order <- ds_maps$core_order
+datasetsPalette <- ds_maps$datasetsPalette
 
 table_filtered$dataset_batch.y <- factor(table_filtered$dataset_batch.y, levels = core_order)
 
@@ -122,11 +123,39 @@ column_names <- c(column_names, "percent_of_multimapped_reads_total_reads_mapped
 
 table_filtered$spike_in_pct <- table_filtered$spike_in_pct * 100
 
-add_bottom_brackets <- function(p, bracket_df, factor_levels, y_base = -0.03, height = 0.015, col = "black", lwd = 0.8) {
+add_bottom_brackets <- function(p, bracket_df, factor_levels = NULL, y_base = 0.03,
+                                height = 0.015, col = "black", lwd = 0.8) {
+  built <- ggplot_build(p)
+  plot_levels <- built$layout$panel_params[[1]]$x$limits
+  if (is.null(plot_levels)) {
+    plot_levels <- factor_levels
+  }
+
+  tile_layer <- NULL
+  for (layer in built$data) {
+    if (all(c("x", "ymin", "ymax") %in% names(layer)) &&
+        nrow(layer) <= length(plot_levels) &&
+        length(unique(layer$ymin)) == 1) {
+      tile_layer <- layer
+      break
+    }
+  }
+
   for (i in seq_len(nrow(bracket_df))) {
-    x1 <- which(factor_levels == bracket_df$xmin[i])
-    x2 <- which(factor_levels == bracket_df$xmax[i])
-    if (length(x1) == 0 || length(x2) == 0) next
+    x1 <- match(bracket_df$xmin[i], plot_levels)
+    x2 <- match(bracket_df$xmax[i], plot_levels)
+    if (is.na(x1) || is.na(x2)) next
+
+    x_start <- x1 - 0.5
+    x_end <- x2 + 0.5
+    if (!is.null(tile_layer) && all(c("x", "xmin", "xmax") %in% names(tile_layer))) {
+      start_row <- tile_layer[tile_layer$x == x1, , drop = FALSE]
+      end_row <- tile_layer[tile_layer$x == x2, , drop = FALSE]
+      if (nrow(start_row) == 1 && nrow(end_row) == 1) {
+        x_start <- start_row$xmin
+        x_end <- end_row$xmax
+      }
+    }
 
     bracket <- linesGrob(
       x = unit.c(unit(0, "npc"), unit(1, "npc")),
@@ -149,10 +178,11 @@ add_bottom_brackets <- function(p, bracket_df, factor_levels, y_base = -0.03, he
 
     p <- p + annotation_custom(
       grob = grobTree(bracket, verticals),
-      xmin = x1 - 0.5,
-      xmax = x2 + 0.5
+      xmin = x_start,
+      xmax = x_end
     )
   }
+
   return(p)
 }
 
@@ -245,7 +275,7 @@ make_scatter <- function(data, x_var, y_var, x_label, y_label,
       legend.key.height  = unit(0.5, "lines"),
       panel.grid.major.x = element_blank(),
       panel.grid.minor.x = element_blank(),
-      panel.grid.major.y = element_line(linewidth = 0.8),
+      panel.grid.major.y = element_line(linewidth = 0.8, colour = "grey90"),
       panel.grid.minor.y = element_blank(),
       plot.background    = element_rect(fill = "white", colour = "white")
     ) +

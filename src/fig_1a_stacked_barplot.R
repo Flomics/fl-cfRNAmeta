@@ -56,10 +56,12 @@ data_barplot$simple_phenotype[grep("Stomach cancer",data_barplot$phenotype)] <- 
 
 
 
-mappings <- fromJSON("src/dataset_mappings.json")
+source("src/load_dataset_mappings.R")
+ds_maps <- load_dataset_mappings("src/dataset_mappings.json")
+mappings <- ds_maps$mappings
 
-clean_dataset_names <- unlist(mappings$datasetsLabels)
-core_order <- unlist(mappings$datasetVisualOrder)
+clean_dataset_names <- ds_maps$datasetsLabels
+core_order <- ds_maps$core_order
 
 data_barplot$dataset_batch_clean <- recode(data_barplot$dataset_batch, !!!clean_dataset_names)
 
@@ -176,11 +178,39 @@ phenotype_merged_plot_data$phenotype_merged <- factor(phenotype_merged_plot_data
 
 merged_colors <- merged_colors[legend_order]
 
-add_bottom_brackets <- function(p, bracket_df, factor_levels, y_base = -0.03, height = 0.015, col="black", lwd=0.8) {
+add_bottom_brackets <- function(p, bracket_df, factor_levels = NULL, y_base = 0.03,
+                                height = 0.015, col = "black", lwd = 0.8) {
+  built <- ggplot_build(p)
+  plot_levels <- built$layout$panel_params[[1]]$x$limits
+  if (is.null(plot_levels)) {
+    plot_levels <- factor_levels
+  }
+
+  tile_layer <- NULL
+  for (layer in built$data) {
+    if (all(c("x", "ymin", "ymax") %in% names(layer)) &&
+        nrow(layer) <= length(plot_levels) &&
+        length(unique(layer$ymin)) == 1) {
+      tile_layer <- layer
+      break
+    }
+  }
+
   for (i in seq_len(nrow(bracket_df))) {
-    x1 <- which(factor_levels == bracket_df$xmin[i])
-    x2 <- which(factor_levels == bracket_df$xmax[i])
-    if (length(x1) == 0 || length(x2) == 0) next
+    x1 <- match(bracket_df$xmin[i], plot_levels)
+    x2 <- match(bracket_df$xmax[i], plot_levels)
+    if (is.na(x1) || is.na(x2)) next
+
+    x_start <- x1 - 0.5
+    x_end <- x2 + 0.5
+    if (!is.null(tile_layer) && all(c("x", "xmin", "xmax") %in% names(tile_layer))) {
+      start_row <- tile_layer[tile_layer$x == x1, , drop = FALSE]
+      end_row <- tile_layer[tile_layer$x == x2, , drop = FALSE]
+      if (nrow(start_row) == 1 && nrow(end_row) == 1) {
+        x_start <- start_row$xmin
+        x_end <- end_row$xmax
+      }
+    }
 
     bracket <- linesGrob(
       x = unit.c(unit(0, "npc"), unit(1, "npc")),
@@ -203,10 +233,11 @@ add_bottom_brackets <- function(p, bracket_df, factor_levels, y_base = -0.03, he
 
     p <- p + annotation_custom(
       grob = grobTree(bracket, verticals),
-      xmin = x1 - 0.5,
-      xmax = x2 + 0.5
+      xmin = x_start,
+      xmax = x_end
     )
   }
+
   return(p)
 }
 
@@ -227,7 +258,7 @@ p <- ggplot(phenotype_merged_plot_data, aes(x = dataset_batch_clean, y = count, 
     legend.text = element_text(size = 14),  
     panel.grid.major.x = element_blank(),
     panel.grid.minor.x = element_blank(),
-    panel.grid.major.y = element_line(size = 0.8), 
+    panel.grid.major.y = element_line(size = 0.8, colour = "grey90"), 
     panel.grid.minor.y = element_blank(),
     plot.margin = margin(20, 20, 20, 40),
     plot.background = element_rect(fill = "white", colour = "white") 
@@ -264,7 +295,7 @@ plot_with_legend <- ggplot(phenotype_merged_plot_data, aes(x = dataset_batch_cle
     legend.text = element_text(size = 12),
     panel.grid.major.x = element_blank(),
     panel.grid.minor.x = element_blank(),
-    panel.grid.major.y = element_line(size = 0.3),
+    panel.grid.major.y = element_line(size = 0.3, colour = "grey90"),
     panel.grid.minor.y = element_blank(),
     plot.margin = margin(0, 0, 0, 27),
     plot.background = element_rect(fill = "white", colour = "white")
