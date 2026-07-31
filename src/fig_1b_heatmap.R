@@ -159,6 +159,7 @@ ordered_datasets <- c(clean_dataset_names[core_order])
 colnames(metadata_matrix) <- clean_dataset_names[colnames(metadata_matrix)]
 
 
+ordered_datasets <- ordered_datasets[ordered_datasets %in% colnames(metadata_matrix)]
 metadata_matrix <- metadata_matrix[, ordered_datasets]
 
 
@@ -492,7 +493,7 @@ for (i in seq_len(nrow(bracket_df))) {
   x2 <- bracket_df$xmax_idx[i]
   if (is.na(x1) || is.na(x2)) next
   
-  offset <- 0.005
+  offset <- 0.008
   x_start_np <- (x_min_np + (x1 - 1) / n_cols * dx_np) + offset
   x_end_np   <- (x_min_np + x2       / n_cols * dx_np) - offset
   
@@ -571,7 +572,7 @@ for (i in seq_len(nrow(bracket_df))) {
   x2 <- bracket_df$xmax_idx[i]
   if (is.na(x1) || is.na(x2)) next
   
-  offset <- 0.005
+  offset <- 0.008
   x_start_np <- (x_min_np + (x1 - 1) / n_cols * dx_np) + offset
   x_end_np   <- (x_min_np + x2       / n_cols * dx_np) - offset
   
