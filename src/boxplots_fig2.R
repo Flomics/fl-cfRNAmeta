@@ -1,4 +1,4 @@
-  library(ggplot2)
+library(ggplot2)
 library(dplyr)
 library(ggpubr)
 library(scales)
@@ -13,13 +13,20 @@ library("extrafont")
 loadfonts()
 
 # Read column names from text file
-setwd("~/fl-cfRNAmeta/")
+#setwd("../") # chdir to root of the git repo
+#setwd(dirname(dirname(sys.frame(1)$ofile)))
+
+if (!dir.exists("./tables/")) {
+  stop("Error: subdirectory ./tables/ does not exist, are you sure you're at the root of the fl-cfRNAmeta git repo?")
+}
+
 column_names <- c("read_number",
                   #"avg_input_read_length",
                   #"percentage_of_uniquely_mapped_reads",
                   "avg_mapped_read_length",
                   "mapped_percentage",
-                  "exonic_percentage",                  
+                  "exonic_percentage",
+                  "qualimap_exonic_percentage",                  
                   #"intronic_percentage",
                   "percentage_of_spliced_reads",
                   #"X.known_splice_junctions",           
@@ -369,6 +376,8 @@ ggplot_objects <- lapply(column_names, function(col_name) {
   
   return(p)
 })
+
+dir.create("figures", showWarnings = FALSE, recursive = TRUE)
 
 setwd("figures/")
 
