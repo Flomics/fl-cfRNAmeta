@@ -3,6 +3,11 @@
 # Generates the two NG80 tables read by boxplots_fig2.R and diversity_scatterplots.R:
 #   tables/genes_contributing_to_percentage_reads.tsv                protein-coding genes only ("_pc")
 #   tables/genes_contributing_to_percentage_reads_no_spike_ins.tsv   all genes except SIRV/ERCC
+#   tables/genes_contributing_to_percentage_reads_all_genes.tsv      all genes, spike-ins included
+#
+# The all_genes table is a control: it is what fl-rnaseq computes, so it must reproduce the
+# genes_contributing_to_* columns of the sampleinfo. Those columns are what the figures use
+# for the with-spike-ins NG80, so the table itself is not an input to anything.
 #
 # Usage: bash src/make_ng80_tables.sh <count_matrix.tsv> <gene_info.tsv> <spikein_ids.tsv>
 #   count_matrix.tsv  unfiltered RAW COUNTS matrix (gene_id, gene_name, samples...),
@@ -23,7 +28,7 @@ if [ "$#" -ne 3 ]; then
     exit 1
 fi
 
-MATRIX=$1
+MATRIX=$(cd "$(dirname "$1")" && pwd)/$(basename "$1")
 GENE_INFO=$2
 SPIKEINS=$3
 REPO=$(cd "$(dirname "$0")/.." && pwd)
@@ -64,3 +69,6 @@ column_by_name "$SPIKEINS" gene_id > "$WORK/drop_spike_ins.txt"
 python3 "$REPO/src/filter_gene_ids.py" "$MATRIX" "$WORK/drop_spike_ins.txt" \
     > "$WORK/matrix_no_spike_ins.tsv"
 run_ng80 "$WORK/matrix_no_spike_ins.tsv" genes_contributing_to_percentage_reads_no_spike_ins.tsv
+
+# all genes, spike-ins included: control, must match the sampleinfo columns
+run_ng80 "$MATRIX" genes_contributing_to_percentage_reads_all_genes.tsv
