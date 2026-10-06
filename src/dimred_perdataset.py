@@ -121,18 +121,32 @@ def parse_args(argv=None):
 
 
 def load_inputs(matrix_file, sampleinfo_file):
-    """Read the matrix and its sample metadata, checking they line up."""
-    sample_df = pd.read_csv(sampleinfo_file, sep="\t")
+    """Read the matrix and the rows of the sampleinfo that describe its samples.
+
+    The sampleinfo covers every sample of the study while the matrix is filtered, so
+    it is subset and reordered to the matrix columns rather than required to match.
+    """
+    sample_df = pd.read_csv(sampleinfo_file, sep="\t", low_memory=False)
     counts_df = pd.read_csv(matrix_file, sep="\t", index_col="gene_id")
 
+    if "sample_name" not in sample_df.columns:
+        raise SystemExit("sampleinfo has no sample_name column to match the matrix on")
+
     sample_names = counts_df.select_dtypes(include=[np.number]).columns.tolist()
-    if len(sample_names) != sample_df.shape[0]:
+    n_rows = sample_df.shape[0]
+
+    sample_df = sample_df.drop_duplicates("sample_name").set_index("sample_name")
+    unknown = [ss for ss in sample_names if ss not in sample_df.index]
+    if unknown:
         raise SystemExit(
-            f"matrix has {len(sample_names)} sample columns but sampleinfo has "
-            f"{sample_df.shape[0]} rows; they must describe the same samples")
+            f"{len(unknown)} matrix columns are not in the sampleinfo, "
+            f"e.g. {', '.join(unknown[:5])}")
+    sample_df = sample_df.loc[sample_names].reset_index()
 
     print(f"  matrix     : {counts_df.shape[0]} genes x {len(sample_names)} samples")
-    print(f"  sampleinfo : {sample_df.shape[0]} samples, {sample_df.shape[1]} columns")
+    print(f"  sampleinfo : {sample_df.shape[1]} columns"
+          + (f", {n_rows - len(sample_names)} rows not in the matrix dropped"
+             if n_rows > len(sample_names) else ""))
     return counts_df, sample_df, sample_names
 
 
