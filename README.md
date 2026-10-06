@@ -42,6 +42,28 @@ fl-cfRNAmeta/
 - **`fig_1b_heatmap.R`**  
   R script for creating the pre-analytical variables heatmap.
 
+- **`perdataset_dimred.sh`**  
+  Runs PCA and tSNE on each dataset separately, from the all-batches expression matrix.
+  Splits the matrix with `split_matrix_by_dataset.sh` and then calls `dimred_perdataset.py`
+  once per dataset, carrying on if one of them fails:  
+  `bash src/perdataset_dimred.sh <gene_tpm_norm.tsv> <sampleinfo.tsv> [out_dir]`  
+  Plots land in `<out_dir>/plots/<dataset>/{pca,tsne}/`. `SPLIT_COL` chooses the granularity:
+  `dataset_batch` (the default, one group per batch) or `dataset_short_name` (one per lab).
+
+- **`split_matrix_by_dataset.sh`**  
+  Splits an all-batches matrix into one matrix and sampleinfo per dataset. Valid on
+  `gene_tpm_norm` because it is normalised per sample, so a subset of its columns is exactly
+  the TPM of that dataset alone; this does not hold for TMM.
+
+- **`dimred_perdataset.py`**  
+  PCA and tSNE of one dataset, coloured by each metadata variable in turn. Dataset colours,
+  markers and ordering come from `dataset_mappings.json`, the rest of the palettes from
+  `dimred_plots.py`. Variables absent from the sampleinfo are reported and skipped.
+
+- **`dimred_plots.py`**  
+  Colour maps, orderings and the scatter used by `dimred_perdataset.py`. Extracted from the
+  internal `bioinfo_utils` so this repository runs on its own.
+
 - **`gene_coverage_profile_fig2_tmpH.ipynb`**  
   Jupyter notebook for plotting gene coverage profiles.
 
