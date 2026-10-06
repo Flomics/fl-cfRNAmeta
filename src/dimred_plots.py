@@ -701,7 +701,7 @@ def prepare_color_scheme(sample_ids, sample_names, color_map=None, marker_map=No
     # Marker map -----------------------------------------------------------
     
     # Only necessary for 'discrete' color schemes
-    if (color_by == 'sample_name') or (np.issubdtype(label_color_df.dtypes['label'], np.number)):
+    if (color_by == 'sample_name') or pd.api.types.is_numeric_dtype(label_color_df['label']):
         # assign marker index within each color group
         # => for consistency, in this case 'color's are unique and thus 'marker's are the default: 'o'
         label_color_df['marker_idx'] = 0
@@ -825,7 +825,7 @@ def plot_dimred_embedding(X, dimred_obj, pc1=0, pc2=1, sample_ids=None, sample_n
     n_labels = label_color_df.shape[0]
     
     # Plot variable: categorical or numerical
-    numeric_values = np.issubdtype(label_color_df.dtypes['label'], np.number)
+    numeric_values = pd.api.types.is_numeric_dtype(label_color_df['label'])
     unique_markers = label_color_df['marker'].unique()
 
     # Plot: 2D Embedding ---------------------------------------------------------

@@ -12,8 +12,9 @@
 #                   results/all-batches_meta_filtered/expression_matrix/gene_tpm_norm.tsv
 #   sampleinfo.tsv  sample metadata; needs a sample_name column plus the split column
 #   out_dir         written as <out_dir>/<group>/{matrix.tsv,sampleinfo.tsv}
-#   split_col       granularity, default dataset_batch (26 groups, per batch).
-#                   dataset_short_name gives 18 groups instead, one per lab.
+#   split_col       granularity, default dataset_short_name (18 groups, one per dataset).
+#                   dataset_batch gives 26 groups instead, splitting the datasets that
+#                   were sequenced in more than one batch.
 #
 # Writes about as much as the source matrix, and can be deleted once the plots exist.
 #
@@ -27,7 +28,7 @@ fi
 MATRIX=$1
 SAMPLEINFO=$2
 OUT=$3
-SPLIT_COL=${4:-dataset_batch}
+SPLIT_COL=${4:-dataset_short_name}
 
 for f in "$MATRIX" "$SAMPLEINFO"; do
     [ -r "$f" ] || { echo "Error: cannot read $f" >&2; exit 1; }

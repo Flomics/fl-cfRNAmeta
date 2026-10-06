@@ -16,8 +16,9 @@
 # The split under <out_dir>/split is reused if it is already there, and can be deleted
 # once the plots exist.
 #
-# Overridable: SPLIT_COL (dataset_batch, per batch | dataset_short_name, per lab),
-# PYTHON and MARKER_SIZE.
+# Overridable: SPLIT_COL (dataset_short_name, one group per dataset, the default |
+# dataset_batch, one per sequencing batch), PYTHON and MARKER_SIZE. A dataset's batches
+# stay together and are told apart inside each plot by the dataset_batch_label colour.
 #
 # Needs pandas, numpy, matplotlib, seaborn, scikit-learn.
 #
@@ -53,9 +54,9 @@ echo
 if [ -d "$SPLIT" ] && [ -n "$(ls -A "$SPLIT" 2>/dev/null)" ]; then
     echo "[1/2] split already present, reusing it"
 else
-    echo "[1/2] splitting by ${SPLIT_COL:-dataset_batch}"
+    echo "[1/2] splitting by ${SPLIT_COL:-dataset_short_name}"
     bash "$SRC/split_matrix_by_dataset.sh" "$MATRIX" "$SAMPLEINFO" "$SPLIT" \
-        "${SPLIT_COL:-dataset_batch}"
+        "${SPLIT_COL:-dataset_short_name}"
 fi
 
 echo

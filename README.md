@@ -47,8 +47,9 @@ fl-cfRNAmeta/
   Splits the matrix with `split_matrix_by_dataset.sh` and then calls `dimred_perdataset.py`
   once per dataset, carrying on if one of them fails:  
   `bash src/perdataset_dimred.sh <gene_tpm_norm.tsv> <sampleinfo.tsv> [out_dir]`  
-  Plots land in `<out_dir>/plots/<dataset>/{pca,tsne}/`. `SPLIT_COL` chooses the granularity:
-  `dataset_batch` (the default, one group per batch) or `dataset_short_name` (one per lab).
+  Plots land in `<out_dir>/plots/<dataset>/{pca,tsne}/`. Datasets sequenced in more than one
+  batch are kept together and told apart inside each plot by the `dataset_batch_label` colour;
+  set `SPLIT_COL=dataset_batch` to give each batch its own plots instead.
 
 - **`split_matrix_by_dataset.sh`**  
   Splits an all-batches matrix into one matrix and sampleinfo per dataset. Valid on
