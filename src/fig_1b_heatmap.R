@@ -16,6 +16,22 @@ loadfonts()
 
 setwd("~/fl-cfRNAmeta/")
 
+# Two outputs, assembled manually afterwards: "legend" for its legends, "figure" for
+# its heatmap. One variable instead of toggling comments in four places.
+VARIANT <- Sys.getenv("FIG1B_VARIANT", "legend")
+stopifnot(VARIANT %in% c("legend", "figure"))
+SHOW_LEG    <- VARIANT == "legend"
+DEV_W       <- if (SHOW_LEG) 6.9 else 3.7
+DEV_H       <- if (SHOW_LEG) 4.6 * 0.766667 else 2.5
+OUT_PNG     <- sprintf("figures/fig_1b_metadata_heatmap_for_%s.png", VARIANT)
+OUT_SVG     <- sprintf("figures/fig_1b_metadata_heatmap_for_%s.svg", VARIANT)
+BRACKET_PNG <- if (SHOW_LEG) 0.45 else 0.25
+BRACKET_SVG <- if (SHOW_LEG) 0.50 else 0.25
+CELL_H      <- if (SHOW_LEG) 0.32 else 0.70   # heatmap cell height, cm
+BRACKET_INSET <- 0.08                        # bracket inset, as a fraction of column width
+FONT        <- "Arial"
+
+
 data_heatmap <- read.table("tables/cfRNA-meta_per_batch_metadata.tsv", header = TRUE, sep = "\t")
 data_heatmap <- data_heatmap %>%
   mutate(
@@ -258,8 +274,8 @@ make_centrifugation_legend1 <- function(title, range = c(1000, 12000), colors = 
     col_fun = col_fun,
     title = title,
     at = c(1000, 12000),
-    title_gp = gpar(fontsize = 12, fontface = "bold"),
-    labels_gp = gpar(fontsize = 12),
+    title_gp = gpar(fontsize = 12, fontface = "bold", fontfamily = FONT),
+    labels_gp = gpar(fontsize = 12, fontfamily = FONT),
     grid_height = unit(0.02, "cm"),
     grid_width = unit(0.50, "cm"),
     legend_height = unit(1.5, "cm")
@@ -269,13 +285,13 @@ make_centrifugation_legend1 <- function(title, range = c(1000, 12000), colors = 
     labels = names(fallback_colors),
     legend_gp = gpar(fill = fallback_colors),
     title = NULL,
-    labels_gp = gpar(fontsize = 12),
+    labels_gp = gpar(fontsize = 12, fontfamily = FONT),
     grid_height = unit(0.02, "cm"),
     grid_width = unit(0.50, "cm"),
     direction = "vertical"
   )
   
-  packLegend(continuous_lgd, discrete_lgd, direction = "vertical")
+  continuous_lgd   # Unspecified/None is now a single shared legend
 }
 
 make_centrifugation_legend2 <- function(title, range = c(1940, 16000), colors = c("#FDD0A2", "#7F2704")) {
@@ -285,8 +301,8 @@ make_centrifugation_legend2 <- function(title, range = c(1940, 16000), colors = 
     col_fun = col_fun,
     title = title,
     at = c(1940, 16000),
-    title_gp = gpar(fontsize = 12, fontface = "bold"),
-    labels_gp = gpar(fontsize = 12),
+    title_gp = gpar(fontsize = 12, fontface = "bold", fontfamily = FONT),
+    labels_gp = gpar(fontsize = 12, fontfamily = FONT),
     grid_height = unit(0.02, "cm"),
     grid_width = unit(0.50, "cm"),
     legend_height = unit(1.5, "cm")
@@ -296,13 +312,13 @@ make_centrifugation_legend2 <- function(title, range = c(1940, 16000), colors = 
     labels = names(fallback_colors),
     legend_gp = gpar(fill = fallback_colors),
     title = NULL,
-    labels_gp = gpar(fontsize = 12),
+    labels_gp = gpar(fontsize = 12, fontfamily = FONT),
     grid_height = unit(0.02, "cm"),
     grid_width = unit(0.50, "cm"),
     direction = "vertical"
   )
   
-  packLegend(continuous_lgd, discrete_lgd, direction = "vertical")
+  continuous_lgd   # Unspecified/None is now a single shared legend
 }
 
 
@@ -386,27 +402,27 @@ for (var in row_order) {
   
   ht_global_opt(font = "Arial", ADD = TRUE)
   ht_global_opt(
-    heatmap_column_names_gp = gpar(fontsize = 12),
-    heatmap_row_names_gp = gpar(fontsize = 12),
-    legend_title_gp = gpar(fontsize = 12),
-    legend_labels_gp = gpar(fontsize = 12, lineheight = 0.8)
+    heatmap_column_names_gp = gpar(fontsize = 12, fontfamily = FONT),
+    heatmap_row_names_gp = gpar(fontsize = 12, fontfamily = FONT),
+    legend_title_gp = gpar(fontsize = 12, fontfamily = FONT),
+    legend_labels_gp = gpar(fontsize = 12, lineheight = 0.8, fontfamily = FONT)
   )
   
   ht <- Heatmap(
     mat,
     name = var_pretty,
     col = color_map,
+    show_heatmap_legend = FALSE,   # legends are built by hand below
     cluster_rows = FALSE,
     cluster_columns = FALSE,
     show_row_names = TRUE,
     show_column_names = TRUE,
     column_names_rot = 45,
     column_names_side = "bottom",
-    column_names_gp = gpar(fontsize = 12),
+    column_names_gp = gpar(fontsize = 12, fontfamily = FONT),
     row_names_side = "left",
     bottom_annotation = bottom_anno,
-    height = unit(0.32, "cm"), #controls the height of the heatmap "squares", this one is for the legend
-    #height = unit(0.70, "cm"), #controls the height of the heatmap "squares", and this one for the figure
+    height = unit(CELL_H, "cm"),
     cell_fun = function(j, i, x, y, width, height, fill) {
       grid.rect(x = x, y = y, width = width, height = height,
                 gp = gpar(fill = fill, col = "white", lwd = 0.5))
@@ -416,8 +432,8 @@ for (var in row_order) {
       grid_width = unit(0.50, "cm"), # controls the shape of the legend squares
       gap = unit(0.1, "cm"),
       row_gap = unit(0.01, "cm"),
-      title_gp = gpar(fontsize = 12, fontface = "bold"),
-      labels_gp = gpar(fontsize = 12))
+      title_gp = gpar(fontsize = 12, fontface = "bold", fontfamily = FONT),
+      labels_gp = gpar(fontsize = 12, fontfamily = FONT))
   )
   
   heatmap_list[[var]] <- ht
@@ -430,12 +446,64 @@ names(heatmap_list) <- row_order
 
 ht_list <- Reduce(`%v%`, heatmap_list)
 
+# Legends built by hand: fixed 4-column layout, Unspecified/None shared once at the
+# top. grid_height near zero lets ComplexHeatmap size the key to one text line.
+LGD_GH <- unit(0.02, "cm")
+LGD_GW <- unit(0.50, "cm")
+.lgd_title  <- gpar(fontsize = 12, fontface = "bold", fontfamily = FONT)
+# lineheight 1: with 0.8 a two-line label took less than two rows.
+.lgd_labels <- gpar(fontsize = 12, lineheight = 1, fontfamily = FONT)
+
+# Draw the key ourselves: ComplexHeatmap stretches it to the label height, so two-line
+# labels got tall rectangles. Always square, aligned to the first line.
+sq_graphics <- function(cols) {
+  lapply(unname(cols), function(cl) {
+    force(cl)
+    function(x, y, w, h) {
+      grid.rect(x = x, y = y + h * 0.5 - LGD_GW * 0.5,
+                width = LGD_GW, height = LGD_GW,
+                gp = gpar(fill = cl, col = NA))
+    }
+  })
+}
+
+cat_lgd <- function(var) {
+  pal <- palette_list[[var]]
+  # drop Unspecified/None (shared legend) and the palette padding entries
+  pal <- pal[!(names(pal) %in% c(names(fallback_colors), "NA", "placeholder"))]
+  Legend(labels = names(pal), graphics = sq_graphics(pal),
+         title = clean_names[[var]], title_gp = .lgd_title, labels_gp = .lgd_labels,
+         grid_height = LGD_GH, grid_width = LGD_GW)
+}
+
+lgd_fallback <- Legend(labels = names(fallback_colors),
+                       graphics = sq_graphics(fallback_colors),
+                       title = NULL, labels_gp = .lgd_labels,
+                       grid_height = LGD_GH, grid_width = LGD_GW)
+
+lgd_all <- packLegend(
+  packLegend(lgd_fallback,
+             cat_lgd("plasma_tubes_short_name"),
+             make_centrifugation_legend1("Centrifugation, step 1"),
+             make_centrifugation_legend2("Centrifugation, step 2"),
+             cat_lgd("biomaterial"),
+             cat_lgd("nucleic_acid_type"), direction = "vertical"),
+  packLegend(cat_lgd("rna_extraction_kit_short_name"),
+             cat_lgd("dnase"), direction = "vertical"),
+  packLegend(cat_lgd("library_prep_kit_short_name"),
+             cat_lgd("library_selection"),
+             cat_lgd("cdna_library_type"), direction = "vertical"),
+  packLegend(cat_lgd("read_length"),
+             cat_lgd("broad_protocol_category"), direction = "vertical"),
+  direction = "horizontal", column_gap = unit(4, "mm")
+)
+
 
 
 
 ragg::agg_png(
-  "figures/fig_1b_metadata_heatmap_for_legend.png",
-  width = 6.9, height = 4.6*0.766667, units = "in", res = 600, scaling = 5/12
+  OUT_PNG,
+  width = DEV_W, height = DEV_H, units = "in", res = 600, scaling = 5/12
 )
 
 # ragg::agg_png(
@@ -455,21 +523,23 @@ ht_opt(legend_gap = unit(0.4, "mm"), ADD = TRUE) #reduce space between different
 #                gap = unit(0.2, "mm"))  # reduce from the default
 
 
-ht_drw <- draw(
+ht_drw <- if (SHOW_LEG) draw(
   ht_list,
   heatmap_legend_side = "right",
   annotation_legend_side = "right",
   gap = unit(0.2, "mm"),
-  heatmap_legend_list = list(
-    "Centrifugation, step 1" = make_centrifugation_legend1("Centrifugation, step 1"),
-    "Centrifugation, step 2" = make_centrifugation_legend2("Centrifugation, step 2")
-  )
+  heatmap_legend_list = lgd_all
+) else draw(
+  ht_list,
+  show_heatmap_legend = FALSE,
+  show_annotation_legend = FALSE,
+  gap = unit(0.2, "mm")
 )
 
 
 ht_pos <- htPositionsOnDevice(ht_drw)
 
-y_top_in <- ht_pos[ht_pos$heatmap == "Broad protocol\ncategory (BPC)", "y_min"] - unit(0.45, "in") #this addition or subtraction here controls the position of the brackets. I could not find a better way to do it, for legend
+y_top_in <- ht_pos[ht_pos$heatmap == "Broad protocol\ncategory (BPC)", "y_min"] - unit(BRACKET_PNG, "in")
 #y_top_in <- ht_pos[ht_pos$heatmap == "Broad protocol\ncategory (BPC)", "y_min"] - unit(0.3, "in") #for figure
 
 y_top_np <- convertY(y_top_in, "npc", valueOnly = FALSE)
@@ -493,9 +563,12 @@ for (i in seq_len(nrow(bracket_df))) {
   x2 <- bracket_df$xmax_idx[i]
   if (is.na(x1) || is.na(x2)) next
   
-  offset <- 0.008
-  x_start_np <- (x_min_np + (x1 - 1) / n_cols * dx_np) + offset
-  x_end_np   <- (x_min_np + x2       / n_cols * dx_np) - offset
+  # Inset proportional to column width; a fixed npc value ate ~30% of each group
+  # on the smaller "figure" canvas.
+  col_w  <- dx_np / n_cols
+  offset <- BRACKET_INSET * col_w
+  x_start_np <- (x_min_np + (x1 - 1) * col_w) + offset
+  x_end_np   <- (x_min_np + x2       * col_w) - offset
   
   x_start_u  <- unit(x_start_np, "npc") 
   x_end_u    <- unit(x_end_np,   "npc") 
@@ -523,7 +596,8 @@ for (i in seq_len(nrow(bracket_df))) {
 dev.off()
 
 
-svglite("figures/fig_1b_metadata_heatmap_for_legend.svg", width = 6.9, height = 4.6*0.766667, scaling = 5/12)
+svglite(OUT_SVG, width = DEV_W, height = DEV_H, scaling = 5/12,
+        system_fonts = list(sans = FONT))
 # svglite("figures/fig_1b_metadata_heatmap_for_figure.svg",
 #          width = 3.7, height = 2.5, scaling = 5/12)
 #showtext::showtext_begin()
@@ -535,20 +609,22 @@ svglite("figures/fig_1b_metadata_heatmap_for_legend.svg", width = 6.9, height = 
 #                show_annotation_legend = FALSE,
 #                gap = unit(0.2, "mm"))  # reduce from the default
 
-ht_drw <- draw(
+ht_drw <- if (SHOW_LEG) draw(
   ht_list,
   heatmap_legend_side = "right",
   annotation_legend_side = "right",
   gap = unit(0.2, "mm"),
-  heatmap_legend_list = list(
-    "Centrifugation, step 1" = make_centrifugation_legend1("Centrifugation, step 1"),
-    "Centrifugation, step 2" = make_centrifugation_legend2("Centrifugation, step 2")
-  )
+  heatmap_legend_list = lgd_all
+) else draw(
+  ht_list,
+  show_heatmap_legend = FALSE,
+  show_annotation_legend = FALSE,
+  gap = unit(0.2, "mm")
 )
 
 ht_pos <- htPositionsOnDevice(ht_drw)
 
-y_top_in <- ht_pos[ht_pos$heatmap == "Broad protocol\ncategory (BPC)", "y_min"] - unit(0.5, "in") #this addition or subtraction here controls the position of the brackets. I could not find a better way to do it
+y_top_in <- ht_pos[ht_pos$heatmap == "Broad protocol\ncategory (BPC)", "y_min"] - unit(BRACKET_SVG, "in")
 #y_top_in <- ht_pos[ht_pos$heatmap == "Broad protocol\ncategory (BPC)", "y_min"] - unit(0.3, "in") #for figure
 
 y_top_np <- convertY(y_top_in, "npc", valueOnly = FALSE)
@@ -572,9 +648,12 @@ for (i in seq_len(nrow(bracket_df))) {
   x2 <- bracket_df$xmax_idx[i]
   if (is.na(x1) || is.na(x2)) next
   
-  offset <- 0.008
-  x_start_np <- (x_min_np + (x1 - 1) / n_cols * dx_np) + offset
-  x_end_np   <- (x_min_np + x2       / n_cols * dx_np) - offset
+  # Inset proportional to column width; a fixed npc value ate ~30% of each group
+  # on the smaller "figure" canvas.
+  col_w  <- dx_np / n_cols
+  offset <- BRACKET_INSET * col_w
+  x_start_np <- (x_min_np + (x1 - 1) * col_w) + offset
+  x_end_np   <- (x_min_np + x2       * col_w) - offset
   
   x_start_u  <- unit(x_start_np, "npc") 
   x_end_u    <- unit(x_end_np,   "npc") 
