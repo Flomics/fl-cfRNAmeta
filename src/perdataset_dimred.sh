@@ -70,7 +70,7 @@ for d in "$SPLIT"/*/; do
     if "$PYTHON" "$SRC/dimred_perdataset.py" \
             --matrix "$d/matrix.tsv" --sampleinfo "$d/sampleinfo.tsv" \
             --label "$ds" --out-dir "$PLOTS" \
-            --marker-size "${MARKER_SIZE:-12}"; then
+            --marker-size "${MARKER_SIZE:-8}"; then
         ok=$((ok + 1))
     else
         failed+=("$ds")

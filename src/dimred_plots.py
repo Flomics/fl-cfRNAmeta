@@ -773,30 +773,30 @@ def plot_dimred_embedding(X, dimred_obj, pc1=0, pc2=1, sample_ids=None, sample_n
         'annotation': 10,
     }
 
-    font_size = 5
+    font_size = 7
     # cfRNA-meta
     layout_config = {
-        'subplot_size': 1.55, # inches
+        'subplot_size': 2.6, # inches
         # Font size ----
         # Figure
         'axis_label': font_size,
-        'axis_label_pad': 2,
+        'axis_label_pad': 4,
         'axis_ticks': font_size,
-        'axis_ticks_width': 0.25,
-        'axis_ticks_length': 1,
-        'axis_ticks_pad':    1.,
+        'axis_ticks_width': 0.4,
+        'axis_ticks_length': 2,
+        'axis_ticks_pad':    2.,
         'subtitle':   font_size,
-        'spine_linewidth': 0.5,
+        'spine_linewidth': 0.7,
         # Legend
         'legend_fontsize': font_size,
         'legend_title': font_size,
         # Color-bar
         'cbar_ticks': font_size,
-        'cbar_ticks_width': 0.25,
-        'cbar_ticks_length': 1,
-        'cbar_ticks_pad':    1.,
+        'cbar_ticks_width': 0.4,
+        'cbar_ticks_length': 2,
+        'cbar_ticks_pad':    2.,
         'cbar_label': font_size,
-        'cbar_linewidth': 0.25,
+        'cbar_linewidth': 0.4,
         # Sample
         'annotation': font_size,
     }
@@ -896,16 +896,27 @@ def plot_dimred_embedding(X, dimred_obj, pc1=0, pc2=1, sample_ids=None, sample_n
                 ax_height / fig_height  # height
             ]) for ii in range(2)
             ]
+        axs[1].set_axis_off()
+        ax_legend_dedicated = axs[1]
+        axs = axs[:1]
     else:
         single_plot=False
-        fig, axs = plt.subplots(
+        # The legend used to reuse the second data axis, on the assumption that the grid
+        # had a spare one. With exactly n_cols plots nothing is spare and it landed on top
+        # of a plot, so it gets a column of its own, the width the padding already allows.
+        grid = plt.subplots(
             nrows=n_rows,
-            ncols=n_cols, 
+            ncols=n_cols + 1,
             figsize=fig_size,
-            squeeze=False
+            squeeze=False,
+            width_ratios=[1] * n_cols + [x_padding / layout_config['subplot_size']],
         )
-        # Flatten for looping
-        axs = axs.flatten()
+        fig, grid_axs = grid
+        axs = [grid_axs[rr][cc] for rr in range(n_rows) for cc in range(n_cols)]
+        legend_axs = [grid_axs[rr][n_cols] for rr in range(n_rows)]
+        for ax in legend_axs:
+            ax.set_axis_off()
+        ax_legend_dedicated = legend_axs[0]
 
     # --------
     # Dim-red: PC_{ii}  vs PC_{jj}
@@ -955,8 +966,9 @@ def plot_dimred_embedding(X, dimred_obj, pc1=0, pc2=1, sample_ids=None, sample_n
         # plt.yticks(fontsize=layout_config['axis_ticks'])
 
         if title:
-            #plt.suptitle(title, fontsize=layout_config['subtitle'], y=1)
-            plt.suptitle(title, fontsize=layout_config['subtitle'], y=0.92)
+            # a single plot fills the canvas to y=0.93, so 0.92 put the title inside it
+            plt.suptitle(title, fontsize=layout_config['subtitle'],
+                         y=0.98 if single_plot else 0.92)
             
         # Plot the points and annotate ------------------------------
 
@@ -1007,16 +1019,8 @@ def plot_dimred_embedding(X, dimred_obj, pc1=0, pc2=1, sample_ids=None, sample_n
 
     # Legend or Colorbar -----------------------------------------------------
 
-    # avoid legend redundancy when multiple plots
-    if n_plots > 1:
-        if full_matrix:
-            # use first since diagonal is empty
-            ax_legend = axs[0]
-        else:
-            # use second plot instead of last, since last will be empty
-            ax_legend = axs[1]
-    else:
-        ax_legend = axs[-1]
+    # the diagonal of a full matrix is empty, so the legend can sit there
+    ax_legend = axs[0] if full_matrix else ax_legend_dedicated
         
     if (not show_cbar):
         # # Create a legend with unique labels
@@ -1039,19 +1043,19 @@ def plot_dimred_embedding(X, dimred_obj, pc1=0, pc2=1, sample_ids=None, sample_n
         unique_labels_df = label_color_df.astype({'label':str}).set_index('label')
 
         if not isinstance(hue_order, type(None)):
-            try:
-                assert all([ii in hue_order for ii in unique_labels_df.index])
-            except AssertionError:
-                pass
-            #assert all([ii in hue_order for ii in unique_labels_df.index])
-            # re-order labels
-            unique_labels_df = unique_labels_df.loc[[ii for ii in hue_order if ii in unique_labels_df.index]]
+            # hue_order sorts the legend, it must not filter it. The orderings are shared
+            # across datasets, so a dataset none of whose labels appear in them, such as
+            # moufarrej's collection centres, lost every legend entry.
+            ordered = [ii for ii in hue_order if ii in unique_labels_df.index]
+            rest = [ii for ii in unique_labels_df.index if ii not in ordered]
+            unique_labels_df = unique_labels_df.loc[ordered + rest]
 
         handles = []
         for rr in unique_labels_df.itertuples(index=True):
             handles.append(
                 plt.Line2D(
-                    [0], [0], marker=rr.marker, color='w', markerfacecolor=rr.color, markersize=marker_size, label=rr.Index
+                    [0], [0], marker=rr.marker, color='w', markerfacecolor=rr.color,
+                    markersize=max(np.sqrt(marker_size), 5), label=rr.Index
                 )
             )
 
@@ -1126,6 +1130,10 @@ def plot_dimred_embedding(X, dimred_obj, pc1=0, pc2=1, sample_ids=None, sample_n
         cbar.outline.set_linewidth(layout_config['cbar_linewidth'],)
 
     # Store figure to file --------------------------------
+
+    # default spacing collides the y label of one panel with the panel to its left
+    if not single_plot:
+        fig.tight_layout(rect=(0, 0, 1, 0.9))
 
     if not isinstance(outpath, type(None)):
         if isinstance(outpath, str):

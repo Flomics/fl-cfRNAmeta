@@ -114,7 +114,8 @@ def parse_args(argv=None):
                    help="parent plots directory (default: %(default)s)")
     p.add_argument("--mappings", default=DEFAULT_MAPPINGS,
                    help="dataset labels, palette, markers and order (default: src/dataset_mappings.json)")
-    p.add_argument("--marker-size", type=int, default=12)
+    p.add_argument("--marker-size", type=int, default=8,
+                   help="scatter point area in points squared (default: %(default)s)")
     p.add_argument("--ext", nargs="+", default=[".png", ".pdf"],
                    help="output formats (default: .png .pdf)")
     return p.parse_args(argv)
