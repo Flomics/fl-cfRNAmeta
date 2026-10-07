@@ -115,10 +115,11 @@ plt.rcParams["mathtext.fontset"] = "custom"
 plt.rcParams["mathtext.rm"] = "Arial"
 plt.rcParams["mathtext.it"] = "Arial:italic"
 plt.rcParams["mathtext.bf"] = "Arial:bold"
+plt.rcParams["svg.fonttype"] = "none"
 font_size = 5
 
 out_prefix = os.path.join(plots_dir, "fig3c_biotype_stacked_bp")
-_, df_mean, _, _ = create_stacked_barplot(
+_, _, _, artist_elements = create_stacked_barplot(
     dataset=df,
     meta_column=group_var,
     value_columns=ordered_cols,
@@ -130,7 +131,7 @@ _, df_mean, _, _ = create_stacked_barplot(
     ax_width=1.01 * 2.99,
     aspect=2,
     dpi=600,
-    output=out_prefix,
+    output=None,
     scaling="mean",
     normalize_data=True,
     add_category_border=True,
@@ -175,5 +176,6 @@ _, df_mean, _, _ = create_stacked_barplot(
     y_upper_pad=0.05,
 )
 
-# Proportions per bar, as plotted
-df_mean.div(df_mean.sum(axis=1), axis=0).loc[ordered_rows].to_csv(f"{out_prefix}_proportions.tsv", sep="\t")
+for ext in ("png", "svg"):
+    plt.savefig(f"{out_prefix}.{ext}", format=ext, dpi=600, bbox_inches="tight", bbox_extra_artists=artist_elements)
+    print(f"Bar plot saved to {out_prefix}.{ext}")
