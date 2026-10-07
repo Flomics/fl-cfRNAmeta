@@ -46,6 +46,7 @@ fl-cfRNAmeta/
   Python script for the Figure 3C RNA biotype stacked bar plot, one bar per dataset batch. Uses
   `barplot_stacked_plot.py`, `dataset_mappings.json` and `gene_biotype_mappings.json`:  
   `python src/fig3c_biotype_stacked_bp.py tables/gene_tpm_norm.tsv tables/sampleinfo_all-batches.tsv tables/gencode_v39_gene_biotypes.tsv figures/fig3c`
+  Requires the Arial font to be installed; the script stops if it is missing.
 
 - **`gene_coverage_profile_fig2_tmpH.ipynb`**  
   Jupyter notebook for plotting gene coverage profiles.

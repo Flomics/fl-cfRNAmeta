@@ -18,6 +18,7 @@ import pandas as pd
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib import font_manager
 
 SRC_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, SRC_DIR)
@@ -26,6 +27,15 @@ from barplot_stacked_plot import create_stacked_barplot
 if len(sys.argv) != 5:
     sys.exit(__doc__)
 count_data_file, sample_info_file, gene_biotypes_file, plots_dir = sys.argv[1:5]
+
+# The panel must be in Arial, which cannot be redistributed here. Fail rather than let
+# matplotlib fall back to another font with only a log warning.
+try:
+    font_manager.findfont("Arial", fallback_to_default=False)
+except ValueError:
+    sys.exit("Arial is not installed: the figure must be drawn in Arial. Install it and "
+             "clear the matplotlib font cache (matplotlib.get_cachedir()).")
+
 os.makedirs(plots_dir, exist_ok=True)
 
 biotype_col = "biotype_cfRNAmeta"
