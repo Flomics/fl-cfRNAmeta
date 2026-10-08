@@ -18,3 +18,4 @@ tables/gene*
 !tables/genes_contributing_to_percentage_reads_no_spike_ins.tsv
 tables/variance*
 figures/
+perdataset_dimred/
