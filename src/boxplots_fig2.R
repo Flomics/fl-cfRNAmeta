@@ -88,8 +88,9 @@ biotype_data$total <- rowSums(biotype_data)
 biotype_data$percent_of_reads_mapping_to_spike_ins <- biotype_data$spike_in / biotype_data$total
 biotype_data$percent_of_reads_mapping_to_spike_ins <- biotype_data$percent_of_reads_mapping_to_spike_ins * 100
 
-exonic <- as.numeric(as.character(filtered_df$exonic))
+exonic <- as.numeric(as.character(filtered_df$qualimap_exonic))
 spike_in <- as.numeric(as.character(filtered_df$spike_in))
+filtered_df$qualimap_mapped <- filtered_df$qualimap_exonic + filtered_df$qualimap_intergenic + filtered_df$qualimap_intronic
 
 filtered_df$exonic_reads_minus_spike_ins <- ifelse(
   is.na(exonic) & is.na(spike_in), NA,
@@ -97,7 +98,7 @@ filtered_df$exonic_reads_minus_spike_ins <- ifelse(
 )
 
 
-filtered_df$exonic_reads_minus_spike_ins <- (filtered_df$exonic_reads_minus_spike_ins / filtered_df$mapped_fragments)  * 100
+filtered_df$exonic_reads_minus_spike_ins <- (filtered_df$exonic_reads_minus_spike_ins / filtered_df$qualimap_mapped)  * 100
 
 
 # Keep specified columns
