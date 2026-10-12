@@ -36,6 +36,11 @@ fl-cfRNAmeta/
 - **`boxplots_fig2.R`**  
   R script to generate the following boxplots: percentage of spliced reads, percentage of exonic reads, percentage of fragments mapping to the correct gene orientation, NG80, fragment number, percentage of reads mapping to reference human genome, percentage of reads mapping to ERCC spike-ins, effective fragment length distribution, etc. Also used to create the NG80 vs spliced reads scatterplot, and the percent of human reads vs percent of microbial reads scatterplot.
 
+  Run:
+  ```bash
+   Rscript --vanilla src/boxplots_fig2.R 
+  ```
+
 - **`fig_1a_stacked_barplot.R`**  
   R script for creating donor phenotype stacked bar plot.
 

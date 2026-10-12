@@ -3,25 +3,37 @@
 # Generates the two NG80 tables read by boxplots_fig2.R and diversity_scatterplots.R:
 #   tables/genes_contributing_to_percentage_reads.tsv                protein-coding genes only ("_pc")
 #   tables/genes_contributing_to_percentage_reads_no_spike_ins.tsv   all genes except SIRV/ERCC
+#   tables/genes_contributing_to_percentage_reads_all_genes.tsv      all genes, spike-ins included
 #
-# Usage: bash src/make_ng80_tables.sh <count_matrix.tsv> <gene_info.tsv>
-#   count_matrix.tsv  unfiltered gene-level matrix (gene_id, gene_name, samples...),
-#                     e.g. results/<dataset>/expression_matrix/gene_tpm_norm.tsv
-#                     NOT the filterByExpr_* version, which drops genes.
+# The all_genes table is a control: it is what fl-rnaseq computes, so it must reproduce the
+# genes_contributing_to_* columns of the sampleinfo. Those columns are what the figures use
+# for the with-spike-ins NG80, so the table itself is not an input to anything.
+#
+# Usage: bash src/make_ng80_tables.sh <count_matrix.tsv> <gene_info.tsv> <spikein_ids.tsv>
+#   count_matrix.tsv  unfiltered RAW COUNTS matrix (gene_id, gene_name, samples...),
+#                     e.g. results/<dataset>/expression_matrix/gene_raw_counts.tsv
+#                     NG80 is defined on raw counts: TPM divides by gene length, which
+#                     reshapes the per-sample distribution and changes the metric.
+#                     Not the filterByExpr_* version either, which drops genes.
 #   gene_info.tsv     GENCODE annotation with gene_id and gene_type columns.
+#   spikein_ids.tsv   spike-in gene_ids, e.g. snakeDA's
+#                     resources/gene_list/<gtf_id>/spikein_gene_ids.tsv (99 ERCC+SIRV).
+#                     Do not match on /ERCC/ instead: that also catches the human
+#                     ERCC1-8 DNA-repair genes.
 #
 set -euo pipefail
 
-if [ "$#" -ne 2 ]; then
-    echo "Usage: bash src/make_ng80_tables.sh <count_matrix.tsv> <gene_info.tsv>" >&2
+if [ "$#" -ne 3 ]; then
+    echo "Usage: bash src/make_ng80_tables.sh <count_matrix.tsv> <gene_info.tsv> <spikein_ids.tsv>" >&2
     exit 1
 fi
 
-MATRIX=$1
+MATRIX=$(cd "$(dirname "$1")" && pwd)/$(basename "$1")
 GENE_INFO=$2
+SPIKEINS=$3
 REPO=$(cd "$(dirname "$0")/.." && pwd)
 
-for f in "$MATRIX" "$GENE_INFO"; do
+for f in "$MATRIX" "$GENE_INFO" "$SPIKEINS"; do
     [ -r "$f" ] || { echo "Error: cannot read $f" >&2; exit 1; }
 done
 
@@ -53,8 +65,10 @@ python3 "$REPO/src/filter_gene_ids.py" "$MATRIX" "$WORK/drop_not_protein_coding.
 run_ng80 "$WORK/matrix_protein_coding.tsv" genes_contributing_to_percentage_reads.tsv
 
 # all genes except spike-ins
-awk -F'\t' 'NR>1 && ($1 ~ /SIRV|ERCC/ || $2 ~ /SIRV|ERCC/) { print $1 }' "$MATRIX" \
-    > "$WORK/drop_spike_ins.txt"
+column_by_name "$SPIKEINS" gene_id > "$WORK/drop_spike_ins.txt"
 python3 "$REPO/src/filter_gene_ids.py" "$MATRIX" "$WORK/drop_spike_ins.txt" \
     > "$WORK/matrix_no_spike_ins.tsv"
 run_ng80 "$WORK/matrix_no_spike_ins.tsv" genes_contributing_to_percentage_reads_no_spike_ins.tsv
+
+# all genes, spike-ins included: control, must match the sampleinfo columns
+run_ng80 "$MATRIX" genes_contributing_to_percentage_reads_all_genes.tsv

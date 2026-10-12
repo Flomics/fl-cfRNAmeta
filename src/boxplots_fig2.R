@@ -10,11 +10,17 @@ library(colorspace)
 library(showtext)
 library(svglite)
 library("extrafont")
+library(forcats)
 loadfonts()
 
-# Read column names from text file
-#setwd("../") # chdir to root of the git repo
-#setwd(dirname(dirname(sys.frame(1)$ofile)))
+# Function to print summary stats on dataframes (for debugging purposes):
+df_stats <- function(df) {
+  nm <- deparse(substitute(df))
+  cat("  Data frame:", nm, "\n")
+  cat("      Rows:", nrow(df), "\n")
+  cat("      Cols:", ncol(df), "\n")
+}
+
 
 if (!dir.exists("./tables/")) {
   stop("Error: subdirectory ./tables/ does not exist, are you sure you're at the root of the fl-cfRNAmeta git repo?")
@@ -42,18 +48,27 @@ column_names <- c("read_number",
                   "spike_in_pct")
 #"mt_rna_pct", "mt_rrna_pct", "mt_trna_pct", "misc_rna_pct", "protein_coding_pct", "lncrna_pct", "snrna_pct", "snorna_pct", "spike_in_pct", "other_rna_biotypes_pct")
 
-data <- read.delim("tables/sampleinfo_all-batches.tsv", header = TRUE, sep = "\t", fileEncoding = "UTF-8")
+data <- read.delim(
+  # convert special characters to ASCII
+  text = iconv(readLines("tables/sampleinfo_all-batches.tsv", warn = FALSE, encoding = "UTF-8"), from = "UTF-8", to = "ASCII", sub = ""),
+  header = TRUE, sep = "\t", fileEncoding = "UTF-8", quote = "", comment.char = "")
+
+df_stats(data)
 
 # Load metadata
 metadata <- read.delim("tables/cfRNA-meta_per_sample_metadata.tsv", header = TRUE, sep = "\t", fill = TRUE)
 
+df_stats(metadata)
 
 # Step 1: Filter merged_df to keep only samples that appear in metadata
 metadata_subset <- metadata[, c("run", "dataset_batch")]
 
+df_stats(metadata)
+
 filtered_df <- data[data$sample_id %in% metadata$run, ]
 filtered_df <- merge(filtered_df, metadata_subset, by.x = "sample_id", by.y = "run", all.x = TRUE)
 
+df_stats(filtered_df)
 
 removed_samples <- data[!(data$sample_id %in% metadata$run), ]
 print(removed_samples$sample_id)
@@ -73,8 +88,9 @@ biotype_data$total <- rowSums(biotype_data)
 biotype_data$percent_of_reads_mapping_to_spike_ins <- biotype_data$spike_in / biotype_data$total
 biotype_data$percent_of_reads_mapping_to_spike_ins <- biotype_data$percent_of_reads_mapping_to_spike_ins * 100
 
-exonic <- as.numeric(as.character(filtered_df$exonic))
+exonic <- as.numeric(as.character(filtered_df$qualimap_exonic))
 spike_in <- as.numeric(as.character(filtered_df$spike_in))
+filtered_df$qualimap_mapped <- filtered_df$qualimap_exonic + filtered_df$qualimap_intergenic + filtered_df$qualimap_intronic
 
 filtered_df$exonic_reads_minus_spike_ins <- ifelse(
   is.na(exonic) & is.na(spike_in), NA,
@@ -82,7 +98,7 @@ filtered_df$exonic_reads_minus_spike_ins <- ifelse(
 )
 
 
-filtered_df$exonic_reads_minus_spike_ins <- (filtered_df$exonic_reads_minus_spike_ins / filtered_df$mapped_fragments)  * 100
+filtered_df$exonic_reads_minus_spike_ins <- (filtered_df$exonic_reads_minus_spike_ins / filtered_df$qualimap_mapped)  * 100
 
 
 # Keep specified columns
@@ -498,7 +514,7 @@ summary(table_filtered$spike_in_pct[table_filtered$dataset_batch.y=="chen"])
 # High quality samples barplot
 ######################################################
 # Create summary for high-quality sample barplot
-setwd("~/fl-cfRNAmeta/")
+#setwd("~/fl-cfRNAmeta/")
 quality_summary <- table_filtered %>%
   mutate(
     high_quality = genes_contributing_to_80._of_reads > 1000 &
@@ -597,6 +613,7 @@ quality_plot <- quality_plot +
 
 quality_plot <- add_bottom_brackets(quality_plot, bracket_df, levels(table_filtered$dataset_batch.y),  y_base = 0.03)
 
+setwd("..")
 
 ggsave("figures/high_quality_sample_fraction_barplot_2.png", quality_plot, width = 3.35, height = 3.35*(3/5), dpi = 600, device = ragg::agg_png, scaling = 5/12)
 ggsave("figures/high_quality_sample_fraction_barplot_2.svg", quality_plot, width = 3.35, height = 3.35*(3/5), dpi = 600, device = "svg", scaling =5/12)
@@ -1618,7 +1635,7 @@ ggsave("figures/diversity_scatterplot_slide_deck_median.svg", p_scatter, width =
 #################################
 # Per dataset k2 results vs mapping rate
 ################################
-k2_results <- read.delim("~/fl-cfRNAmeta/tables/taxa_simple_df_w_batch.tsv")
+k2_results <- read.delim("tables/taxa_simple_df_w_batch.tsv")
 
 k2_results$microbial <- k2_results$fungi + k2_results$bacteria
 
