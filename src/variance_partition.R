@@ -22,14 +22,10 @@ setwd("~/fl-cfRNAmeta")
 
 platelet_info <- read.delim("tables/sampleinfo_external_and_internal_datasets.tsv", header = TRUE, sep = "\t", fileEncoding = "UTF-8")
 
-# The old sampleinfo uses old sample names (block_1, zhu_61...): link on run, then
-# sample_id, then current sample_name on old sample_id.
-platelet_by_run <- setNames(platelet_info$platelet, platelet_info$run)
-platelet_by_sid <- setNames(platelet_info$platelet, platelet_info$sample_id)
-filtered_df$platelet <- unname(coalesce(platelet_by_run[filtered_df$sample_id],
-                                        platelet_by_sid[filtered_df$sample_id],
-                                        platelet_by_sid[filtered_df$sample_name]))
-cat("Samples with a platelet fraction:", sum(!is.na(filtered_df$platelet)), "of", nrow(filtered_df), "\n")
+# the old sampleinfo has the old sample names
+filtered_df$platelet <- coalesce(platelet_info$platelet[match(filtered_df$sample_id, platelet_info$run)],
+                                 platelet_info$platelet[match(filtered_df$sample_id, platelet_info$sample_id)],
+                                 platelet_info$platelet[match(filtered_df$sample_name, platelet_info$sample_id)])
 
 filtered_df <- filtered_df %>%
   left_join(
