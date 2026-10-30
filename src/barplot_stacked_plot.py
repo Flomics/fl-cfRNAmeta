@@ -967,29 +967,29 @@ def create_stacked_barplot(
     if yticks:
         ax.set_yticks(yticks)
 
-    # ~ Saving Plot (if output path is provided) ~ #
-    if output:
-        dir_name = os.path.dirname(output)
-        if dir_name and not os.path.exists(dir_name):
-            os.makedirs(dir_name)
-
     # select legend to plot
     if boxes_legend_pos == "bottom":
         artist_elements = [main_legend,top_box_legend]
     else:
         artist_elements = [main_legend]
 
-    filename_pdf = output + ".pdf"
-    plt.savefig(filename_pdf, format='pdf', dpi=dpi, bbox_inches='tight', bbox_extra_artists=artist_elements)
-    print(f"Box plot saved to {filename_pdf}")
+    # ~ Saving Plot (if output path is provided) ~ #
+    if output:
+        dir_name = os.path.dirname(output)
+        if dir_name and not os.path.exists(dir_name):
+            os.makedirs(dir_name)
 
-    filename_png = output + ".png"
-    plt.savefig(filename_png, format='png', dpi=dpi, bbox_inches='tight',bbox_extra_artists=artist_elements)
-    print(f"Box plot saved to {filename_png}")
+        filename_pdf = output + ".pdf"
+        plt.savefig(filename_pdf, format='pdf', dpi=dpi, bbox_inches='tight', bbox_extra_artists=artist_elements)
+        print(f"Bar plot saved to {filename_pdf}")
 
-    filename_svg = output + ".svg"
-    plt.rcParams["svg.fonttype"] = "none"
-    plt.savefig(filename_svg, format='svg', dpi=dpi, bbox_inches='tight',bbox_extra_artists=artist_elements)
-    print(f"Box plot saved to {filename_svg}")
+        filename_png = output + ".png"
+        plt.savefig(filename_png, format='png', dpi=dpi, bbox_inches='tight',bbox_extra_artists=artist_elements)
+        print(f"Bar plot saved to {filename_png}")
+
+        filename_svg = output + ".svg"
+        plt.rcParams["svg.fonttype"] = "none"
+        plt.savefig(filename_svg, format='svg', dpi=dpi, bbox_inches='tight',bbox_extra_artists=artist_elements)
+        print(f"Bar plot saved to {filename_svg}")
 
     return dataframe_before_scaling, dataframe_after_scaling, ax, artist_elements
