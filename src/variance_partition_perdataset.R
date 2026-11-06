@@ -35,7 +35,8 @@ old <- fread(args[3], sep = "\t", quote = "", data.table = FALSE)
 ng80 <- fread(args[4], sep = "\t", data.table = FALSE)
 
 df <- md %>%
-  select(run, dataset_short_name, dataset_batch, broad_protocol_category) %>%
+  select(run, dataset_short_name, dataset_batch, broad_protocol_category,
+         collection_center_short_name) %>%
   inner_join(si, by = c("run" = "sample_id"), suffix = c("", ".si")) %>%
   mutate(
     # FER as in boxplots_fig2.R
@@ -48,45 +49,21 @@ df <- md %>%
                         old$platelet[match(sample_name, old$sample_id)])
   )
 
-# same as variance_partition.R; order matters, later patterns overwrite earlier ones
-phenotype_rules <- c(
-  "Acute Myeloid Leukemia" = "cancer",
-  "Alzheimers disease" = "non-cancer disease",
-  "Chronic hepatitis B" = "non-cancer disease",
-  "Chronic kidney failure EPO-treated" = "non-cancer disease",
-  "Cirrhosis" = "non-cancer disease",
-  "Colorectal cancer" = "cancer",
-  "Diffuse large B-cell lymphoma" = "cancer",
-  "Diverticulitis" = "non-cancer disease",
-  "Esophagus cancer" = "cancer",
-  "G-CSF-treated healthy donors" = "healthy",
-  "Healthy" = "healthy",
-  "Healthy pregnant woman" = "healthy",
-  "Healthy pregnant woman who delivered preterm" = "non-cancer disease",
-  "Liver cancer" = "cancer",
-  "Lung cancer" = "cancer",
-  "Multiple myeloma" = "cancer",
-  "Nonalcoholic fatty liver disease" = "non-cancer disease",
-  "Nonalcoholic steatohepatitis" = "non-cancer disease",
-  "Pancreatic cancer" = "cancer",
-  "Pre-cancerous condition: cirrhosis" = "non-cancer disease",
-  "Pre-cancerous condition: MGUS" = "non-cancer disease",
-  "Pre-eclampsia" = "non-cancer disease",
-  "Primary mediastinal B-cell lymphoma" = "cancer",
-  "Stomach cancer" = "cancer"
-)
-df$simple_phenotype <- ifelse(is.na(df$phenotype) | df$phenotype == "", "missing",
-                              ifelse(df$phenotype == "healthy", "healthy", NA))
-for (p in names(phenotype_rules)) df$simple_phenotype[grep(p, df$phenotype)] <- phenotype_rules[[p]]
+# within a study, the study's own labels rather than healthy / cancer / non-cancer
+df$phenotype[df$phenotype == ""] <- NA
+df$collection_centre <- gsub(",(\\S)", ", \\1", trimws(df$collection_center_short_name))
+df$collection_centre[is.na(df$collection_centre) | df$collection_centre %in% c("", "Unknown")] <- "Unspecified"
 
 numeric_all     <- c("ng80", "percentage_of_spliced_reads", "exonic_reads_minus_spike_ins",
                      "platelet", "mapped_fragments")
-categorical_all <- c("dataset_batch", "simple_phenotype", "broad_protocol_category")
+# order matters: of two terms that split the samples identically, the first one is kept
+categorical_all <- c("phenotype", "collection_centre", "dataset_batch", "broad_protocol_category")
 
 labels <- c(ng80 = "NG80", percentage_of_spliced_reads = "FSR",
             exonic_reads_minus_spike_ins = "FER", platelet = "Platelet (%)",
             mapped_fragments = "Mapped fragments", dataset_batch = "Batch",
-            simple_phenotype = "Phenotype", broad_protocol_category = "Broad Protocol Category (BPC)",
+            phenotype = "Phenotype", collection_centre = "Collection centre",
+            broad_protocol_category = "Broad Protocol Category (BPC)",
             Residuals = "Residuals")
 colours <- setNames(colorRampPalette(RColorBrewer::brewer.pal(8, "Set2"))(length(labels)), labels)
 
@@ -102,7 +79,7 @@ medians <- list()
 for (study in sort(unique(df$dataset_short_name))) {
   d <- df %>% filter(dataset_short_name == study, sample_name %in% colnames(tpm))
   numeric_vars <- numeric_all[sapply(numeric_all, function(v) any(!is.na(d[[v]])))]
-  d <- d[complete.cases(d[, numeric_vars]), ]
+  d <- d[complete.cases(d[, numeric_vars]) & !is.na(d$phenotype), ]
   if (nrow(d) < min_samples) {
     message(study, ": skipped, ", nrow(d), " samples")
     next
@@ -111,7 +88,19 @@ for (study in sort(unique(df$dataset_short_name))) {
   # terms that are constant within the study cannot be fitted
   numeric_vars <- numeric_vars[sapply(numeric_vars, function(v) sd(d[[v]]) > 0)]
   cat_vars <- categorical_all[sapply(categorical_all, function(v) n_distinct(d[[v]]) > 1)]
-  message(study, ": ", nrow(d), " samples, ", paste(c(numeric_vars, cat_vars), collapse = " + "))
+
+  # perfectly confounded terms cannot be told apart: keep one and record it
+  same_split <- function(a, b) n_distinct(paste(a, b)) == n_distinct(a) && n_distinct(a) == n_distinct(b)
+  kept <- character()
+  confounded <- character()
+  for (v in cat_vars) {
+    hit <- Filter(function(k) same_split(d[[k]], d[[v]]), kept)
+    if (length(hit)) confounded <- c(confounded, paste(v, "=", hit[1])) else kept <- c(kept, v)
+  }
+  cat_vars <- kept
+  confounded <- paste(confounded, collapse = "; ")
+  message(study, ": ", nrow(d), " samples, ", paste(c(numeric_vars, cat_vars), collapse = " + "),
+          if (nzchar(confounded)) paste0(" (dropped, confounded: ", confounded, ")"))
 
   d$ng80 <- log(d$ng80)
   d[numeric_vars] <- lapply(d[numeric_vars], function(x) as.numeric(scale(x)))
@@ -137,7 +126,8 @@ for (study in sort(unique(df$dataset_short_name))) {
               file.path(outdir, paste0("variance_partition_", study, ".tsv")),
               quote = FALSE, sep = "\t", row.names = FALSE)
   medians[[study]] <- data.frame(study = study, n_samples = nrow(d), n_genes = nrow(x),
-                                 variable = colnames(vp), median_variance = apply(vp, 2, median))
+                                 variable = colnames(vp), median_variance = apply(vp, 2, median),
+                                 confounded = confounded)
 
   long <- pivot_longer(vp, everything(), names_to = "Variable", values_to = "VarianceExplained")
   long$Variable <- factor(labels[long$Variable], levels = labels[colnames(vp)])
