@@ -22,11 +22,12 @@ setwd("~/fl-cfRNAmeta")
 
 platelet_info <- read.delim("tables/sampleinfo_external_and_internal_datasets.tsv", header = TRUE, sep = "\t", fileEncoding = "UTF-8")
 
+# the old sampleinfo has the old sample names
+filtered_df$platelet <- coalesce(platelet_info$platelet[match(filtered_df$sample_id, platelet_info$run)],
+                                 platelet_info$platelet[match(filtered_df$sample_id, platelet_info$sample_id)],
+                                 platelet_info$platelet[match(filtered_df$sample_name, platelet_info$sample_id)])
+
 filtered_df <- filtered_df %>%
-  left_join(
-    platelet_info %>% select(sample_name, platelet),
-    by = "sample_name"
-  ) %>%
   left_join(
     metadata %>% select(run, broad_protocol_category),
     by = c("sample_id" = "run")
@@ -67,7 +68,7 @@ VP_NUMERIC <- c(
   "genes_contributing_to_80._of_reads",   # NG80
   "percentage_of_spliced_reads",           # FSR
   "exonic_reads_minus_spike_ins",          # FER
-  "platelet.y",
+  "platelet",
   "mapped_fragments"
 )
 
@@ -83,7 +84,8 @@ vp_sampleinfo <- filtered_df %>%
   filter(
     !is.na(genes_contributing_to_80._of_reads),
     !is.na(percentage_of_spliced_reads),
-    !is.na(simple_phenotype)
+    !is.na(simple_phenotype),
+    !is.na(platelet)
   ) %>%
   as.data.frame()
 
@@ -197,7 +199,7 @@ vp_long$Variable <- recode(vp_long$Variable,
                            "status"                             = "Phenotype",
                            "Residuals"                          = "Residuals",
                            "protein_coding_pct"                 = "Protein coding (%)",
-                           "platelet.y"                         = "Platelet (%)",
+                           "platelet"                         = "Platelet (%)",
                            "broad_protocol_category"            = "Broad Protocol Category (BPC)",
                            "mapped_fragments"                   = "Mapped fragments",
                            "cdna_library_type"                  = "cDNA Library type",
@@ -281,7 +283,7 @@ vp_long_nod$Variable <- recode(vp_long_nod$Variable,
                                "exonic_reads_minus_spike_ins"       = "FER",
                                "dataset_batch.y"                    = "Dataset",
                                "Residuals"                          = "Residuals",
-                               "platelet.y"                         = "Platelet (%)",
+                               "platelet"                         = "Platelet (%)",
                                "broad_protocol_category"            = "Broad Protocol Category (BPC)",
                                "mapped_fragments"                   = "Mapped fragments",
                                "simple_phenotype"                   = "Phenotype",
