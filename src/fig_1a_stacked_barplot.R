@@ -5,20 +5,21 @@ library(forcats)
 library(jsonlite)
 library(grid)
 library(scales)
-library(showtext)
-font_add(family="Arial", regular = "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf")
-showtext_opts(dpi = 600)  # MUST come before showtext_auto()
-showtext_auto()
-theme_set(theme_classic(base_family = "Arial"))
-
-
+library(svglite)
+#library(showtext)
+#font_add(family="Arial", regular = "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf")
+#showtext_opts(dpi = 600)  # MUST come before showtext_auto()
+#showtext_auto()
+#theme_set(theme_classic(base_family = "Arial"))
+library("extrafont")
+loadfonts()
 
 setwd("~/fl-cfRNAmeta/")
 
 data <- read.delim("tables/cfRNA-meta_per_sample_metadata.tsv", header = TRUE, sep = "\t", fill = TRUE)
 
 #Assign healthy phenotype to Flomics_1 and flomics_2
-data$phenotype[data$dataset_batch %in% c("flomics_1", "flomics_2", "giraldez_standard", "giraldez_phospho-rna-seq")] <- "healthy"
+#data$phenotype[data$dataset_batch %in% c("flomics_1", "flomics_2", "giraldez_standard", "giraldez_phospho-rna-seq")] <- "healthy"
 
 data_barplot <- data
 data_barplot$simple_phenotype <- NA
@@ -55,10 +56,12 @@ data_barplot$simple_phenotype[grep("Stomach cancer",data_barplot$phenotype)] <- 
 
 
 
-mappings <- fromJSON("src/dataset_mappings.json")
+source("src/load_dataset_mappings.R")
+ds_maps <- load_dataset_mappings("src/dataset_mappings.json")
+mappings <- ds_maps$mappings
 
-clean_dataset_names <- unlist(mappings$datasetsLabels)
-core_order <- unlist(mappings$datasetVisualOrder)
+clean_dataset_names <- ds_maps$datasetsLabels
+core_order <- ds_maps$core_order
 
 data_barplot$dataset_batch_clean <- recode(data_barplot$dataset_batch, !!!clean_dataset_names)
 
@@ -153,8 +156,8 @@ merged_colors <- c(
   cancer_colors
 )
 bracket_df <- data.frame(
-  xmin = c("Block (2x75bp)", "Giráldez (phospho-RNA-seq)", "Ibarra (buffy coat)","Reggiardo (BioIVT)" , "Moufarrej (Site 1)", "Roskams-Hieter (pilot)"),
-  xmax = c("Block (2x150bp)", "Giráldez (standard)", "Ibarra (serum)","Reggiardo (DLS)" , "Moufarrej (Site 2)", "Roskams-Hieter (validation)"),
+  xmin = c("Block (2x75bp)", "Giráldez (phospho)", "Ibarra (buffy coat)","Reggiardo (BioIVT)" , "Moufarrej (Site 1)", "Roskams (pilot)"),
+  xmax = c("Block (2x150bp)", "Giráldez (standard)", "Ibarra (serum)","Reggiardo (DLS)" , "Moufarrej (Site 2)", "Roskams (validation)"),
   label = c("Block", "Giráldez", "Ibarra","Reggiardo" , "Moufarrej", "Roskams-Hieter")
 )
 
@@ -175,42 +178,73 @@ phenotype_merged_plot_data$phenotype_merged <- factor(phenotype_merged_plot_data
 
 merged_colors <- merged_colors[legend_order]
 
-add_bottom_brackets <- function(p, bracket_df, factor_levels) {
+add_bottom_brackets <- function(p, bracket_df, factor_levels = NULL, y_base = 0.03,
+                                height = 0.015, col = "black", lwd = 0.8,
+                                x_inset = 0.04) {
+  built <- ggplot_build(p)
+  plot_levels <- built$layout$panel_params[[1]]$x$limits
+  if (is.null(plot_levels)) {
+    plot_levels <- factor_levels
+  }
+
+  tile_layer <- NULL
+  for (layer in built$data) {
+    if (all(c("x", "ymin", "ymax") %in% names(layer)) &&
+        nrow(layer) <= length(plot_levels) &&
+        length(unique(layer$ymin)) == 1) {
+      tile_layer <- layer
+      break
+    }
+  }
+
   for (i in seq_len(nrow(bracket_df))) {
-    x1 <- which(factor_levels == bracket_df$xmin[i])
-    x2 <- which(factor_levels == bracket_df$xmax[i])
-    if (length(x1) == 0 || length(x2) == 0) next
-    
-    offset <- 0.005
-    x_start <- ((x1 - 1) / length(factor_levels)) + offset
-    x_end   <- (x2 / length(factor_levels)) - offset
-    
+    x1 <- match(bracket_df$xmin[i], plot_levels)
+    x2 <- match(bracket_df$xmax[i], plot_levels)
+    if (is.na(x1) || is.na(x2)) next
+
+    x_start <- x1 - 0.5
+    x_end <- x2 + 0.5
+    if (!is.null(tile_layer) && all(c("x", "xmin", "xmax") %in% names(tile_layer))) {
+      start_row <- tile_layer[tile_layer$x == x1, , drop = FALSE]
+      end_row <- tile_layer[tile_layer$x == x2, , drop = FALSE]
+      if (nrow(start_row) == 1 && nrow(end_row) == 1) {
+        x_start <- start_row$xmin
+        x_end <- end_row$xmax
+      }
+    }
+    if ((x_end - x_start) > (2 * x_inset)) {
+      x_start <- x_start + x_inset
+      x_end <- x_end - x_inset
+    }
+
     bracket <- linesGrob(
-      x = unit.c(unit(x_start, "npc"), unit(x_end, "npc")),
-      y = unit(c(-0.03, -0.03), "npc"),
-      gp = gpar(col = "black", lwd = 0.8)
+      x = unit.c(unit(0, "npc"), unit(1, "npc")),
+      y = unit(c(y_base, y_base), "npc"),
+      gp = gpar(col = col, lwd = lwd)
     )
-    
+
     verticals <- gList(
       linesGrob(
-        x = unit.c(unit(x_start, "npc"), unit(x_start, "npc")),
-        y = unit(c(-0.03, -0.045), "npc"),
-        gp = gpar(col = "black", lwd = 0.95)
+        x = unit.c(unit(0, "npc"), unit(0, "npc")),
+        y = unit(c(y_base, y_base - height), "npc"),
+        gp = gpar(col = col, lwd = lwd)
       ),
       linesGrob(
-        x = unit.c(unit(x_end, "npc"), unit(x_end, "npc")),
-        y = unit(c(-0.03, -0.045), "npc"),
-        gp = gpar(col = "black", lwd = 0.95)
+        x = unit.c(unit(1, "npc"), unit(1, "npc")),
+        y = unit(c(y_base, y_base - height), "npc"),
+        gp = gpar(col = col, lwd = lwd)
       )
     )
-    
-    p <- p + annotation_custom(grobTree(bracket, verticals))
+
+    p <- p + annotation_custom(
+      grob = grobTree(bracket, verticals),
+      xmin = x_start,
+      xmax = x_end
+    )
   }
+
   return(p)
 }
-
-
-
 
 
 
@@ -220,23 +254,91 @@ p <- ggplot(phenotype_merged_plot_data, aes(x = dataset_batch_clean, y = count, 
   labs(x = "Dataset", y = "Number of samples") +
   theme_minimal(base_size = 20) +
   theme(
-    axis.text.x = element_text(angle = 45, vjust = 0.9, hjust = 1, size = 12, color = "black"),
-    axis.title.x = element_text(size = 20), 
-    axis.title.y = element_text(size = 20),  
+    text=element_text(family="Arial"),
+    axis.text.x = element_text(angle = 45, vjust = 1.1, hjust = 1, size = 12, color = "black"),
+    axis.title.x = element_blank(), 
+    axis.title.y = element_text(size = 20), 
+    legend.position = "right",
     legend.title = element_text(size = 18, face = "bold"),  
     legend.text = element_text(size = 14),  
     panel.grid.major.x = element_blank(),
     panel.grid.minor.x = element_blank(),
-    panel.grid.major.y = element_line(size = 0.8), 
+    panel.grid.major.y = element_line(size = 0.8, colour = "grey90"), 
     panel.grid.minor.y = element_blank(),
-    plot.margin = margin(20, 20, 20, 20),
+    plot.margin = margin(20, 20, 20, 40),
     plot.background = element_rect(fill = "white", colour = "white") 
-  ) + coord_cartesian(clip = "off")
+  ) + coord_cartesian(clip = "off")#, ylim = c(-20, NA))
 
-p <- add_bottom_brackets(p, bracket_df, levels(phenotype_merged_plot_data$dataset_batch_clean))
 
-ggsave("~/figures/fig_1a_combined_simplified_and_cancer_detail.png",
+
+
+p <- add_bottom_brackets(p, bracket_df, levels(phenotype_merged_plot_data$dataset_batch_clean), y_base = 0.03)
+
+
+ggsave("figures/fig_1a_combined_simplified_and_cancer_detail.png",
        width = 17, height = 8, dpi = 600, units = "in", bg = "white",device = ragg::agg_png)
-ggsave("~/figures/fig_1a_combined_simplified_and_cancer_detail.pdf",
-       width = 17, height = 8, dpi = 600, units = "in", bg = "white", device = cairo_pdf)
+ggsave("figures/fig_1a_combined_simplified_and_cancer_detail.svg",
+       width = 17, height = 8, dpi = 600, units = "in", bg = "white", device = "svg")
 
+
+library(ggplot2)
+library(cowplot)
+library(grid)  
+
+plot_with_legend <- ggplot(phenotype_merged_plot_data, aes(x = dataset_batch_clean, y = count, fill = phenotype_merged)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = merged_colors, name = "Donor phenotype") +
+  labs(x = "Dataset", y = "Number of samples") +
+  theme_minimal(base_size = 6) +
+  theme(
+    text = element_text(family = "Arial", size = 12),
+    axis.text.x = element_text(angle = 45, vjust = 1.05, hjust = 1, size = 12, color = "black"),
+    axis.title.x = element_blank(),
+    legend.key.size = unit(0.5, "cm"),  # or smaller, e.g., 0.25
+    axis.title.y = element_text(size = 12),
+    legend.title = element_text(size = 12, face = "bold"),
+    legend.text = element_text(size = 12),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_line(size = 0.3, colour = "grey90"),
+    panel.grid.minor.y = element_blank(),
+    plot.margin = margin(0, 0, 0, 27),
+    plot.background = element_rect(fill = "white", colour = "white")
+  ) +
+  coord_cartesian(clip = "off")
+
+plot_with_legend <- add_bottom_brackets(plot_with_legend, bracket_df, levels(phenotype_merged_plot_data$dataset_batch_clean), y_base = 0.03)
+
+
+legend <- cowplot::get_legend(plot_with_legend)
+
+plot_no_legend <- plot_with_legend + theme(legend.position = "none")
+ggsave("figures/fig_1a_combined_simplified_and_cancer_detail_no_legend.png",
+       plot = plot_no_legend,
+       width = 3.35, height = 1.7, dpi = 600, units = "in", bg = "white", device = ragg::agg_png, scaling= 5/12)
+ggsave("figures/fig_1a_combined_simplified_and_cancer_detail_legend_only.png",
+       plot = legend,
+       width = 1.3, height = 1.7, dpi = 600, units = "in", bg = "white", device = ragg::agg_png, scaling= 5/12)
+ggsave("figures/fig_1a_combined_simplified_and_cancer_detail_no_legend.svg",
+       plot = plot_no_legend,
+       width = 3.35, height = 1.7, dpi = 600, units = "in", bg = "white", device = "svg", scaling= 5/12)
+ggsave("figures/fig_1a_combined_simplified_and_cancer_detail_legend_only.svg",
+       plot = legend,
+       width = 1.3, height = 1.7, dpi = 600, units = "in", bg = "white", device = "svg", scaling= 5/12)
+
+
+final_plot <- cowplot::plot_grid(
+  plot_no_legend,
+  legend,
+  rel_widths = c(3.35, 1.3), 
+  rel_heights = c(1,1),
+  nrow = 1
+)
+
+ggsave("figures/fig_1a_combined_simplified_and_cancer_detail_2.png",
+       plot = final_plot,
+       width = 4.65, height = 1.7, dpi = 600, units = "in", bg = "white", device = ragg::agg_png, scaling = 5/12)
+
+ggsave("figures/fig_1a_combined_simplified_and_cancer_detail_2.svg",
+       plot = final_plot,
+       width = 4.65, height = 1.7, dpi = 600, units = "in", bg = "white", device = "svg", scaling = 5/12)
