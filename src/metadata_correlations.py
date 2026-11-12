@@ -81,11 +81,9 @@ def cramers_v_corrected(x, y):
         return "Unspecified"
     known = y.notna() & (x != "missing")
     confusion_matrix = pd.crosstab(x[known], y[known])
-    if confusion_matrix.shape[1] < 2:
+    # V is undefined if the samples left have a single value or a single phenotype
+    if min(confusion_matrix.shape) < 2:
         return "Uniform"
-    # V is undefined if the samples left have a single phenotype
-    if confusion_matrix.shape[0] < 2:
-        return "Single phenotype"
 
     chi2, _, _, _ = chi2_contingency(confusion_matrix, correction=False)
     n = confusion_matrix.to_numpy().sum()
