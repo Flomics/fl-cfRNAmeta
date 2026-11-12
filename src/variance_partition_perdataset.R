@@ -1,6 +1,9 @@
 #!/usr/bin/env Rscript
 # Variance partition within each study (dataset_short_name).
 #
+# Writes per study a violin plot, the variance of each gene and a collinearity matrix, plus
+# variance_partition_perdataset_{medians,summary}.tsv with all studies.
+#
 # Usage:
 #   Rscript src/variance_partition_perdataset.R <sampleinfo> <metadata> <old_sampleinfo> \
 #       <ng80_table> <tpm_matrix> <outdir> [min_samples] [cores]
@@ -127,6 +130,7 @@ for (study in sort(unique(df$dataset_short_name))) {
               quote = FALSE, sep = "\t", row.names = FALSE)
   medians[[study]] <- data.frame(study = study, n_samples = nrow(d), n_genes = nrow(x),
                                  variable = colnames(vp), median_variance = apply(vp, 2, median),
+                                 genes_over_10pct = colMeans(vp > 0.1),
                                  confounded = confounded)
 
   long <- pivot_longer(vp, everything(), names_to = "Variable", values_to = "VarianceExplained")
@@ -159,5 +163,20 @@ for (study in sort(unique(df$dataset_short_name))) {
   ggsave(paste0(out, ".svg"), p, width = 6, height = 4, device = svglite::svglite)
 }
 
-write.table(bind_rows(medians), file.path(outdir, "variance_partition_perdataset_medians.tsv"),
+medians <- bind_rows(medians)
+write.table(medians, file.path(outdir, "variance_partition_perdataset_medians.tsv"),
             quote = FALSE, sep = "\t", row.names = FALSE)
+
+# one row per study, in percent: the median alone hides the genes a term does explain
+summary <- medians %>%
+  mutate(variable = factor(variable, levels = c(categorical_all, numeric_all, "Residuals")),
+         median_pct = round(100 * median_variance, 1),
+         genes_over_10pct = round(100 * genes_over_10pct, 1)) %>%
+  arrange(variable) %>%
+  pivot_wider(id_cols = c(study, n_samples, n_genes, confounded), names_from = variable,
+              values_from = c(median_pct, genes_over_10pct),
+              names_glue = "{variable}_{.value}", names_vary = "slowest") %>%
+  relocate(confounded, .after = last_col()) %>%
+  arrange(desc(n_samples))
+write.table(summary, file.path(outdir, "variance_partition_perdataset_summary.tsv"),
+            quote = FALSE, sep = "\t", row.names = FALSE, na = "NA")
