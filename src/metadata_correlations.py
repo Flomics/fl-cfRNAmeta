@@ -18,6 +18,7 @@ import pandas as pd
 import numpy as np
 from scipy.stats import chi2_contingency
 import matplotlib.pyplot as plt
+from matplotlib import font_manager
 from matplotlib.colors import Normalize
 from matplotlib.cm import ScalarMappable
 from matplotlib.patches import Patch
@@ -27,6 +28,14 @@ if len(sys.argv) != 3:
     sys.exit(__doc__)
 FILE, OUTPATH = sys.argv[1:]
 os.makedirs(OUTPATH, exist_ok=True)
+
+# The panel must be in Arial, which cannot be redistributed here. Fail rather than let
+# matplotlib fall back to another font with only a log warning.
+try:
+    font_manager.findfont("Arial", fallback_to_default=False)
+except ValueError:
+    sys.exit("Arial is not installed: the figure must be drawn in Arial. Install it and "
+             "clear the matplotlib font cache (matplotlib.get_cachedir()).")
 
 df = pd.read_csv(FILE, sep ="\t")
 
@@ -212,6 +221,8 @@ sel_results = sel_results.rename(columns={'Ibarra (Buffy Coat)': "Ibarra (buffy 
                                         'Ibarra (Plasma)': "Ibarra (plasma)",
                                         'Ibarra (Serum)': "Ibarra (serum)", 
                                          'Roskams': 'Roskams-Hieter'})
+cmap = sns.cubehelix_palette(start=0.4, rot=0, dark=0.4, light=0.91, as_cmap=True)
+
 # Build color matrix
 def get_color(val):
     if val == "Uniform":
@@ -221,99 +232,79 @@ def get_color(val):
     else:
         try:
             # Normalize number to colormap
-            norm = Normalize(vmin=0, vmax=1)
-            cmap = sns.cubehelix_palette(start = 0.4, rot = 0, dark = 0.4, 
-                                         light = 0.91, as_cmap = True)
-            return cmap(norm(float(val)))
+            return cmap(float(val))
         except:
             return "white"  # fallback for unexpected content
 
 color_matrix = sel_results.map(get_color)
 
 
-fonts = 8 # original
-fonts = 5 
+fonts = 5
 fonts_cells = 4
-# Plot using matplotlib
-#fig, ax = plt.subplots(figsize=(6, 9))
-fig, ax = plt.subplots(figsize=(2.5, 3.5))  # Add this cell_size line above or hardcode height
+
+plt.rcParams["font.family"] = "sans-serif"
+plt.rcParams["font.sans-serif"] = ["Arial"]
+plt.rcParams["svg.fonttype"] = "none"
+
+# Layout in inches, so that cell size and margins do not depend on the number of
+# datasets and the legend and colour bar never overlap the heatmap or each other
+n_rows, n_cols = sel_results.shape
+cell = 0.22
+left, bottom, top, right = 1.0, 0.85, 0.05, 0.9
+hm_w, hm_h = n_cols * cell, n_rows * cell
+fig_w, fig_h = left + hm_w + right, bottom + hm_h + top
+fig = plt.figure(figsize=(fig_w, fig_h))
+ax = fig.add_axes([left / fig_w, bottom / fig_h, hm_w / fig_w, hm_h / fig_h])
 
 for i, row in enumerate(sel_results.index):
     for j, col in enumerate(sel_results.columns):
         val = sel_results.loc[row, col]
-        color = color_matrix.loc[row, col]
-        ax.add_patch(plt.Rectangle((j, i), 1, 1, color=color))
-        tcol = "black"
-        if isinstance(val, float): 
-            if val > 0.5: 
-                tcol = "white"
-        # Display values
+        ax.add_patch(plt.Rectangle((j, i), 1, 1, color=color_matrix.loc[row, col]))
+        if not isinstance(val, float):
+            continue
         if partial.loc[i, j]:
-            ax.text(j + 0.5, i + 0.5, "{}*".format(round(val, 1)) if isinstance(val, float) else "",
-                    ha='center', va='center', fontsize=fonts_cells, color = tcol)
-        elif row == "Centrifugation, step 2" and col == "Ibarra (plasma)": 
-            ax.text(j + 0.5, i + 0.5, "{}**".format(round(val, 1)) if isinstance(val, float) else "",
-                    ha='center', va='center', fontsize=fonts_cells, color = tcol)             
+            label = "{}*".format(round(val, 1))
+        elif row == "Centrifugation, step 2" and col == "Ibarra (plasma)":
+            label = "{}**".format(round(val, 1))
         else:
-            ax.text(j + 0.5, i + 0.5, "{}".format(round(val, 1)) if isinstance(val, float) else "",
-                    ha='center', va='center', fontsize=fonts_cells, color = tcol)
+            label = "{}".format(round(val, 1))
+        ax.text(j + 0.5, i + 0.5, label, ha='center', va='center', fontsize=fonts_cells,
+                color="white" if val > 0.5 else "black")
 
-ax.set_xlim(0, len(sel_results.columns))
-ax.set_ylim(0, len(sel_results.index))
-ax.set_xticks(np.arange(len(sel_results.columns)) + 0.5)
-ax.set_xticklabels(sel_results.columns, fontsize=fonts)
-
-ax.set_yticks(np.arange(len(sel_results.index)) + 0.5)
+ax.set_xlim(0, n_cols)
+ax.set_ylim(0, n_rows)
+ax.set_xticks(np.arange(n_cols) + 0.5)
+ax.set_xticklabels(sel_results.columns, fontsize=fonts, rotation=45, ha='right',
+                   rotation_mode='anchor')
+ax.set_yticks(np.arange(n_rows) + 0.5)
 ax.set_yticklabels(sel_results.index, fontsize=fonts)
 ax.invert_yaxis()
-ax.set_aspect("equal")
+ax.tick_params(axis='both', which='both', length=0, pad=2)
 
-ax.tick_params(axis='both', which='both', length=0)
-
-plt.xticks(rotation=45, ha='right')
-plt.tight_layout()
-
-# Add colorbar for numeric values
-
-# Define manual colorbar position: [left, bottom, width, height]
-cbar_ax = fig.add_axes([1.1, 0.38, 0.02, 0.1])  # adjust these values to shift/resize
-sm = ScalarMappable(cmap=sns.cubehelix_palette(start=0.4, rot=0, dark=0.4, light=0.91, 
-                                               as_cmap=True), 
-                    norm=Normalize(vmin=0, vmax=1))
-sm.set_array([])
-cbar = fig.colorbar(sm, cax=cbar_ax)
-
-# Add manual label
-cbar_ax.text(-1.7, 0.5, "Cramer's V score", rotation=90, va='center', fontsize=fonts,
-             ha='center', transform=cbar_ax.transAxes)
-
-
-
-
-
-# Define manual legend entries
-legend_elements = [
-    Patch(facecolor='#B2DF8A', edgecolor='black', label='Uniform'),
-    Patch(facecolor='#333333', edgecolor='black', label='Unspecified'),
-]
-
-# Add to the plot
-ax.legend(handles=legend_elements, loc='upper left', bbox_to_anchor=(1.02, 1), 
-          fontsize=fonts, borderaxespad=0.)
-
-# remove spines
 for spine in ax.spines.values():
     spine.set_visible(False)
+for i in range(n_rows + 1):
+    ax.hlines(i, 0, n_cols, color='white', linewidth=1)
+for j in range(n_cols + 1):
+    ax.vlines(j, 0, n_rows, color='white', linewidth=1)
 
-# Add grid lines
-for i in range(len(sel_results.index) + 1):
-    ax.hlines(i, 0, len(sel_results.columns), color='white', linewidth=1)
+# legend at the top right of the heatmap, colour bar below it
+legend_elements = [
+    Patch(facecolor='#B2DF8A', edgecolor='black', linewidth=0.3, label='Uniform'),
+    Patch(facecolor='#333333', edgecolor='black', linewidth=0.3, label='Unspecified'),
+]
+ax.legend(handles=legend_elements, loc='upper left', bbox_to_anchor=(1.02, 1),
+          fontsize=fonts, frameon=False, borderaxespad=0., handlelength=1, handleheight=1)
 
-for j in range(len(sel_results.columns) + 1):
-    ax.vlines(j, 0, len(sel_results.index), color='white', linewidth=1)
+cbar_h = 0.45
+cbar_ax = fig.add_axes([(left + hm_w + 0.1) / fig_w, bottom / fig_h, 0.06 / fig_w, cbar_h / fig_h])
+sm = ScalarMappable(cmap=cmap, norm=Normalize(vmin=0, vmax=1))
+cbar = fig.colorbar(sm, cax=cbar_ax, ticks=[0, 0.5, 1])
+cbar.outline.set_linewidth(0.3)
+cbar.ax.tick_params(labelsize=fonts, width=0.3, length=1.5, pad=1)
+cbar.set_label("Cramér's V", fontsize=fonts, labelpad=2)
 
-
-plt.savefig(os.path.join(OUTPATH, "metadata_corrs.png"), dpi=600, bbox_inches='tight')
-plt.savefig(os.path.join(OUTPATH, "metadata_corrs.pdf"), dpi=600, bbox_inches='tight')
-plt.savefig(os.path.join(OUTPATH, "metadata_corrs.svg"), dpi=600, bbox_inches='tight')
+plt.savefig(os.path.join(OUTPATH, "metadata_corrs.png"), dpi=600, bbox_inches='tight', pad_inches=0.02)
+plt.savefig(os.path.join(OUTPATH, "metadata_corrs.pdf"), dpi=600, bbox_inches='tight', pad_inches=0.02)
+plt.savefig(os.path.join(OUTPATH, "metadata_corrs.svg"), dpi=600, bbox_inches='tight', pad_inches=0.02)
 
