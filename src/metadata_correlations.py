@@ -1,11 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Mon Jun 30 12:01:55 2025
+Cramer's V between phenotype and each pre-analytical variable, per dataset (Figure 1C).
 
+Usage:
+    python src/metadata_correlations.py <per_sample_metadata.tsv> <out_dir>
+
+    per_sample_metadata.tsv   tables/cfRNA-meta_per_sample_metadata.tsv
+    out_dir                   writes metadata_corrs.{png,pdf,svg} and metadata_corrs.tsv
+
+Created on Mon Jun 30 12:01:55 2025
 @author: erusu
 """
 import os
+import sys
 import pandas as pd
 import numpy as np
 from scipy.stats import chi2_contingency
@@ -15,14 +23,15 @@ from matplotlib.cm import ScalarMappable
 from matplotlib.patches import Patch
 import seaborn as sns
 
-FILE = "../tables/cfRNA-meta_per_sample_metadata.tsv"
+if len(sys.argv) != 3:
+    sys.exit(__doc__)
+FILE, OUTPATH = sys.argv[1:]
+os.makedirs(OUTPATH, exist_ok=True)
 
 df = pd.read_csv(FILE, sep ="\t")
 
-OUTPATH = "/mnt/efs/home/erusu/workplace/2025-05-cfRNAmeta/5.phenotype_corr"
-
 # modify phenotype column
-df['simple_phenotype'] = np.nan
+df['simple_phenotype'] = pd.Series(np.nan, index=df.index, dtype=object)
 
 df.loc[df['phenotype'] == "healthy", 'simple_phenotype'] = "healthy"
 df.loc[df['phenotype'].isna(), 'simple_phenotype'] = "missing"
@@ -54,24 +63,25 @@ df.loc[df['phenotype'].str.contains("Stomach cancer", na=False), 'simple_phenoty
 
 
 
-def cramers_v_corrected(x, y):
-    confusion_matrix = pd.crosstab(x, y, dropna = False)
-    
-    # if there is NaN in the columns, return Unspecified
-    if y.isnull().all(): 
-        return "Unspecified"
-    elif np.nan in list(confusion_matrix.columns): 
-        return "Unspecified"
-    else: 
-        if confusion_matrix.shape[1] < 2:
-            return "Uniform"  
-        
-        chi2, _, _, _ = chi2_contingency(confusion_matrix, correction=False)
-        n = confusion_matrix.to_numpy().sum()
-        r, k = confusion_matrix.shape
-        result = np.sqrt((chi2 / n) / min(k - 1, r - 1))
+MAX_MISSING = 0.5
 
-        return result
+def cramers_v_corrected(x, y):
+    # a few samples without the variable should not hide it for the whole dataset:
+    # they are left out, and only a variable missing in most samples is Unspecified
+    if y.isnull().mean() > MAX_MISSING:
+        return "Unspecified"
+    known = y.notna() & (x != "missing")
+    confusion_matrix = pd.crosstab(x[known], y[known])
+    if confusion_matrix.shape[1] < 2:
+        return "Uniform"
+    # V is undefined if the samples left have a single phenotype
+    if confusion_matrix.shape[0] < 2:
+        return "Single phenotype"
+
+    chi2, _, _, _ = chi2_contingency(confusion_matrix, correction=False)
+    n = confusion_matrix.to_numpy().sum()
+    r, k = confusion_matrix.shape
+    return np.sqrt((chi2 / n) / min(k - 1, r - 1))
 
 
 
@@ -99,9 +109,8 @@ df.loc[df['dataset_short_name'] == "toden", "dnase"] = "None"
 df.loc[df['dataset_short_name'] == "sun", "collection_center"] = "Zhongnan Hospital"
 df.loc[df['dataset_short_name'] == "tao", "collection_center"] = "Peking University First Hospital"
 
-# Toden --> remove only 1 not annotated sample to be able to calculate it
-df = df[~((df['dataset_short_name'] == "toden") & (df["collection_center"] == "Unknown"))]
-#df.loc[(df['dataset_short_name'] == "toden") & (df["collection_center"] == "Unknown"), "collection_center"] = np.nan
+# Toden has one sample with collection center "Unknown"
+df.loc[(df['dataset_short_name'] == "toden") & (df["collection_center"] == "Unknown"), "collection_center"] = np.nan
 
 
 # block & moufarrej blood collection tube not known
@@ -141,6 +150,8 @@ excluded_datasets = ["flomics_1", "flomics_2", "giraldez", "ngo", "wang",
 #                     'giraldez_phospho-rna-seq', 'flomics_2','wang','flomics_1']
 
 results = pd.DataFrame(index=tech_vars, columns=datasets)
+# cells computed after leaving out samples without the variable, marked * in the plot
+partial = pd.DataFrame(False, index=tech_vars, columns=datasets)
 
 for dset in datasets:
     if dset not in excluded_datasets: 
@@ -151,6 +162,8 @@ for dset in datasets:
             except:
                 score = np.nan
             results.loc[var, dset] = score
+            partial.loc[var, dset] = (isinstance(score, float)
+                                      and sub_df[var].isnull().any())
         
 # reorder columns accordingly
 dataset_order = ["sun", "chalasani", "Ibarra (buffy coat)", 
@@ -166,6 +179,8 @@ dataset_order = ["sun", "chalasani", "Ibarra (buffy coat)",
 
 
 results = results[dataset_order]
+partial = partial[dataset_order]
+results.to_csv(os.path.join(OUTPATH, "metadata_corrs.tsv"), sep="\t")
 print(results)
 # drop rows that are all the same: 
 sel_results = results.drop(['biomaterial', "nucleic_acid_type", 
@@ -173,6 +188,8 @@ sel_results = results.drop(['biomaterial', "nucleic_acid_type",
                             "library_prep_kit_short_name",
                             "plasma_tubes_short_name",
                             "library_selection", "cdna_library_type"], axis=0)
+partial = partial.loc[sel_results.index]
+partial.index, partial.columns = range(len(partial.index)), range(len(partial.columns))
 
 
 # set errors to ignore in case we remove columns 
@@ -211,7 +228,7 @@ def get_color(val):
         except:
             return "white"  # fallback for unexpected content
 
-color_matrix = sel_results.applymap(get_color)
+color_matrix = sel_results.map(get_color)
 
 
 fonts = 8 # original
@@ -231,9 +248,9 @@ for i, row in enumerate(sel_results.index):
             if val > 0.5: 
                 tcol = "white"
         # Display values
-        if row == "Collection center" and col == "Toden": 
+        if partial.loc[i, j]:
             ax.text(j + 0.5, i + 0.5, "{}*".format(round(val, 1)) if isinstance(val, float) else "",
-                    ha='center', va='center', fontsize=fonts_cells, color = tcol) 
+                    ha='center', va='center', fontsize=fonts_cells, color = tcol)
         elif row == "Centrifugation, step 2" and col == "Ibarra (plasma)": 
             ax.text(j + 0.5, i + 0.5, "{}**".format(round(val, 1)) if isinstance(val, float) else "",
                     ha='center', va='center', fontsize=fonts_cells, color = tcol)             
@@ -296,7 +313,7 @@ for j in range(len(sel_results.columns) + 1):
     ax.vlines(j, 0, len(sel_results.index), color='white', linewidth=1)
 
 
-plt.savefig(os.path.join(OUTPATH, "metadata_corrs2.png"), dpi=600, bbox_inches='tight')
-plt.savefig(os.path.join(OUTPATH, "metadata_corrs2.pdf"), dpi=600, bbox_inches='tight')
-plt.savefig(os.path.join(OUTPATH, "metadata_corrs2.svg"), dpi=600, bbox_inches='tight')
+plt.savefig(os.path.join(OUTPATH, "metadata_corrs.png"), dpi=600, bbox_inches='tight')
+plt.savefig(os.path.join(OUTPATH, "metadata_corrs.pdf"), dpi=600, bbox_inches='tight')
+plt.savefig(os.path.join(OUTPATH, "metadata_corrs.svg"), dpi=600, bbox_inches='tight')
 

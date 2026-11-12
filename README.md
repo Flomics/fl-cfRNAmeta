@@ -47,6 +47,12 @@ fl-cfRNAmeta/
 - **`fig_1b_heatmap.R`**  
   R script for creating the pre-analytical variables heatmap.
 
+- **`metadata_correlations.py`**  
+  Python script for the Figure 1C heatmap: Cramér's V between phenotype and each pre-analytical
+  variable, per dataset. Samples without a value are left out (cells marked `*`); a variable is
+  Unspecified only if it is missing in more than half of the dataset's samples:  
+  `python src/metadata_correlations.py tables/cfRNA-meta_per_sample_metadata.tsv figures/fig1c`
+
 - **`fig3c_biotype_stacked_bp.py`**  
   Python script for the Figure 3C RNA biotype stacked bar plot, one bar per dataset batch. Uses
   `barplot_stacked_plot.py`, `dataset_mappings.json` and `gene_biotype_mappings.json`:  
