@@ -1,0 +1,20 @@
+# Environment for deconvolve.py and merge_2.py.
+# Library versions match upstream sevahn/deconvolution (cfrna_deconv.yml);
+# scanpy/anndata are only needed because merge_2.py imports scanpy.
+# Tested: both scripts run and reproduce upstream's published fractions.
+name: vorperian_deconv
+channels:
+  - conda-forge
+dependencies:
+  - python=3.7
+  - pip
+  - pip:
+    - cvxopt==1.2.7
+    - joblib==1.1.0
+    - numpy==1.18.1
+    - pandas==1.0.1
+    - scikit-learn==0.24.2
+    - scipy==1.5.2
+    - threadpoolctl==3.1.0
+    - anndata==0.7.4
+    - scanpy==1.8.1
