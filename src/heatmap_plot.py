@@ -35,7 +35,9 @@ def create_heatmap(# ~ BASIC INPUT PARAMETERS ~ #
                    legend_gap: float = 3,
                    legend_border: bool = False,
                    legend_order: list = None,
-                   legend_rename: dict = None):
+                   legend_rename: dict = None,
+                   colorbar_label: str = 'Cell type\nfraction',
+                   legend_style: str = 'compact'):
     """
     Generates a heatmap from a pandas DataFrame, displaying multiple
     value columns along with multiple metadata columns.
@@ -81,6 +83,11 @@ def create_heatmap(# ~ BASIC INPUT PARAMETERS ~ #
         legend_border (bool, optional) Add border to legend box. Defaults to False
         legend_order (list, optional) Specify the order of legend. Defaults to None
         legend_rename (dict, optional) Dictionary to rename columns name for legend visualization. Defaults to None
+        colorbar_label (str, optional) Colour-bar label, compact style only. Defaults to "Cell type\nfraction"
+        legend_style (str, optional) "compact": small black-text legends and restyled colour bar.
+                                     "default": PyComplexHeatmap defaults (coloured legend text, legend layout
+                                     and order, colour bar labelled {heatmap_value_name}); legend_vpad,
+                                     legend_hpad and legend_order are ignored. Defaults to "compact"
 
     Returns:
         A single PyComplexHeatmap heatmap. Returns None if the input DataFrame is
@@ -254,7 +261,7 @@ def create_heatmap(# ~ BASIC INPUT PARAMETERS ~ #
                     anno_simple_args[col_name] = pch.anno_simple(
                         df_for_metadata_annotation[col_name],
                         colors=final_colors_for_annotation[col_name],
-                        legend_kws=legend_kws
+                        legend_kws=legend_kws if legend_style == 'compact' else None
                     )
 
                 else:
@@ -284,6 +291,13 @@ def create_heatmap(# ~ BASIC INPUT PARAMETERS ~ #
 
     plt.figure(figsize=(fig_width, dynamic_height))
 
+    # legend layout: compact style sets it explicitly, default style keeps PyComplexHeatmap's defaults except the gap
+    if legend_style == 'compact':
+        legend_layout_kws = dict(legend_gap=legend_gap, legend_vpad=legend_vpad, legend_hpad=legend_hpad,
+                                 legend_order=metadata_columns+[heatmap_value_name] if legend_order is None else legend_order+[heatmap_value_name])
+    else:
+        legend_layout_kws = dict(legend_gap=legend_gap)
+
     # ~ Initialize ClusterMapPlotter ~ #
     cm = pch.ClusterMapPlotter(data=df_for_heatmap_data.transpose(),
                                top_annotation=col_ha,
@@ -300,21 +314,18 @@ def create_heatmap(# ~ BASIC INPUT PARAMETERS ~ #
                                tree_kws={'row_cmap': 'Set1'},
                                verbose=1,
                                plot_legend=show_legend,
-                               legend_gap=legend_gap,
-                               legend_vpad=legend_vpad,
-                               legend_hpad=legend_hpad,
                                yticklabels_kws={'labelsize': heatmap_label_fontsize},
                                cmap='viridis',
-                               legend_order= metadata_columns+[heatmap_value_name] if legend_order is None else legend_order+[heatmap_value_name]
+                               **legend_layout_kws
 )
     
-    if show_legend:
+    if show_legend and legend_style == 'compact':
         for i in range(len(cm.cbars)):
             print(i)
             print(type(cm.cbars[i]))
             if isinstance(cm.cbars[i], matplotlib.colorbar.Colorbar):
                 print(type(cm.cbars[i]))
-                cm.cbars[i].set_label('Cell type\nfraction',fontsize=5)
+                cm.cbars[i].set_label(colorbar_label,fontsize=5)
                 cm.cbars[i].set_ticklabels([0,0.5,1],fontsize=5)
                 cm.cbars[i].ax.tick_params(axis='y',  width=0.25)
                 cm.cbars[i].outline.set_linewidth(0.25)

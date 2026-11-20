@@ -27,6 +27,7 @@ def create_stacked_barplot(
                            focus_value: list = None,
                            collapse_focus_values_as: str = None,
                            collapsed_color: str = None,
+                          others_label: str = 'others',
                            color_map: dict = None,
                            # ~ ERROR BARS PARAMETERS ~ #
                            add_error_bars: bool = False,
@@ -146,6 +147,7 @@ def create_stacked_barplot(
                                        will be summed into a single category.
                                        If None or an empty list, all value_columns are plotted individually
                                        without an "others" category.
+        others_label (str, optional): Legend label of the "others" category (custom bottom legend only). Defaults to 'others'.
         collapse_focus_values_as (str, optional): If provided and {focus_value} is not empty,
                                                    all columns listed in {focus_value} will be summed
                                                    and plotted as a single category with this name.
@@ -945,7 +947,7 @@ def create_stacked_barplot(
         for val in ordered_unique_main_legend_values:
             color = category_colors_internal_map.get(val, 'grey')
             all_legend_handles.append(mpatches.Patch(color=color)) # Patch for the square color
-            all_legend_labels.append(str(val)) # Label for the square
+            all_legend_labels.append(others_label if val == 'others' else str(val)) # Label for the square
 
             main_legend = ax.legend(
                 handles=all_legend_handles,

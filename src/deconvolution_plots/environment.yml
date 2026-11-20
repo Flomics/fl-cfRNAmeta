@@ -1,0 +1,18 @@
+# Environment the deconvolution notebooks were verified with.
+# PyComplexHeatmap must be 1.8.1-1.8.3 (>=1.8.4 rejects legend_gap); pandas must be < 3.
+name: cfrnameta_deconvolution_plots
+channels:
+  - conda-forge
+dependencies:
+  - python=3.13
+  - pandas=2.3.3
+  - numpy=2.2.6
+  - matplotlib=3.11.2
+  - seaborn=0.13.2
+  - scipy=1.18.1
+  - scikit-learn=1.9.1
+  - jupyterlab
+  - ipykernel
+  - pip
+  - pip:
+      - PyComplexHeatmap==1.8.2
